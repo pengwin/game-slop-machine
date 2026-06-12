@@ -1,10 +1,13 @@
 # Agent Rules for Game Slop Machine
 
 ## Project Structure
-- Plugins: `src/plugins/` (one directory per plugin)
-- Each plugin has: `mod.rs`, `components.rs`, `resources.rs`, `systems.rs`
-- Keep components and resources co-located with their plugins
-- Split code into small, meaningful files
+- Workspace: `Cargo.toml` (workspace root)
+- Apps: `apps/` (runnable executables)
+- Crates: `crates/` (libraries)
+- Plugins: `crates/game-core/src/plugins/` (one directory per plugin)
+- Each plugin has: `mod.rs`, plus meaningful feature-based files
+- Keep components co-located with the systems that use them
+- Split code into small, meaningful files by feature, not by type
 - Main: `src/main.rs` (App setup only)
 
 ## Bevy 0.18.1 Conventions
@@ -23,6 +26,7 @@
 - Derive `Component`, `Resource`
 - Use `..default()` for initialization
 - Name top-level entities with `Name::new("...")`
+- Keep components close to the systems that use them (not in separate components.rs)
 
 ### Systems
 - End with `_system` suffix
@@ -44,16 +48,19 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
 ```
 
 ### Plugin Rules
-- Each plugin is a directory under `src/plugins/`
-- Plugin structure:
+- Each plugin is a directory under `crates/game-core/src/plugins/`
+- Plugin structure by feature, not by type:
   ```
-  src/plugins/my_plugin/
-    mod.rs        # Plugin struct/fn, re-exports
-    components.rs # Plugin-specific components
-    resources.rs  # Plugin-specific resources
-    systems.rs    # Plugin systems
+  crates/game-core/src/plugins/my_plugin/
+    mod.rs         # Plugin struct/fn, re-exports
+    feature_a.rs   # Feature with its own components, systems, resources
+    feature_b.rs   # Another feature
+    config.rs      # Plugin configuration resource
   ```
-- Register plugins in `src/plugins/mod.rs` and `src/main.rs`
+- Do NOT use: components.rs, resources.rs, systems.rs
+- DO use: camera.rs, light.rs, player.rs, enemies.rs, etc.
+- Register plugins in `crates/game-core/src/plugins/mod.rs`
+- Use plugin in apps via `game_core::plugins::GamePlugin`
 
 ### Code Style
 - `use bevy::prelude::*;`
@@ -61,8 +68,8 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
 - Query filters: `Changed<T>`, `Added<T>`, `Without<T>`
 
 ### Build Commands
-- Dev: `cargo run --features dev` (dynamic linking for faster compile)
-- Release: `cargo build --release`
+- Dev: `cargo run -p game` (default profile)
+- Release: `cargo build -p game --release`
 
 ## API Notes (0.18.1 Specific)
 - `despawn()` is recursive by default (no `despawn_recursive()`)

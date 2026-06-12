@@ -1,13 +1,14 @@
-[package]
-name = "game-slop-machine"
+[workspace]
+members = ["apps/*", "crates/*"]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
-[features]
-dev = ["bevy/dynamic_linking"]
-
-[dependencies]
+[workspace.dependencies]
 bevy = "0.18.1"
+game-core = { path = "crates/game-core" }
 
 [profile.dev]
 debug = 0
