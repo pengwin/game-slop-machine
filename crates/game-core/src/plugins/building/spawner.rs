@@ -1,51 +1,50 @@
-mod screenshot;
-
-use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};
+use bevy::prelude::*;
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::Indices;
+use bevy::render::render_resource::PrimitiveTopology;
 use building_gen::tile::TileType;
-use game_core::plugins::GamePlugin;
-use std::time::Duration;
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let output_path = args
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| "building_screenshot.png".to_string());
+use super::config::BuildingGenConfig;
 
-    App::new()
-        .add_plugins((
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: None,
-                    exit_condition: ExitCondition::DontExit,
-                    ..default()
-                })
-                .disable::<WinitPlugin>(),
-            ScheduleRunnerPlugin::run_loop(Duration::from_millis(100)),
-            GamePlugin,
-        ))
-        .insert_resource(screenshot::ScreenshotConfig {
-            path: output_path,
-            width: 1280,
-            height: 1024,
-        })
-        .add_systems(Startup, (generate_building, screenshot::setup_screenshot).chain())
-        .add_systems(Update, screenshot::capture_and_exit)
-        .run();
+#[derive(Resource)]
+pub struct CurrentBuilding {
+    pub layout: building_gen::layout::BuildingLayout,
+    pub entities: Vec<Entity>,
 }
 
-fn generate_building(
+/// Spawns a building when B is pressed.
+///
+/// Uses the simplified mesh approach:
+/// - One unit cube mesh for all wall-like tiles (scaled per tile)
+/// - One floor quad mesh for floor tiles (scaled per tile)
+/// - Colors are applied via materials
+pub fn spawn_building_on_command(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    config: Res<game_core::plugins::building::config::BuildingGenConfig>,
+    config: Res<BuildingGenConfig>,
+    input: Res<ButtonInput<KeyCode>>,
+    existing: Option<ResMut<CurrentBuilding>>,
 ) {
+    if !input.just_pressed(KeyCode::KeyB) {
+        return;
+    }
+
+    // Remove existing building if any
+    if let Some(mut existing) = existing {
+        for entity in existing.entities.drain(..) {
+            commands.entity(entity).despawn();
+        }
+    }
+
     let seed = 42;
     let layout = building_gen::generate_layout(&config.0, seed);
 
-    // Create shared meshes
+    // Create shared meshes (one for walls, one for floors)
     let wall_mesh = meshes.add(create_unit_cube_mesh());
     let floor_mesh = meshes.add(create_floor_quad_mesh());
+
+    let mut entities = Vec::new();
 
     // Spawn tiles
     for y in 0..layout.tile_grid.height {
@@ -59,6 +58,7 @@ fn generate_building(
             let (scale_x, scale_y, scale_z) = building_gen::tile_scale(tile, &config.0);
             let (r, g, b) = building_gen::tile_color(tile);
 
+            // Choose mesh based on tile type
             let mesh_handle = match tile {
                 TileType::Floor => floor_mesh.clone(),
                 _ => wall_mesh.clone(),
@@ -66,26 +66,27 @@ fn generate_building(
 
             let material = materials.add(Color::srgb(r, g, b));
 
-            commands.spawn((
-                Mesh3d(mesh_handle),
-                MeshMaterial3d(material),
-                Transform {
-                    translation: Vec3::new(world_pos.x, 0.0, world_pos.y),
-                    scale: Vec3::new(scale_x, scale_y, scale_z),
-                    ..default()
-                },
-            ));
+            let entity = commands
+                .spawn((
+                    Mesh3d(mesh_handle),
+                    MeshMaterial3d(material),
+                    Transform {
+                        translation: Vec3::new(world_pos.x, 0.0, world_pos.y),
+                        scale: Vec3::new(scale_x, scale_y, scale_z),
+                        ..default()
+                    },
+                ))
+                .id();
+
+            entities.push(entity);
         }
     }
 
-    println!("Building generated with {} rooms", layout.rooms.len());
+    commands.insert_resource(CurrentBuilding { layout, entities });
 }
 
+/// Creates a unit cube mesh (1x1x1, origin at bottom center).
 fn create_unit_cube_mesh() -> Mesh {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::mesh::Indices;
-    use bevy::render::render_resource::PrimitiveTopology;
-
     let vertices = building_gen::unit_cube_vertices();
     let normals = building_gen::unit_cube_normals();
     let uvs = building_gen::unit_cube_uvs();
@@ -104,11 +105,8 @@ fn create_unit_cube_mesh() -> Mesh {
     mesh
 }
 
+/// Creates a floor quad mesh (1x1 at y=0).
 fn create_floor_quad_mesh() -> Mesh {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::mesh::Indices;
-    use bevy::render::render_resource::PrimitiveTopology;
-
     let vertices = building_gen::floor_quad_vertices();
     let normals = building_gen::floor_quad_normals();
     let uvs = building_gen::floor_quad_uvs();

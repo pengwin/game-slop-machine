@@ -1,9 +1,7 @@
 [package]
-name = "game-headless"
+name = "building-ascii"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-bevy.workspace = true
-game-core.workspace = true
 building-gen = { path = "../../crates/building-gen" }

@@ -10,6 +10,31 @@
 - Split code into small, meaningful files by feature, not by type
 - Main: `src/main.rs` (App setup only)
 
+## Crates
+
+### `building-gen`
+Pure Rust library for procedural building generation (no Bevy dependencies).
+- BSP algorithm for room layout
+- Tile-based wall/door/window placement
+- 3D mesh data generation
+- Fully unit-testable
+
+### `game-core`
+Bevy game logic library.
+- Plugins in `src/plugins/`
+- Depends on `building-gen` for building generation
+
+### `apps/game`
+Main game executable.
+
+### `apps/game-headless`
+Headless screenshot tool for AI agents.
+
+### `apps/building-ascii`
+CLI tool to visualize building generation in ASCII format.
+- Usage: `cargo run -p building-ascii -- [seed] [width] [height]`
+- Shows tile statistics, room layout, and ASCII map
+
 ## Bevy 0.18.1 Conventions
 
 ### Entity Spawning
@@ -70,6 +95,8 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
 ### Build Commands
 - Dev: `cargo run -p game` (default profile)
 - Release: `cargo build -p game --release`
+- Headless screenshot: `cargo run -p game-headless -- [output.png]`
+- ASCII building: `cargo run -p building-ascii -- [seed] [width] [height]`
 
 ## API Notes (0.18.1 Specific)
 - `despawn()` is recursive by default (no `despawn_recursive()`)
@@ -77,3 +104,4 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
 - `GlobalAmbientLight` is the resource (not `AmbientLight` which is per-camera component)
 - Function plugins must use snake_case: `pub fn game_plugin(app: &mut App)`
 - Re-export with alias if needed: `pub use game::game_plugin as GamePlugin;`
+- Mesh creation: `use bevy::asset::RenderAssetUsages;` and `use bevy::mesh::Indices;`
