@@ -1,6 +1,8 @@
 mod screenshot;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};
+use building_gen::config::BuildingConfig;
+use building_gen::tile::TileGrid;
 use building_gen::tile::TileType;
 use game_core::plugins::GamePlugin;
 use std::time::Duration;
@@ -29,7 +31,10 @@ fn main() {
             width: 1280,
             height: 1024,
         })
-        .add_systems(Startup, (generate_building, screenshot::setup_screenshot).chain())
+        .add_systems(
+            Startup,
+            (generate_building, screenshot::setup_screenshot).chain(),
+        )
         .add_systems(Update, screenshot::capture_and_exit)
         .run();
 }
@@ -46,39 +51,215 @@ fn generate_building(
     // Create shared meshes
     let wall_mesh = meshes.add(create_unit_cube_mesh());
     let floor_mesh = meshes.add(create_floor_quad_mesh());
+    let wall_material = materials.add(Color::srgb(0.8, 0.8, 0.8));
+    let floor_material = materials.add(Color::srgb(0.6, 0.6, 0.6));
+    let door_material = materials.add(Color::srgb(0.4, 0.2, 0.0));
+    let window_material = materials.add(Color::srgb(0.5, 0.7, 1.0));
 
     // Spawn tiles
     for y in 0..layout.tile_grid.height {
         for x in 0..layout.tile_grid.width {
             let tile = layout.tile_grid.get(x, y);
-            if tile == TileType::Empty {
+            if tile == TileType::Empty || tile == TileType::Doorway {
                 continue;
             }
 
             let world_pos = layout.tile_grid.world_pos(x, y);
-            let (scale_x, scale_y, scale_z) = building_gen::tile_scale(tile, &config.0);
-            let (r, g, b) = building_gen::tile_color(tile);
-
-            let mesh_handle = match tile {
-                TileType::Floor => floor_mesh.clone(),
-                _ => wall_mesh.clone(),
-            };
-
-            let material = materials.add(Color::srgb(r, g, b));
-
-            commands.spawn((
-                Mesh3d(mesh_handle),
-                MeshMaterial3d(material),
-                Transform {
-                    translation: Vec3::new(world_pos.x, 0.0, world_pos.y),
-                    scale: Vec3::new(scale_x, scale_y, scale_z),
-                    ..default()
+            spawn_tile_geometry(
+                &mut commands,
+                TileRenderAssets {
+                    wall_mesh: wall_mesh.clone(),
+                    floor_mesh: floor_mesh.clone(),
+                    wall_material: wall_material.clone(),
+                    floor_material: floor_material.clone(),
+                    door_material: door_material.clone(),
+                    window_material: window_material.clone(),
                 },
-            ));
+                tile,
+                &layout.tile_grid,
+                x,
+                y,
+                Vec3::new(world_pos.x, 0.0, world_pos.y),
+                &config.0,
+            );
         }
     }
 
     println!("Building generated with {} rooms", layout.rooms.len());
+}
+
+struct TileRenderAssets {
+    wall_mesh: Handle<Mesh>,
+    floor_mesh: Handle<Mesh>,
+    wall_material: Handle<StandardMaterial>,
+    floor_material: Handle<StandardMaterial>,
+    door_material: Handle<StandardMaterial>,
+    window_material: Handle<StandardMaterial>,
+}
+
+fn spawn_tile_geometry(
+    commands: &mut Commands,
+    assets: TileRenderAssets,
+    tile: TileType,
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    position: Vec3,
+    config: &BuildingConfig,
+) {
+    match tile {
+        TileType::Floor => {
+            let (sx, sy, sz) = building_gen::tile_scale(tile, config);
+            spawn_cube(
+                commands,
+                assets.floor_mesh,
+                assets.floor_material,
+                position,
+                Vec3::new(sx, sy, sz),
+            );
+        }
+        TileType::Window => {
+            let (sx, _, sz) = oriented_tile_scale(TileType::Wall, grid, x, y, config);
+            let sill = config.window_sill_height;
+            let top_y = sill + config.window_height;
+            let top_h = (config.wall_height - top_y).max(0.0);
+            let glass = glass_scale(Vec3::new(sx, config.window_height, sz), config);
+
+            if sill > 0.0 {
+                spawn_cube(
+                    commands,
+                    assets.wall_mesh.clone(),
+                    assets.wall_material.clone(),
+                    position,
+                    Vec3::new(sx, sill, sz),
+                );
+            }
+            spawn_cube(
+                commands,
+                assets.wall_mesh.clone(),
+                assets.window_material,
+                position + Vec3::Y * sill,
+                glass,
+            );
+            if top_h > 0.0 {
+                spawn_cube(
+                    commands,
+                    assets.wall_mesh,
+                    assets.wall_material,
+                    position + Vec3::Y * top_y,
+                    Vec3::new(sx, top_h, sz),
+                );
+            }
+        }
+        TileType::Door => {
+            let (sx, _, sz) = oriented_tile_scale(TileType::Wall, grid, x, y, config);
+            let lintel_h = (config.wall_height - config.door_height).max(0.0);
+            let door = door_scale(Vec3::new(sx, config.door_height, sz), config);
+
+            spawn_cube(
+                commands,
+                assets.wall_mesh.clone(),
+                assets.door_material,
+                position,
+                door,
+            );
+            if lintel_h > 0.0 {
+                spawn_cube(
+                    commands,
+                    assets.wall_mesh,
+                    assets.wall_material,
+                    position + Vec3::Y * config.door_height,
+                    Vec3::new(sx, lintel_h, sz),
+                );
+            }
+        }
+        TileType::Wall | TileType::WallCorner => {
+            let (sx, sy, sz) = oriented_tile_scale(tile, grid, x, y, config);
+            spawn_cube(
+                commands,
+                assets.wall_mesh,
+                assets.wall_material,
+                position,
+                Vec3::new(sx, sy, sz),
+            );
+        }
+        TileType::Empty | TileType::Doorway => {}
+    }
+}
+
+fn spawn_cube(
+    commands: &mut Commands,
+    mesh: Handle<Mesh>,
+    material: Handle<StandardMaterial>,
+    translation: Vec3,
+    scale: Vec3,
+) {
+    commands.spawn((
+        Mesh3d(mesh),
+        MeshMaterial3d(material),
+        Transform {
+            translation,
+            scale,
+            ..default()
+        },
+    ));
+}
+
+fn glass_scale(scale: Vec3, config: &BuildingConfig) -> Vec3 {
+    thin_opening_scale(scale, config.wall_thickness * 0.35)
+}
+
+fn door_scale(scale: Vec3, config: &BuildingConfig) -> Vec3 {
+    thin_opening_scale(scale, config.wall_thickness * 0.65)
+}
+
+fn thin_opening_scale(mut scale: Vec3, thickness: f32) -> Vec3 {
+    if scale.x < scale.z {
+        scale.x = thickness;
+    } else {
+        scale.z = thickness;
+    }
+
+    scale
+}
+
+fn oriented_tile_scale(
+    tile: TileType,
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    config: &BuildingConfig,
+) -> (f32, f32, f32) {
+    let (sx, sy, sz) = building_gen::tile_scale(tile, config);
+
+    if !matches!(
+        tile,
+        TileType::Wall | TileType::WallCorner | TileType::Door | TileType::Window
+    ) {
+        return (sx, sy, sz);
+    }
+
+    if wall_runs_along_z(grid, x, y) {
+        (config.wall_thickness, sy, config.tile_size)
+    } else {
+        (sx, sy, sz)
+    }
+}
+
+fn wall_runs_along_z(grid: &TileGrid, x: usize, y: usize) -> bool {
+    let left = x > 0 && is_room_side(grid.get(x - 1, y));
+    let right = x + 1 < grid.width && is_room_side(grid.get(x + 1, y));
+    let down = y > 0 && is_room_side(grid.get(x, y - 1));
+    let up = y + 1 < grid.height && is_room_side(grid.get(x, y + 1));
+
+    (left || right) && !(down || up)
+}
+
+fn is_room_side(tile: TileType) -> bool {
+    matches!(
+        tile,
+        TileType::Floor | TileType::Doorway | TileType::Door | TileType::Window
+    )
 }
 
 fn create_unit_cube_mesh() -> Mesh {

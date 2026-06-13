@@ -9,11 +9,11 @@
 //! Window placement strategy:
 //! 1. Only on exterior walls (not between rooms)
 //! 2. 30% chance per wall tile (randomized)
-//! 3. Skip walls that already have doors nearby
+//! 3. Skip walls that already have doors or windows nearby
 //! 4. Windows occupy multiple tiles based on window_width
 
 use crate::config::BuildingConfig;
-use crate::layout::{Doorway, Wall, WallType, Window, Room, WallId};
+use crate::layout::{Doorway, Room, Wall, WallId, WallType, Window};
 use crate::random::SeededRng;
 use crate::tile::{TileGrid, TileType};
 use crate::tile_converter::{find_adjacent_rooms, find_doorway_positions_between_rooms};
@@ -43,8 +43,17 @@ pub fn place_doorways(
 
         if !positions.is_empty() {
             // Place doorway at the middle of the shared wall
-            let mid = positions.len() / 2;
-            let (wx, wy) = positions[mid];
+            let candidates: Vec<_> = positions
+                .into_iter()
+                .filter(|&(x, y)| grid.get(x, y) == TileType::Wall)
+                .collect();
+
+            if candidates.is_empty() {
+                continue;
+            }
+
+            let mid = candidates.len() / 2;
+            let (wx, wy) = candidates[mid];
 
             // Mark the tile as a doorway
             grid.set(wx, wy, TileType::Doorway);
@@ -71,7 +80,7 @@ pub fn place_doorways(
 
         if let Some((x, y)) = grid.tile_coord(mid) {
             let tile = grid.get(x, y);
-            if tile == TileType::Wall || tile == TileType::WallCorner {
+            if tile == TileType::Wall {
                 // Mark the tile as a door
                 grid.set(x, y, TileType::Door);
 
@@ -93,7 +102,7 @@ pub fn place_doorways(
 /// Strategy:
 /// - Only on exterior walls (not between rooms)
 /// - 30% chance per wall tile (randomized)
-/// - Skip walls that already have doors nearby (within 1 tile)
+/// - Skip walls that already have doors or windows nearby
 /// - Windows can span multiple tiles based on window_width config
 pub fn place_windows(
     walls: &[Wall],
@@ -113,24 +122,23 @@ pub fn place_windows(
         let mid = wall.segment.midpoint();
         if let Some((x, y)) = grid.tile_coord(mid) {
             let tile = grid.get(x, y);
-            if tile == TileType::Wall || tile == TileType::WallCorner {
-                // Check if there's a door nearby (within 1 tile)
+            if tile == TileType::Wall {
+                // Check if there's a door or window nearby
                 let has_door = grid
                     .neighbors(x, y)
                     .iter()
                     .any(|(_, _, t)| *t == TileType::Door || *t == TileType::Doorway);
+                let has_window = has_window_near(grid, x, y, config);
 
                 // 30% chance to place window, skip if door nearby
-                if !has_door && rng.gen_bool(0.3) {
-                    // Place window tiles (may span multiple tiles)
-                    for dx in 0..window_tiles {
-                        let nx = x + dx;
-                        if nx < grid.width {
-                            let t = grid.get(nx, y);
-                            if t == TileType::Wall || t == TileType::WallCorner {
-                                grid.set(nx, y, TileType::Window);
-                            }
-                        }
+                if !has_door && !has_window && rng.gen_bool(0.3) {
+                    let positions = window_positions(grid, x, y, window_tiles);
+                    if positions.len() != window_tiles {
+                        continue;
+                    }
+
+                    for (wx, wy) in positions {
+                        grid.set(wx, wy, TileType::Window);
                     }
 
                     windows.push(Window {
@@ -146,6 +154,70 @@ pub fn place_windows(
     }
 
     windows
+}
+
+fn window_positions(
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    window_tiles: usize,
+) -> Vec<(usize, usize)> {
+    let horizontal =
+        has_wall(grid, x.wrapping_sub(1), y) || (x + 1 < grid.width && has_wall(grid, x + 1, y));
+    let vertical =
+        has_wall(grid, x, y.wrapping_sub(1)) || (y + 1 < grid.height && has_wall(grid, x, y + 1));
+    let axis_x = horizontal || !vertical;
+    let half = window_tiles / 2;
+    let mut result = Vec::new();
+
+    for i in 0..window_tiles {
+        let offset = i as isize - half as isize;
+        let wx = if axis_x {
+            x.checked_add_signed(offset)
+        } else {
+            Some(x)
+        };
+        let wy = if axis_x {
+            Some(y)
+        } else {
+            y.checked_add_signed(offset)
+        };
+
+        if let (Some(wx), Some(wy)) = (wx, wy) {
+            if wx < grid.width && wy < grid.height && grid.get(wx, wy) == TileType::Wall {
+                result.push((wx, wy));
+            }
+        }
+    }
+
+    result
+}
+
+fn has_wall(grid: &TileGrid, x: usize, y: usize) -> bool {
+    x < grid.width && y < grid.height && grid.get(x, y) == TileType::Wall
+}
+
+fn has_window_near(grid: &TileGrid, x: usize, y: usize, config: &BuildingConfig) -> bool {
+    let spacing_tiles = (config.window_spacing / config.tile_size).ceil() as i32;
+    let x = x as i32;
+    let y = y as i32;
+
+    for dy in -spacing_tiles..=spacing_tiles {
+        for dx in -spacing_tiles..=spacing_tiles {
+            let nx = x + dx;
+            let ny = y + dy;
+
+            if nx < 0 || ny < 0 || nx as usize >= grid.width || ny as usize >= grid.height {
+                continue;
+            }
+
+            if grid.get(nx as usize, ny as usize) == TileType::Window {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 #[cfg(test)]

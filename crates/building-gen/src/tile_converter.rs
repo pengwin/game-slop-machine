@@ -1,15 +1,14 @@
 //! Converts BSP room layout into a tile grid with walls, floors, and openings.
 //!
 //! The conversion process:
-//! 1. Flood each room's interior with Floor tiles (offset inward from room bounds)
-//! 2. Mark empty tiles adjacent to Floor as Wall tiles (boundary detection)
-//! 3. Identify corner tiles where diagonal floor exists but no adjacent floor
+//! 1. Mark each room's perimeter as wall tiles
+//! 2. Fill the remaining room interior with floor tiles
+//! 3. Identify corner tiles where horizontal and vertical walls meet
 //!
 //! Design decisions:
-//! - Wall offset (0.5 * tile_size) creates a 1-tile gap between adjacent rooms' floors
-//! - This gap becomes the shared wall between rooms
-//! - At room boundaries, two wall tiles may appear (one from each room) - this is expected
-//! - Walls are detected by checking 4-connected neighbors, not 8-connected
+//! - BSP split coordinates are snapped to the tile grid
+//! - A boundary coordinate maps to one wall tile line, so adjacent rooms share a wall
+//! - Walls are detected by checking room perimeters rather than empty neighbor gaps
 
 use crate::config::BuildingConfig;
 use crate::geometry::Vec2;
@@ -18,93 +17,83 @@ use crate::tile::{TileGrid, TileType};
 
 /// Converts BSP rooms into a tile grid with walls and floors.
 ///
-/// The wall_offset shrinks each room inward by half a tile, creating space
-/// for walls at the boundaries. Adjacent rooms will have their walls meet
-/// at the shared boundary, forming a single wall thickness visually.
+/// Room bounds are snapped to tile lines. Adjacent rooms that share a BSP
+/// split write to the same perimeter tile, producing one shared wall.
 pub fn rooms_to_tile_grid(rooms: &[Room], config: &BuildingConfig) -> TileGrid {
     let tiles_x = config.tiles_x();
     let tiles_y = config.tiles_y();
     let mut grid = TileGrid::new(tiles_x, tiles_y, config.tile_size, config.footprint.min);
 
-    // Shrink each room inward by half a tile to leave space for walls
-    let wall_offset = config.tile_size * 0.5;
-
     for room in rooms {
-        flood_room_with_offset(&mut grid, room, config, wall_offset);
+        mark_room_perimeter(&mut grid, room, config);
     }
 
-    // Place walls at the boundary between floor and empty tiles
-    mark_boundary_walls(&mut grid);
+    for room in rooms {
+        fill_room_interior(&mut grid, room, config);
+    }
+
+    mark_wall_corners(&mut grid);
 
     grid
 }
 
-/// Fills a room's interior with Floor tiles, offset inward from the room bounds.
-///
-/// The offset ensures walls can be placed at the room boundary without
-/// overlapping the floor. The room bounds are in world coordinates,
-/// converted to tile coordinates with the offset applied.
-fn flood_room_with_offset(grid: &mut TileGrid, room: &Room, config: &BuildingConfig, offset: f32) {
-    // Convert world coordinates to tile indices, applying the inward offset
-    let min_x = ((room.bounds.min.x - config.footprint.min.x + offset) / config.tile_size).ceil() as usize;
-    let min_y = ((room.bounds.min.y - config.footprint.min.y + offset) / config.tile_size).ceil() as usize;
-    let max_x = ((room.bounds.max.x - config.footprint.min.x - offset) / config.tile_size).floor() as usize;
-    let max_y = ((room.bounds.max.y - config.footprint.min.y - offset) / config.tile_size).floor() as usize;
+fn room_tile_bounds(
+    grid: &TileGrid,
+    room: &Room,
+    config: &BuildingConfig,
+) -> (usize, usize, usize, usize) {
+    let min_x = world_to_grid_line(room.bounds.min.x, config.footprint.min.x, config.tile_size)
+        .min(grid.width.saturating_sub(1));
+    let min_y = world_to_grid_line(room.bounds.min.y, config.footprint.min.y, config.tile_size)
+        .min(grid.height.saturating_sub(1));
+    let max_x = world_to_grid_line(room.bounds.max.x, config.footprint.min.x, config.tile_size)
+        .saturating_sub(1)
+        .min(grid.width.saturating_sub(1));
+    let max_y = world_to_grid_line(room.bounds.max.y, config.footprint.min.y, config.tile_size)
+        .saturating_sub(1)
+        .min(grid.height.saturating_sub(1));
 
-    // Clamp to grid bounds to prevent out-of-bounds access
-    let min_x = min_x.min(grid.width);
-    let min_y = min_y.min(grid.height);
-    let max_x = max_x.min(grid.width).max(min_x);
-    let max_y = max_y.min(grid.height).max(min_y);
+    (min_x, min_y, max_x.max(min_x), max_y.max(min_y))
+}
 
-    // Fill the room interior with floor tiles
-    for y in min_y..max_y {
-        for x in min_x..max_x {
-            grid.set(x, y, TileType::Floor);
+fn world_to_grid_line(value: f32, origin: f32, tile_size: f32) -> usize {
+    ((value - origin) / tile_size).round().max(0.0) as usize
+}
+
+fn mark_room_perimeter(grid: &mut TileGrid, room: &Room, config: &BuildingConfig) {
+    let (min_x, min_y, max_x, max_y) = room_tile_bounds(grid, room, config);
+
+    for x in min_x..=max_x {
+        grid.set(x, min_y, TileType::Wall);
+        grid.set(x, max_y, TileType::Wall);
+    }
+
+    for y in min_y..=max_y {
+        grid.set(min_x, y, TileType::Wall);
+        grid.set(max_x, y, TileType::Wall);
+    }
+}
+
+fn fill_room_interior(grid: &mut TileGrid, room: &Room, config: &BuildingConfig) {
+    let (min_x, min_y, max_x, max_y) = room_tile_bounds(grid, room, config);
+
+    if max_x <= min_x + 1 || max_y <= min_y + 1 {
+        return;
+    }
+
+    for y in (min_y + 1)..max_y {
+        for x in (min_x + 1)..max_x {
+            if grid.get(x, y) == TileType::Empty {
+                grid.set(x, y, TileType::Floor);
+            }
         }
     }
 }
 
-/// Marks empty tiles adjacent to Floor tiles as Wall tiles.
-///
-/// This uses a two-pass approach:
-/// 1. Collect all wall positions (empty tiles next to floor)
-/// 2. Mark those positions as walls
-///
-/// The deduplication step ensures we don't process the same tile twice
-/// when multiple floor tiles share the same empty neighbor.
-fn mark_boundary_walls(grid: &mut TileGrid) {
+fn mark_wall_corners(grid: &mut TileGrid) {
     let width = grid.width;
     let height = grid.height;
-    let mut wall_positions = Vec::new();
 
-    // Pass 1: Find all empty tiles adjacent to floor tiles (4-connected)
-    for y in 0..height {
-        for x in 0..width {
-            if grid.get(x, y) == TileType::Floor {
-                let neighbors = grid.neighbors(x, y);
-                for (nx, ny, tile) in neighbors {
-                    if tile == TileType::Empty {
-                        wall_positions.push((nx, ny));
-                    }
-                }
-            }
-        }
-    }
-
-    // Deduplicate to avoid processing the same tile multiple times
-    wall_positions.sort();
-    wall_positions.dedup();
-
-    // Pass 2: Mark wall positions
-    for (x, y) in wall_positions {
-        if grid.get(x, y) == TileType::Empty {
-            grid.set(x, y, TileType::Wall);
-        }
-    }
-
-    // Pass 3: Identify and mark corner tiles
-    // A corner is a wall tile that has floor diagonally but not adjacently
     for y in 0..height {
         for x in 0..width {
             if grid.get(x, y) == TileType::Wall && is_corner(grid, x, y) {
@@ -117,24 +106,11 @@ fn mark_boundary_walls(grid: &mut TileGrid) {
 /// Determines if a wall tile is a corner piece.
 ///
 /// A corner is defined as a wall tile where:
-/// - At least one diagonal neighbor is Floor
-/// - No adjacent (4-connected) neighbor is Floor
+/// - Is one of the footprint's outer corners
 ///
 /// This identifies walls at building corners where two walls meet at 90 degrees.
 fn is_corner(grid: &TileGrid, x: usize, y: usize) -> bool {
-    // Check diagonal neighbors for floor
-    let has_floor_diag = (x > 0 && y > 0 && grid.get(x - 1, y - 1) == TileType::Floor)
-        || (x > 0 && y < grid.height - 1 && grid.get(x - 1, y + 1) == TileType::Floor)
-        || (x < grid.width - 1 && y > 0 && grid.get(x + 1, y - 1) == TileType::Floor)
-        || (x < grid.width - 1 && y < grid.height - 1 && grid.get(x + 1, y + 1) == TileType::Floor);
-
-    // Check adjacent neighbors for floor
-    let has_floor_adj = (x > 0 && grid.get(x - 1, y) == TileType::Floor)
-        || (x < grid.width - 1 && grid.get(x + 1, y) == TileType::Floor)
-        || (y > 0 && grid.get(x, y - 1) == TileType::Floor)
-        || (y < grid.height - 1 && grid.get(x, y + 1) == TileType::Floor);
-
-    has_floor_diag && !has_floor_adj
+    (x == 0 || x == grid.width - 1) && (y == 0 || y == grid.height - 1)
 }
 
 /// Converts wall tiles into Wall structs for the building layout.
