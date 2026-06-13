@@ -1,19 +1,21 @@
 use bevy::prelude::*;
 use bevy::camera::ScalingMode;
 
+use super::camera_config::CameraConfig;
+
 #[derive(Component)]
 pub struct MainCamera;
 
-pub fn spawn_camera(mut commands: Commands) {
+pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
     commands.spawn((
         MainCamera,
         Camera3d::default(),
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::FixedVertical {
-                viewport_height: 5.0,
+                viewport_height: config.viewport_height,
             },
             ..OrthographicProjection::default_3d()
         }),
-        Transform::from_xyz(10.0, 10.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_translation(config.position).looking_at(config.target, Vec3::Y),
     ));
 }
