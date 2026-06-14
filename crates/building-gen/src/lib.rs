@@ -152,6 +152,19 @@ pub fn floor_quad_indices() -> Vec<u32> {
     mesh::floor_quad_indices()
 }
 
+/// Generates a complete merged building mesh from the tile grid.
+///
+/// Returns a `BuildingMesh` with separate `MeshData` per material category
+/// (walls, floors, roof, doors, windows). Each category can be turned into
+/// a single Bevy Mesh and spawned as one entity.
+pub fn generate_building_mesh(
+    grid: &tile::TileGrid,
+    config: &config::BuildingConfig,
+    roof: &layout::RoofGeometry,
+) -> mesh::BuildingMesh {
+    mesh::generate_building_mesh(grid, config, roof)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
