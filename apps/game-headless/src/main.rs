@@ -151,6 +151,11 @@ fn generate_building(
         bmesh.door_mesh.indices.len() / 3
     );
     println!(
+        "  opening trim: {} verts, {} tris",
+        bmesh.opening_trim_mesh.vertices.len(),
+        bmesh.opening_trim_mesh.indices.len() / 3
+    );
+    println!(
         "  window: {} verts, {} tris",
         bmesh.window_mesh.vertices.len(),
         bmesh.window_mesh.indices.len() / 3
@@ -262,6 +267,19 @@ fn generate_building(
             })),
             Transform::default(),
             Name::new("Doors"),
+        ));
+    }
+
+    if !bmesh.opening_trim_mesh.is_empty() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&bmesh.opening_trim_mesh))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.18, 0.16, 0.13),
+                cull_mode: None,
+                ..default()
+            })),
+            Transform::default(),
+            Name::new("Opening Trim"),
         ));
     }
 
