@@ -12,7 +12,7 @@ use building_gen::tile_converter::classify_wall_tiles;
 use game_core::plugins::GamePlugin;
 use std::time::Duration;
 
-const SHOW_ROOF: bool = false;
+const SHOW_ROOF: bool = true;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
