@@ -45,6 +45,23 @@ pub fn spawn_building_on_command(
 
     let mut entities = Vec::new();
 
+    if !bmesh.foundation_mesh.is_empty() {
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.42, 0.42, 0.38),
+                        perceptual_roughness: 0.95,
+                        ..default()
+                    })),
+                    Transform::default(),
+                    Name::new("Foundation"),
+                ))
+                .id(),
+        );
+    }
+
     if !bmesh.wall_mesh.is_empty() {
         entities.push(
             commands

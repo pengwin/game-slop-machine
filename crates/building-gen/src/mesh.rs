@@ -215,6 +215,7 @@ impl MeshData {
 /// Complete building mesh split by material.
 #[derive(Debug, Clone, Default)]
 pub struct BuildingMesh {
+    pub foundation_mesh: MeshData,
     pub wall_mesh: MeshData,
     pub wall_top_mesh: MeshData,
     pub exterior_wall_mesh: MeshData,
@@ -238,6 +239,7 @@ pub fn generate_building_mesh(
 ) -> BuildingMesh {
     let wall_meshes = generate_wall_meshes(grid, config);
     BuildingMesh {
+        foundation_mesh: generate_foundation_mesh(config),
         wall_mesh: wall_meshes.wall,
         wall_top_mesh: wall_meshes.top,
         exterior_wall_mesh: wall_meshes.exterior,
@@ -377,7 +379,10 @@ fn interior_connector_boxes(
     let cutout = opening_cutout(wall.opening);
 
     boxes.push(WallBox {
-        bounds: ([min_x, 0.0, min_z], [max_x, config.wall_height, max_z]),
+        bounds: (
+            [min_x, building_base_y(config), min_z],
+            [max_x, building_top_y(config), max_z],
+        ),
         axis: WallAxis::Both,
         exterior_class: exterior_face_class(wall),
         cutout: None,
@@ -385,8 +390,8 @@ fn interior_connector_boxes(
 
     if dirs.left && tile_min_x < min_x {
         boxes.push(connector_wall_box(
-            [tile_min_x, 0.0, min_z],
-            [min_x, config.wall_height, max_z],
+            [tile_min_x, building_base_y(config), min_z],
+            [min_x, building_top_y(config), max_z],
             WallAxis::X,
             wall,
             cutout,
@@ -394,8 +399,8 @@ fn interior_connector_boxes(
     }
     if dirs.right && max_x < tile_max_x {
         boxes.push(connector_wall_box(
-            [max_x, 0.0, min_z],
-            [tile_max_x, config.wall_height, max_z],
+            [max_x, building_base_y(config), min_z],
+            [tile_max_x, building_top_y(config), max_z],
             WallAxis::X,
             wall,
             cutout,
@@ -403,8 +408,8 @@ fn interior_connector_boxes(
     }
     if dirs.bottom && tile_min_z < min_z {
         boxes.push(connector_wall_box(
-            [min_x, 0.0, tile_min_z],
-            [max_x, config.wall_height, min_z],
+            [min_x, building_base_y(config), tile_min_z],
+            [max_x, building_top_y(config), min_z],
             WallAxis::Z,
             wall,
             cutout,
@@ -412,8 +417,8 @@ fn interior_connector_boxes(
     }
     if dirs.top && max_z < tile_max_z {
         boxes.push(connector_wall_box(
-            [min_x, 0.0, max_z],
-            [max_x, config.wall_height, tile_max_z],
+            [min_x, building_base_y(config), max_z],
+            [max_x, building_top_y(config), tile_max_z],
             WallAxis::Z,
             wall,
             cutout,
@@ -590,7 +595,18 @@ fn wall_bounds_for_tile(
         }
     };
 
-    ([min_x, 0.0, min_z], [max_x, config.wall_height, max_z])
+    (
+        [min_x, building_base_y(config), min_z],
+        [max_x, building_top_y(config), max_z],
+    )
+}
+
+fn building_base_y(config: &BuildingConfig) -> f32 {
+    config.foundation_height.max(0.0)
+}
+
+fn building_top_y(config: &BuildingConfig) -> f32 {
+    building_base_y(config) + config.wall_height
 }
 
 fn tile_xz_bounds(
@@ -829,18 +845,158 @@ fn append_wall_sub_faces(
 }
 
 // ---------------------------------------------------------------------------
-// Floor mesh
+// Foundation and floor mesh
 // ---------------------------------------------------------------------------
+
+fn generate_foundation_mesh(config: &BuildingConfig) -> MeshData {
+    let mut mesh = MeshData::default();
+    let width = config.foundation_width.max(0.0);
+    if width <= f32::EPSILON {
+        return mesh;
+    }
+
+    let offset = config.foundation_wall_offset.max(0.0);
+    let top_y = config.foundation_height.max(0.0);
+    let bottom_y = 0.0;
+    let inner_min_x = config.footprint.min.x - offset;
+    let inner_max_x = config.footprint.max.x + offset;
+    let inner_min_z = config.footprint.min.y - offset;
+    let inner_max_z = config.footprint.max.y + offset;
+    let outer_min_x = inner_min_x - width;
+    let outer_max_x = inner_max_x + width;
+    let outer_min_z = inner_min_z - width;
+    let outer_max_z = inner_max_z + width;
+
+    append_foundation_quad(
+        &mut mesh,
+        outer_min_x,
+        outer_max_x,
+        outer_min_z,
+        inner_min_z,
+        top_y,
+    );
+    append_foundation_quad(
+        &mut mesh,
+        outer_min_x,
+        outer_max_x,
+        inner_max_z,
+        outer_max_z,
+        top_y,
+    );
+    append_foundation_quad(
+        &mut mesh,
+        outer_min_x,
+        inner_min_x,
+        inner_min_z,
+        inner_max_z,
+        top_y,
+    );
+    append_foundation_quad(
+        &mut mesh,
+        inner_max_x,
+        outer_max_x,
+        inner_min_z,
+        inner_max_z,
+        top_y,
+    );
+    append_foundation_sides(
+        &mut mesh,
+        outer_min_x,
+        outer_max_x,
+        outer_min_z,
+        outer_max_z,
+        bottom_y,
+        top_y,
+    );
+
+    mesh
+}
+
+fn append_foundation_quad(
+    mesh: &mut MeshData,
+    min_x: f32,
+    max_x: f32,
+    min_z: f32,
+    max_z: f32,
+    y: f32,
+) {
+    if max_x <= min_x || max_z <= min_z {
+        return;
+    }
+
+    append_quad(
+        mesh,
+        [min_x, y, max_z],
+        [max_x, y, max_z],
+        [min_x, y, min_z],
+        [max_x, y, min_z],
+        [0.0, 1.0, 0.0],
+        [min_x, min_z],
+        [max_x, max_z],
+    );
+}
+
+fn append_foundation_sides(
+    mesh: &mut MeshData,
+    min_x: f32,
+    max_x: f32,
+    min_z: f32,
+    max_z: f32,
+    bottom_y: f32,
+    top_y: f32,
+) {
+    append_quad(
+        mesh,
+        [min_x, top_y, min_z],
+        [max_x, top_y, min_z],
+        [min_x, bottom_y, min_z],
+        [max_x, bottom_y, min_z],
+        [0.0, 0.0, -1.0],
+        [min_x, bottom_y],
+        [max_x, top_y],
+    );
+    append_quad(
+        mesh,
+        [max_x, top_y, max_z],
+        [min_x, top_y, max_z],
+        [max_x, bottom_y, max_z],
+        [min_x, bottom_y, max_z],
+        [0.0, 0.0, 1.0],
+        [min_x, bottom_y],
+        [max_x, top_y],
+    );
+    append_quad(
+        mesh,
+        [min_x, top_y, max_z],
+        [min_x, top_y, min_z],
+        [min_x, bottom_y, max_z],
+        [min_x, bottom_y, min_z],
+        [-1.0, 0.0, 0.0],
+        [min_z, bottom_y],
+        [max_z, top_y],
+    );
+    append_quad(
+        mesh,
+        [max_x, top_y, min_z],
+        [max_x, top_y, max_z],
+        [max_x, bottom_y, min_z],
+        [max_x, bottom_y, max_z],
+        [1.0, 0.0, 0.0],
+        [min_z, bottom_y],
+        [max_z, top_y],
+    );
+}
 
 fn generate_floor_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
     let mut mesh = MeshData::default();
     let ts = config.tile_size;
     let origin_x = grid.origin.x;
     let origin_z = grid.origin.y;
+    let floor_y = building_base_y(config);
 
     for y in 0..grid.height {
         for x in 0..grid.width {
-            if grid.get(x, y) != TileType::Floor {
+            if !needs_floor_surface(grid.get(x, y)) {
                 continue;
             }
             let x0 = origin_x + x as f32 * ts;
@@ -850,10 +1006,10 @@ fn generate_floor_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
 
             append_quad(
                 &mut mesh,
-                [x0, 0.0, z1],
-                [x1, 0.0, z1],
-                [x0, 0.0, z0],
-                [x1, 0.0, z0],
+                [x0, floor_y, z1],
+                [x1, floor_y, z1],
+                [x0, floor_y, z0],
+                [x1, floor_y, z0],
                 [0.0, 1.0, 0.0],
                 [x0, z0],
                 [x1, z1],
@@ -862,6 +1018,14 @@ fn generate_floor_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
     }
 
     mesh
+}
+
+fn needs_floor_surface(tile: TileType) -> bool {
+    match tile {
+        TileType::Floor => true,
+        TileType::Wall(wall) => wall.kind == WallKind::Interior,
+        TileType::Empty => false,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -883,7 +1047,7 @@ fn generate_door_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
             let bounds = wall_bounds_for_tile(grid, x, y, wall, config);
             let [min_x, min_y, min_z] = bounds.0;
             let [max_x, _max_y, max_z] = bounds.1;
-            let h = config.door_height;
+            let h = min_y + config.door_height;
 
             match wall.main_axis() {
                 WallAxis::Z => {
@@ -979,7 +1143,7 @@ fn generate_window_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
             let bounds = wall_bounds_for_tile(grid, x, y, wall, config);
             let [min_x, _min_y, min_z] = bounds.0;
             let [max_x, _max_y, max_z] = bounds.1;
-            let sill = config.window_sill_height;
+            let sill = building_base_y(config) + config.window_sill_height;
             let wh = config.window_height;
 
             match wall.main_axis() {
@@ -1059,7 +1223,7 @@ fn generate_window_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
 fn generate_roof_mesh(bounds: Rect, _roof: &RoofGeometry, config: &BuildingConfig) -> MeshData {
     let mut mesh = MeshData::default();
     let overhang = config.roof_overhang;
-    let wall_h = config.wall_height;
+    let wall_h = building_top_y(config);
 
     let min_x = bounds.min.x - overhang;
     let max_x = bounds.max.x + overhang;
@@ -1241,6 +1405,25 @@ mod tests {
     }
 
     #[test]
+    fn test_foundation_width_controls_mesh() {
+        let config = BuildingConfig {
+            foundation_width: 0.75,
+            foundation_wall_offset: 0.25,
+            ..Default::default()
+        };
+        let mesh = generate_foundation_mesh(&config);
+
+        assert_eq!(mesh.vertices.len(), 32);
+        assert_eq!(mesh.indices.len(), 48);
+
+        let disabled = BuildingConfig {
+            foundation_width: 0.0,
+            ..config
+        };
+        assert!(generate_foundation_mesh(&disabled).is_empty());
+    }
+
+    #[test]
     fn test_tile_scale_wall() {
         let config = BuildingConfig::default();
         let (x, y, z) = tile_scale(
@@ -1282,6 +1465,10 @@ mod tests {
 
         assert!(!bmesh.wall_mesh.is_empty(), "wall mesh should not be empty");
         assert!(
+            !bmesh.foundation_mesh.is_empty(),
+            "foundation mesh should not be empty"
+        );
+        assert!(
             !bmesh.wall_top_mesh.is_empty(),
             "wall top mesh should not be empty"
         );
@@ -1312,6 +1499,7 @@ mod tests {
         let bmesh = generate_building_mesh(&layout.tile_grid, &config, &roof);
 
         for (name, data) in [
+            ("foundation", &bmesh.foundation_mesh),
             ("wall", &bmesh.wall_mesh),
             ("wall_top", &bmesh.wall_top_mesh),
             ("exterior_wall", &bmesh.exterior_wall_mesh),

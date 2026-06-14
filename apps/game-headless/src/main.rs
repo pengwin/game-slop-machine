@@ -106,6 +106,11 @@ fn generate_building(
 
     println!("Mesh stats:");
     println!(
+        "  foundation: {} verts, {} tris",
+        bmesh.foundation_mesh.vertices.len(),
+        bmesh.foundation_mesh.indices.len() / 3
+    );
+    println!(
         "  wall:   {} verts, {} tris",
         bmesh.wall_mesh.vertices.len(),
         bmesh.wall_mesh.indices.len() / 3
@@ -150,6 +155,19 @@ fn generate_building(
         bmesh.window_mesh.vertices.len(),
         bmesh.window_mesh.indices.len() / 3
     );
+
+    if !bmesh.foundation_mesh.is_empty() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.42, 0.42, 0.38),
+                perceptual_roughness: 0.95,
+                ..default()
+            })),
+            Transform::default(),
+            Name::new("Foundation"),
+        ));
+    }
 
     if !bmesh.wall_mesh.is_empty() {
         commands.spawn((
