@@ -169,6 +169,23 @@ pub fn spawn_building_on_command(
         );
     }
 
+    if config.render_roof && !bmesh.gable_mesh.is_empty() {
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&bmesh.gable_mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.92, 0.88, 0.68),
+                        cull_mode: None,
+                        ..default()
+                    })),
+                    Transform::default(),
+                    Name::new("Gables"),
+                ))
+                .id(),
+        );
+    }
+
     if !bmesh.door_mesh.is_empty() {
         entities.push(
             commands

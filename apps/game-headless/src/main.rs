@@ -62,7 +62,7 @@ fn generate_building(
 ) {
     let config = config_for_fixture(&fixture.0);
     let grid = match fixture.0.as_str() {
-        "procedural" => building_gen::generate_layout(&config, 42).tile_grid,
+        "procedural" | "with-roof" => building_gen::generate_layout(&config, 42).tile_grid,
         "four-doors" => {
             build_perimeter_opening_grid(&config, WallOpening::Door { render_panel: true })
         }
@@ -144,6 +144,11 @@ fn generate_building(
         "  roof:   {} verts, {} tris",
         bmesh.roof_mesh.vertices.len(),
         bmesh.roof_mesh.indices.len() / 3
+    );
+    println!(
+        "  gable:  {} verts, {} tris",
+        bmesh.gable_mesh.vertices.len(),
+        bmesh.gable_mesh.indices.len() / 3
     );
     println!(
         "  door:   {} verts, {} tris",
@@ -257,6 +262,19 @@ fn generate_building(
         ));
     }
 
+    if config.render_roof && !bmesh.gable_mesh.is_empty() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&bmesh.gable_mesh))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.92, 0.88, 0.68),
+                cull_mode: None,
+                ..default()
+            })),
+            Transform::default(),
+            Name::new("Gables"),
+        ));
+    }
+
     if !bmesh.door_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.door_mesh))),
@@ -301,10 +319,13 @@ fn generate_building(
 }
 
 fn config_for_fixture(fixture: &str) -> BuildingConfig {
-    if fixture == "procedural" {
-        BuildingConfig::default()
-    } else {
-        BuildingConfig {
+    match fixture {
+        "procedural" => BuildingConfig::default(),
+        "with-roof" => BuildingConfig {
+            render_roof: true,
+            ..Default::default()
+        },
+        _ => BuildingConfig {
             footprint: Rect::new(0.0, 0.0, 8.0, 6.0),
             tile_size: 1.0,
             wall_thickness: 1.0,
@@ -312,7 +333,7 @@ fn config_for_fixture(fixture: &str) -> BuildingConfig {
             wall_height: 3.0,
             door_width: 0.8,
             ..Default::default()
-        }
+        },
     }
 }
 
