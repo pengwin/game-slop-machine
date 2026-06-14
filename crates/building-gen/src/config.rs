@@ -25,6 +25,7 @@ pub struct BuildingConfig {
     pub interior_door_render_panel: bool,
     pub exterior_window_render_glass: bool,
     pub interior_window_render_glass: bool,
+    pub render_roof: bool,
 }
 
 impl Default for BuildingConfig {
@@ -53,6 +54,7 @@ impl Default for BuildingConfig {
             interior_door_render_panel: false,
             exterior_window_render_glass: true,
             interior_window_render_glass: false,
+            render_roof: false,
         }
     }
 }

@@ -12,7 +12,7 @@ use building_gen::tile_converter::classify_wall_tiles;
 use game_core::plugins::GamePlugin;
 use std::time::Duration;
 
-const SHOW_ROOF: bool = true;
+
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -248,7 +248,7 @@ fn generate_building(
         ));
     }
 
-    if SHOW_ROOF && !bmesh.roof_mesh.is_empty() {
+    if config.render_roof && !bmesh.roof_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.roof_mesh))),
             MeshMaterial3d(materials.add(Color::srgb(0.55, 0.35, 0.2))),

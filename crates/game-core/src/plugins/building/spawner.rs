@@ -156,7 +156,7 @@ pub fn spawn_building_on_command(
         );
     }
 
-    if !bmesh.roof_mesh.is_empty() {
+    if config.render_roof && !bmesh.roof_mesh.is_empty() {
         entities.push(
             commands
                 .spawn((
