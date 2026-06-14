@@ -31,29 +31,37 @@ fn main() {
     println!("==================");
     println!(
         "Footprint: {}x{}, Seed: {}, Rooms: {}",
-        width, height, seed, layout.rooms.len()
+        width,
+        height,
+        seed,
+        layout.rooms.len()
     );
     println!();
 
     println!("Tile Statistics:");
-    println!("  Floor:    {}", layout.tile_grid.count_tiles(TileType::Floor));
-    println!("  Wall:     {}", layout.tile_grid.count_tiles(TileType::Wall));
-    println!("  Corner:   {}", layout.tile_grid.count_tiles(TileType::WallCorner));
-    println!("  Doorway:  {}", layout.tile_grid.count_tiles(TileType::Doorway));
-    println!("  Door:     {}", layout.tile_grid.count_tiles(TileType::Door));
-    println!("  Window:   {}", layout.tile_grid.count_tiles(TileType::Window));
-    println!("  Empty:    {}", layout.tile_grid.count_tiles(TileType::Empty));
+    println!(
+        "  Floor:    {}",
+        layout.tile_grid.count_tiles(TileType::Floor)
+    );
+    println!(
+        "  Wall:     {}",
+        layout.tile_grid.count_matching_tiles(TileType::is_wall)
+    );
+    println!(
+        "  Opening:  {}",
+        layout.tile_grid.count_matching_tiles(TileType::is_opening)
+    );
+    println!(
+        "  Empty:    {}",
+        layout.tile_grid.count_tiles(TileType::Empty)
+    );
     println!();
 
     println!("Rooms:");
     for room in &layout.rooms {
         println!(
             "  Room {:?}: ({:.1}, {:.1}) to ({:.1}, {:.1})",
-            room.id,
-            room.bounds.min.x,
-            room.bounds.min.y,
-            room.bounds.max.x,
-            room.bounds.max.y
+            room.id, room.bounds.min.x, room.bounds.min.y, room.bounds.max.x, room.bounds.max.y
         );
     }
     println!();
@@ -65,16 +73,7 @@ fn main() {
         print!("{:3} ", y);
         for x in 0..layout.tile_grid.width {
             let tile = layout.tile_grid.get(x, y);
-            let c = match tile {
-                TileType::Empty => '.',
-                TileType::Floor => ' ',
-                TileType::Wall => '#',
-                TileType::WallCorner => '+',
-                TileType::Doorway => 'D',
-                TileType::Door => 'd',
-                TileType::Window => 'w',
-            };
-            print!("{}", c);
+            print!("{}", tile.ascii_char());
         }
         println!();
     }
@@ -88,9 +87,10 @@ fn main() {
     println!();
     println!("Legend:");
     println!("  . = Empty (outside)");
-    println!("  # = Wall");
+    println!("  -/| = Wall");
     println!("  + = Wall corner");
-    println!("  D = Doorway (between rooms)");
+    println!("  T = T-junction");
+    println!("  D = Open doorway");
     println!("  d = Door (exterior)");
     println!("  w = Window");
     println!("    = Floor (inside room)");

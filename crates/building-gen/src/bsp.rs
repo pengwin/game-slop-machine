@@ -22,9 +22,7 @@ use crate::random::SeededRng;
 #[derive(Debug, Clone)]
 pub enum BspNode {
     /// A leaf node containing a single room
-    Leaf {
-        room: Room,
-    },
+    Leaf { room: Room },
     /// An internal node representing a split of the region
     Internal {
         axis: Axis,

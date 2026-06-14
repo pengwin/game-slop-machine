@@ -11,7 +11,10 @@
 use crate::config::BuildingConfig;
 use crate::geometry::Rect;
 use crate::layout::RoofGeometry;
-use crate::tile::{TileGrid, TileType};
+use crate::tile::{
+    CardinalDir, CornerDir, TJunctionDir, TileGrid, TileType, WallAxis, WallKind, WallOpening,
+    WallShape, WallTile,
+};
 
 /// A unit cube mesh (1x1x1) centered at origin.
 ///
@@ -161,14 +164,11 @@ pub fn tile_scale(tile_type: TileType, config: &BuildingConfig) -> (f32, f32, f3
     let t = config.wall_thickness;
 
     match tile_type {
-        // Walls: full tile width, wall height, wall thickness
-        TileType::Wall => (s, h, t),
-        // Corner: full tile in all dimensions
-        TileType::WallCorner => (s, h, s),
-        // Doorway tiles are logical openings and should not be rendered as walls.
-        TileType::Doorway => (0.0, 0.0, 0.0),
-        TileType::Door => (s, config.door_height, t),
-        TileType::Window => (s, config.window_height, t),
+        TileType::Wall(wall) => match wall.shape {
+            WallShape::Straight(CardinalDir::Left | CardinalDir::Right) => (t, h, s),
+            WallShape::Straight(CardinalDir::Bottom | CardinalDir::Top) => (s, h, t),
+            WallShape::Corner(_) | WallShape::TJunction(_) | WallShape::Cross => (s, h, s),
+        },
         // Floor: full tile width, small height for visibility, full tile depth
         TileType::Floor => (s, 0.1, s),
         // Empty: no scale (shouldn't be rendered)
@@ -184,11 +184,11 @@ pub fn tile_scale(tile_type: TileType, config: &BuildingConfig) -> (f32, f32, f3
 pub fn tile_color(tile_type: TileType) -> (f32, f32, f32) {
     match tile_type {
         TileType::Floor => (0.6, 0.6, 0.6),
-        TileType::Wall => (0.8, 0.8, 0.8),
-        TileType::WallCorner => (0.7, 0.7, 0.7),
-        TileType::Doorway => (0.4, 0.2, 0.0),
-        TileType::Door => (0.4, 0.2, 0.0),
-        TileType::Window => (0.5, 0.7, 1.0),
+        TileType::Wall(wall) => match wall.opening {
+            Some(WallOpening::Door { .. } | WallOpening::Doorway) => (0.4, 0.2, 0.0),
+            Some(WallOpening::Window { .. }) => (0.5, 0.7, 1.0),
+            None => (0.8, 0.8, 0.8),
+        },
         TileType::Empty => (0.0, 0.0, 0.0),
     }
 }
@@ -216,6 +216,10 @@ impl MeshData {
 #[derive(Debug, Clone, Default)]
 pub struct BuildingMesh {
     pub wall_mesh: MeshData,
+    pub wall_top_mesh: MeshData,
+    pub exterior_wall_mesh: MeshData,
+    pub exterior_corner_mesh: MeshData,
+    pub exterior_t_junction_mesh: MeshData,
     pub floor_mesh: MeshData,
     pub roof_mesh: MeshData,
     pub door_mesh: MeshData,
@@ -232,8 +236,13 @@ pub fn generate_building_mesh(
     config: &BuildingConfig,
     roof: &RoofGeometry,
 ) -> BuildingMesh {
+    let wall_meshes = generate_wall_meshes(grid, config);
     BuildingMesh {
-        wall_mesh: generate_wall_mesh(grid, config),
+        wall_mesh: wall_meshes.wall,
+        wall_top_mesh: wall_meshes.top,
+        exterior_wall_mesh: wall_meshes.exterior,
+        exterior_corner_mesh: wall_meshes.exterior_corner,
+        exterior_t_junction_mesh: wall_meshes.exterior_t_junction,
         floor_mesh: generate_floor_mesh(grid, config),
         roof_mesh: generate_roof_mesh(config.footprint, roof, config),
         door_mesh: generate_door_mesh(grid, config),
@@ -245,75 +254,68 @@ pub fn generate_building_mesh(
 // Wall mesh
 // ---------------------------------------------------------------------------
 
-fn generate_wall_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
-    let mut mesh = MeshData::default();
+#[derive(Debug, Clone, Default)]
+struct WallMeshes {
+    wall: MeshData,
+    top: MeshData,
+    exterior: MeshData,
+    exterior_corner: MeshData,
+    exterior_t_junction: MeshData,
+}
+
+fn generate_wall_meshes(grid: &TileGrid, config: &BuildingConfig) -> WallMeshes {
+    let mut wall_mesh = MeshData::default();
+    let mut wall_top_mesh = MeshData::default();
+    let mut exterior_wall_mesh = MeshData::default();
+    let mut exterior_corner_mesh = MeshData::default();
+    let mut exterior_t_junction_mesh = MeshData::default();
 
     for y in 0..grid.height {
         for x in 0..grid.width {
-            let tile = grid.get(x, y);
-            if !matches!(
-                tile,
-                TileType::Wall | TileType::WallCorner | TileType::Door | TileType::Window
-            ) {
+            let TileType::Wall(wall) = grid.get(x, y) else {
                 continue;
+            };
+            let exterior_faces = exterior_face_dirs(wall);
+            for wall_box in wall_boxes(grid, x, y, wall, config) {
+                append_wall_box(
+                    &mut wall_mesh,
+                    &mut wall_top_mesh,
+                    &mut exterior_wall_mesh,
+                    &mut exterior_corner_mesh,
+                    &mut exterior_t_junction_mesh,
+                    wall_box.bounds,
+                    wall_box.axis,
+                    wall_box.exterior_class,
+                    &exterior_faces,
+                    config,
+                    wall_box.cutout,
+                );
             }
-
-            let (bounds, _faces_dir) = wall_bounds(grid, x, y, config);
-            let along_z = grid.wall_runs_along_z(x, y);
-
-            // Check each cardinal direction.
-            for dir in [
-                WallFaceDir::NegX,
-                WallFaceDir::PosX,
-                WallFaceDir::NegZ,
-                WallFaceDir::PosZ,
-            ] {
-                let (dx, dy) = dir.to_offset();
-                let neighbor = grid.get_neighbor(x, y, dx, dy);
-                let face_cutout = wall_tile_cutout(tile, along_z, dir);
-
-                match neighbor {
-                    Some(TileType::Floor | TileType::Doorway) => {
-                        append_wall_face(&mut mesh, bounds, dir, config, face_cutout);
-                    }
-                    Some(TileType::Door) => {
-                        let cutout =
-                            face_cutout.or_else(|| wall_tile_cutout(TileType::Door, along_z, dir));
-                        append_wall_face(&mut mesh, bounds, dir, config, cutout);
-                    }
-                    Some(TileType::Window) => {
-                        let cutout = face_cutout
-                            .or_else(|| wall_tile_cutout(TileType::Window, along_z, dir));
-                        append_wall_face(&mut mesh, bounds, dir, config, cutout);
-                    }
-                    // Empty or OOB: exterior face — cutout if current tile is Door/Window.
-                    None | Some(TileType::Empty) => {
-                        append_wall_face(&mut mesh, bounds, dir, config, face_cutout);
-                    }
-                    Some(TileType::Wall | TileType::WallCorner) => {}
-                }
-            }
-
-            // Top face (always visible).
-            append_wall_face(&mut mesh, bounds, WallFaceDir::PosY, config, None);
         }
     }
 
-    mesh
+    WallMeshes {
+        wall: wall_mesh,
+        top: wall_top_mesh,
+        exterior: exterior_wall_mesh,
+        exterior_corner: exterior_corner_mesh,
+        exterior_t_junction: exterior_t_junction_mesh,
+    }
 }
 
-fn wall_tile_cutout(tile: TileType, along_z: bool, dir: WallFaceDir) -> Option<WallCutout> {
-    let is_wall_face = if along_z {
-        matches!(dir, WallFaceDir::NegX | WallFaceDir::PosX)
-    } else {
-        matches!(dir, WallFaceDir::NegZ | WallFaceDir::PosZ)
-    };
+#[derive(Debug, Clone, Copy)]
+struct WallBox {
+    bounds: ([f32; 3], [f32; 3]),
+    axis: WallAxis,
+    exterior_class: ExteriorFaceClass,
+    cutout: Option<WallCutout>,
+}
 
-    match (tile, is_wall_face) {
-        (TileType::Door, true) => Some(WallCutout::Door),
-        (TileType::Window, true) => Some(WallCutout::Window),
-        _ => None,
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExteriorFaceClass {
+    Straight,
+    Corner,
+    TJunction,
 }
 
 /// Wall face direction.
@@ -326,18 +328,6 @@ enum WallFaceDir {
     PosY,
 }
 
-impl WallFaceDir {
-    fn to_offset(self) -> (i32, i32) {
-        match self {
-            Self::NegX => (-1, 0),
-            Self::PosX => (1, 0),
-            Self::NegZ => (0, -1),
-            Self::PosZ => (0, 1),
-            Self::PosY => (0, 0),
-        }
-    }
-}
-
 /// Type of cutout in a wall face.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WallCutout {
@@ -345,59 +335,324 @@ enum WallCutout {
     Window,
 }
 
-/// Computes the 3D bounding box of a wall tile.
-///
-/// For interior walls (rooms on both sides), the box is centered in the tile.
-/// For exterior walls, the box is aligned to the room-side tile boundary.
-fn wall_bounds(
+fn wall_boxes(
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    wall: WallTile,
+    config: &BuildingConfig,
+) -> Vec<WallBox> {
+    if wall.kind == WallKind::Interior {
+        if let Some(boxes) = interior_connector_boxes(grid, x, y, wall, config) {
+            return boxes;
+        }
+    }
+
+    let bounds = wall_bounds_for_tile(grid, x, y, wall, config);
+    vec![WallBox {
+        bounds,
+        axis: wall.main_axis(),
+        exterior_class: exterior_face_class(wall),
+        cutout: opening_cutout(wall.opening),
+    }]
+}
+
+fn interior_connector_boxes(
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    wall: WallTile,
+    config: &BuildingConfig,
+) -> Option<Vec<WallBox>> {
+    let dirs = occupied_dirs(wall.shape)?;
+    let (tile_min_x, tile_max_x, tile_min_z, tile_max_z) = tile_xz_bounds(grid, x, y, config);
+    let cx = (tile_min_x + tile_max_x) / 2.0;
+    let cz = (tile_min_z + tile_max_z) / 2.0;
+    let half = (config.interior_wall_thickness.min(config.tile_size) / 2.0).max(0.0);
+    let min_x = cx - half;
+    let max_x = cx + half;
+    let min_z = cz - half;
+    let max_z = cz + half;
+    let mut boxes = Vec::new();
+    let cutout = opening_cutout(wall.opening);
+
+    boxes.push(WallBox {
+        bounds: ([min_x, 0.0, min_z], [max_x, config.wall_height, max_z]),
+        axis: WallAxis::Both,
+        exterior_class: exterior_face_class(wall),
+        cutout: None,
+    });
+
+    if dirs.left && tile_min_x < min_x {
+        boxes.push(connector_wall_box(
+            [tile_min_x, 0.0, min_z],
+            [min_x, config.wall_height, max_z],
+            WallAxis::X,
+            wall,
+            cutout,
+        ));
+    }
+    if dirs.right && max_x < tile_max_x {
+        boxes.push(connector_wall_box(
+            [max_x, 0.0, min_z],
+            [tile_max_x, config.wall_height, max_z],
+            WallAxis::X,
+            wall,
+            cutout,
+        ));
+    }
+    if dirs.bottom && tile_min_z < min_z {
+        boxes.push(connector_wall_box(
+            [min_x, 0.0, tile_min_z],
+            [max_x, config.wall_height, min_z],
+            WallAxis::Z,
+            wall,
+            cutout,
+        ));
+    }
+    if dirs.top && max_z < tile_max_z {
+        boxes.push(connector_wall_box(
+            [min_x, 0.0, max_z],
+            [max_x, config.wall_height, tile_max_z],
+            WallAxis::Z,
+            wall,
+            cutout,
+        ));
+    }
+
+    Some(boxes)
+}
+
+fn connector_wall_box(
+    min: [f32; 3],
+    max: [f32; 3],
+    axis: WallAxis,
+    wall: WallTile,
+    cutout: Option<WallCutout>,
+) -> WallBox {
+    WallBox {
+        bounds: (min, max),
+        axis,
+        exterior_class: exterior_face_class(wall),
+        cutout,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OccupiedDirs {
+    left: bool,
+    right: bool,
+    bottom: bool,
+    top: bool,
+}
+
+fn occupied_dirs(shape: WallShape) -> Option<OccupiedDirs> {
+    let dirs = match shape {
+        WallShape::Straight(_) => return None,
+        WallShape::Corner(CornerDir::BottomLeft) => OccupiedDirs {
+            left: true,
+            right: false,
+            bottom: true,
+            top: false,
+        },
+        WallShape::Corner(CornerDir::BottomRight) => OccupiedDirs {
+            left: false,
+            right: true,
+            bottom: true,
+            top: false,
+        },
+        WallShape::Corner(CornerDir::TopLeft) => OccupiedDirs {
+            left: true,
+            right: false,
+            bottom: false,
+            top: true,
+        },
+        WallShape::Corner(CornerDir::TopRight) => OccupiedDirs {
+            left: false,
+            right: true,
+            bottom: false,
+            top: true,
+        },
+        WallShape::TJunction(TJunctionDir::Left) => OccupiedDirs {
+            left: false,
+            right: true,
+            bottom: true,
+            top: true,
+        },
+        WallShape::TJunction(TJunctionDir::Right) => OccupiedDirs {
+            left: true,
+            right: false,
+            bottom: true,
+            top: true,
+        },
+        WallShape::TJunction(TJunctionDir::Bottom) => OccupiedDirs {
+            left: true,
+            right: true,
+            bottom: false,
+            top: true,
+        },
+        WallShape::TJunction(TJunctionDir::Top) => OccupiedDirs {
+            left: true,
+            right: true,
+            bottom: true,
+            top: false,
+        },
+        WallShape::Cross => OccupiedDirs {
+            left: true,
+            right: true,
+            bottom: true,
+            top: true,
+        },
+    };
+    Some(dirs)
+}
+
+fn opening_cutout(opening: Option<WallOpening>) -> Option<WallCutout> {
+    match opening {
+        Some(WallOpening::Door { .. } | WallOpening::Doorway) => Some(WallCutout::Door),
+        Some(WallOpening::Window { .. }) => Some(WallCutout::Window),
+        None => None,
+    }
+}
+
+fn exterior_face_dirs(wall: WallTile) -> Vec<WallFaceDir> {
+    if wall.kind != WallKind::Exterior {
+        return Vec::new();
+    }
+
+    match wall.shape {
+        WallShape::Straight(CardinalDir::Left) => vec![WallFaceDir::NegX],
+        WallShape::Straight(CardinalDir::Right) => vec![WallFaceDir::PosX],
+        WallShape::Straight(CardinalDir::Bottom) => vec![WallFaceDir::NegZ],
+        WallShape::Straight(CardinalDir::Top) => vec![WallFaceDir::PosZ],
+        WallShape::Corner(crate::tile::CornerDir::BottomLeft) => {
+            vec![WallFaceDir::NegX, WallFaceDir::NegZ]
+        }
+        WallShape::Corner(crate::tile::CornerDir::BottomRight) => {
+            vec![WallFaceDir::PosX, WallFaceDir::NegZ]
+        }
+        WallShape::Corner(crate::tile::CornerDir::TopLeft) => {
+            vec![WallFaceDir::NegX, WallFaceDir::PosZ]
+        }
+        WallShape::Corner(crate::tile::CornerDir::TopRight) => {
+            vec![WallFaceDir::PosX, WallFaceDir::PosZ]
+        }
+        WallShape::TJunction(crate::tile::TJunctionDir::Left) => vec![WallFaceDir::NegX],
+        WallShape::TJunction(crate::tile::TJunctionDir::Right) => vec![WallFaceDir::PosX],
+        WallShape::TJunction(crate::tile::TJunctionDir::Bottom) => vec![WallFaceDir::NegZ],
+        WallShape::TJunction(crate::tile::TJunctionDir::Top) => vec![WallFaceDir::PosZ],
+        WallShape::Cross => Vec::new(),
+    }
+}
+
+fn exterior_face_class(wall: WallTile) -> ExteriorFaceClass {
+    match wall.shape {
+        WallShape::Corner(_) => ExteriorFaceClass::Corner,
+        WallShape::TJunction(_) => ExteriorFaceClass::TJunction,
+        WallShape::Straight(_) | WallShape::Cross => ExteriorFaceClass::Straight,
+    }
+}
+
+fn wall_bounds_for_tile(
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    wall: WallTile,
+    config: &BuildingConfig,
+) -> ([f32; 3], [f32; 3]) {
+    let (tile_min_x, tile_max_x, tile_min_z, tile_max_z) = tile_xz_bounds(grid, x, y, config);
+    let ext = config.wall_thickness.min(config.tile_size);
+    let int = config.interior_wall_thickness.min(config.tile_size);
+
+    let (min_x, max_x, min_z, max_z) = match wall.shape {
+        WallShape::Straight(CardinalDir::Left) if wall.kind == WallKind::Exterior => {
+            (tile_min_x, tile_min_x + ext, tile_min_z, tile_max_z)
+        }
+        WallShape::Straight(CardinalDir::Right) if wall.kind == WallKind::Exterior => {
+            (tile_max_x - ext, tile_max_x, tile_min_z, tile_max_z)
+        }
+        WallShape::Straight(CardinalDir::Bottom) if wall.kind == WallKind::Exterior => {
+            (tile_min_x, tile_max_x, tile_min_z, tile_min_z + ext)
+        }
+        WallShape::Straight(CardinalDir::Top) if wall.kind == WallKind::Exterior => {
+            (tile_min_x, tile_max_x, tile_max_z - ext, tile_max_z)
+        }
+        WallShape::Straight(CardinalDir::Left | CardinalDir::Right) => {
+            let cx = (tile_min_x + tile_max_x) / 2.0;
+            (cx - int / 2.0, cx + int / 2.0, tile_min_z, tile_max_z)
+        }
+        WallShape::Straight(CardinalDir::Bottom | CardinalDir::Top) => {
+            let cz = (tile_min_z + tile_max_z) / 2.0;
+            (tile_min_x, tile_max_x, cz - int / 2.0, cz + int / 2.0)
+        }
+        WallShape::Corner(_) | WallShape::TJunction(_) | WallShape::Cross => {
+            (tile_min_x, tile_max_x, tile_min_z, tile_max_z)
+        }
+    };
+
+    ([min_x, 0.0, min_z], [max_x, config.wall_height, max_z])
+}
+
+fn tile_xz_bounds(
     grid: &TileGrid,
     x: usize,
     y: usize,
     config: &BuildingConfig,
-) -> (([f32; 3], [f32; 3]), WallFaceDir) {
-    let t = config.wall_thickness;
+) -> (f32, f32, f32, f32) {
     let ts = config.tile_size;
-    let origin_x = grid.origin.x;
-    let origin_z = grid.origin.y;
+    let min_x = grid.origin.x + x as f32 * ts;
+    let min_z = grid.origin.y + y as f32 * ts;
+    (min_x, min_x + ts, min_z, min_z + ts)
+}
 
-    let tile_min_x = origin_x + x as f32 * ts;
-    let tile_min_z = origin_z + y as f32 * ts;
+fn append_wall_box(
+    wall_mesh: &mut MeshData,
+    wall_top_mesh: &mut MeshData,
+    exterior_wall_mesh: &mut MeshData,
+    exterior_corner_mesh: &mut MeshData,
+    exterior_t_junction_mesh: &mut MeshData,
+    bounds: ([f32; 3], [f32; 3]),
+    axis: WallAxis,
+    exterior_class: ExteriorFaceClass,
+    exterior_faces: &[WallFaceDir],
+    config: &BuildingConfig,
+    cutout: Option<WallCutout>,
+) {
+    let cutout_dirs: &[WallFaceDir] = match axis {
+        WallAxis::X => &[WallFaceDir::NegZ, WallFaceDir::PosZ],
+        WallAxis::Z => &[WallFaceDir::NegX, WallFaceDir::PosX],
+        WallAxis::Both => &[
+            WallFaceDir::NegX,
+            WallFaceDir::PosX,
+            WallFaceDir::NegZ,
+            WallFaceDir::PosZ,
+        ],
+    };
 
-    if grid.wall_runs_along_z(x, y) {
-        // Wall runs along Z, thin in X.
-        let room_left = grid.is_room_neighbor(x, y, -1, 0);
-        let room_right = grid.is_room_neighbor(x, y, 1, 0);
-
-        let (wall_min_x, wall_max_x, face_dir) = if room_left && room_right {
-            // Interior wall: center in tile.
-            let center = tile_min_x + ts / 2.0;
-            (center - t / 2.0, center + t / 2.0, WallFaceDir::NegX)
-        } else if room_left {
-            (tile_min_x, tile_min_x + t, WallFaceDir::NegX)
+    for dir in [
+        WallFaceDir::NegX,
+        WallFaceDir::PosX,
+        WallFaceDir::NegZ,
+        WallFaceDir::PosZ,
+    ] {
+        let face_cutout = if cutout_dirs.contains(&dir) {
+            cutout
         } else {
-            (tile_min_x + ts - t, tile_min_x + ts, WallFaceDir::PosX)
+            None
         };
-        let min = [wall_min_x, 0.0, tile_min_z];
-        let max = [wall_max_x, config.wall_height, tile_min_z + ts];
-        ((min, max), face_dir)
-    } else {
-        // Wall runs along X, thin in Z.
-        let room_below = grid.is_room_neighbor(x, y, 0, -1);
-        let room_above = grid.is_room_neighbor(x, y, 0, 1);
-
-        let (wall_min_z, wall_max_z, face_dir) = if room_below && room_above {
-            // Interior wall: center in tile.
-            let center = tile_min_z + ts / 2.0;
-            (center - t / 2.0, center + t / 2.0, WallFaceDir::NegZ)
-        } else if room_below {
-            (tile_min_z, tile_min_z + t, WallFaceDir::NegZ)
-        } else {
-            (tile_min_z + ts - t, tile_min_z + ts, WallFaceDir::PosZ)
+        let mesh = match exterior_class {
+            ExteriorFaceClass::Corner if !exterior_faces.is_empty() => &mut *exterior_corner_mesh,
+            ExteriorFaceClass::TJunction if exterior_faces.contains(&dir) => {
+                &mut *exterior_t_junction_mesh
+            }
+            ExteriorFaceClass::Straight if exterior_faces.contains(&dir) => {
+                &mut *exterior_wall_mesh
+            }
+            _ => &mut *wall_mesh,
         };
-        let min = [tile_min_x, 0.0, wall_min_z];
-        let max = [tile_min_x + ts, config.wall_height, wall_max_z];
-        ((min, max), face_dir)
+        append_wall_face(mesh, bounds, dir, config, face_cutout);
     }
+    append_wall_face(wall_top_mesh, bounds, WallFaceDir::PosY, config, None);
 }
 
 /// Appends a wall face quad (or sub-quads with cutout) to the mesh.
@@ -477,16 +732,18 @@ fn append_wall_face(
 
     match cutout {
         Some(WallCutout::Door) => {
-            let door_start = (u_len - config.door_width) / 2.0;
-            let door_end = door_start + config.door_width;
+            let door_width = config.door_width.min(u_len);
+            let door_start = (u_len - door_width) / 2.0;
+            let door_end = door_start + door_width;
             let door_h = config.door_height.min(max_y - min_y);
             append_wall_sub_faces(
                 mesh, tl, tr, bl, br, normal, u_len, v_len, door_start, door_end, 0.0, door_h,
             );
         }
         Some(WallCutout::Window) => {
-            let win_start = (u_len - config.window_width) / 2.0;
-            let win_end = win_start + config.window_width;
+            let window_width = config.window_width.min(u_len);
+            let win_start = (u_len - window_width) / 2.0;
+            let win_end = win_start + window_width;
             let sill = config.window_sill_height;
             let win_top = (sill + config.window_height).min(max_y - min_y);
             append_wall_sub_faces(
@@ -616,78 +873,83 @@ fn generate_door_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
 
     for y in 0..grid.height {
         for x in 0..grid.width {
-            if grid.get(x, y) != TileType::Door {
+            let TileType::Wall(wall) = grid.get(x, y) else {
+                continue;
+            };
+            if !matches!(wall.opening, Some(WallOpening::Door { render_panel: true })) {
                 continue;
             }
 
-            let (bounds, _face_dir) = wall_bounds(grid, x, y, config);
+            let bounds = wall_bounds_for_tile(grid, x, y, wall, config);
             let [min_x, min_y, min_z] = bounds.0;
             let [max_x, _max_y, max_z] = bounds.1;
             let h = config.door_height;
-            let t = config.wall_thickness * 0.5;
 
-            // Determine wall axis and compute door position.
-            let along_z = grid.wall_runs_along_z(x, y);
-            if along_z {
-                // Wall runs along Z, door face is in XY plane.
-                let width = max_z - min_z;
-                let door_start = (width - config.door_width) / 2.0;
-                let ds = min_z + door_start;
-                let de = ds + config.door_width;
-                let cx = (min_x + max_x) / 2.0;
+            match wall.main_axis() {
+                WallAxis::Z => {
+                    let width = max_z - min_z;
+                    let door_width = config.door_width.min(width);
+                    let door_start = (width - door_width) / 2.0;
+                    let ds = min_z + door_start;
+                    let de = ds + door_width;
+                    let cx = (min_x + max_x) / 2.0;
+                    let t = max_x - min_x;
 
-                // +X face
-                append_quad(
-                    &mut mesh,
-                    [cx + t / 2.0, h, ds],
-                    [cx + t / 2.0, h, de],
-                    [cx + t / 2.0, min_y, ds],
-                    [cx + t / 2.0, min_y, de],
-                    [1.0, 0.0, 0.0],
-                    [0.0, 0.0],
-                    [config.door_width, h],
-                );
-                // -X face
-                append_quad(
-                    &mut mesh,
-                    [cx - t / 2.0, h, de],
-                    [cx - t / 2.0, h, ds],
-                    [cx - t / 2.0, min_y, de],
-                    [cx - t / 2.0, min_y, ds],
-                    [-1.0, 0.0, 0.0],
-                    [0.0, 0.0],
-                    [config.door_width, h],
-                );
-            } else {
-                // Wall runs along X, door face is in YZ plane.
-                let width = max_x - min_x;
-                let door_start = (width - config.door_width) / 2.0;
-                let ds = min_x + door_start;
-                let de = ds + config.door_width;
-                let cz = (min_z + max_z) / 2.0;
+                    // +X face
+                    append_quad(
+                        &mut mesh,
+                        [cx + t / 2.0, h, ds],
+                        [cx + t / 2.0, h, de],
+                        [cx + t / 2.0, min_y, ds],
+                        [cx + t / 2.0, min_y, de],
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0],
+                        [door_width, h],
+                    );
+                    // -X face
+                    append_quad(
+                        &mut mesh,
+                        [cx - t / 2.0, h, de],
+                        [cx - t / 2.0, h, ds],
+                        [cx - t / 2.0, min_y, de],
+                        [cx - t / 2.0, min_y, ds],
+                        [-1.0, 0.0, 0.0],
+                        [0.0, 0.0],
+                        [door_width, h],
+                    );
+                }
+                WallAxis::X | WallAxis::Both => {
+                    let width = max_x - min_x;
+                    let door_width = config.door_width.min(width);
+                    let door_start = (width - door_width) / 2.0;
+                    let ds = min_x + door_start;
+                    let de = ds + door_width;
+                    let cz = (min_z + max_z) / 2.0;
+                    let t = max_z - min_z;
 
-                // +Z face
-                append_quad(
-                    &mut mesh,
-                    [ds, h, cz + t / 2.0],
-                    [de, h, cz + t / 2.0],
-                    [ds, min_y, cz + t / 2.0],
-                    [de, min_y, cz + t / 2.0],
-                    [0.0, 0.0, 1.0],
-                    [0.0, 0.0],
-                    [config.door_width, h],
-                );
-                // -Z face
-                append_quad(
-                    &mut mesh,
-                    [de, h, cz - t / 2.0],
-                    [ds, h, cz - t / 2.0],
-                    [de, min_y, cz - t / 2.0],
-                    [ds, min_y, cz - t / 2.0],
-                    [0.0, 0.0, -1.0],
-                    [0.0, 0.0],
-                    [config.door_width, h],
-                );
+                    // +Z face
+                    append_quad(
+                        &mut mesh,
+                        [ds, h, cz + t / 2.0],
+                        [de, h, cz + t / 2.0],
+                        [ds, min_y, cz + t / 2.0],
+                        [de, min_y, cz + t / 2.0],
+                        [0.0, 0.0, 1.0],
+                        [0.0, 0.0],
+                        [door_width, h],
+                    );
+                    // -Z face
+                    append_quad(
+                        &mut mesh,
+                        [de, h, cz - t / 2.0],
+                        [ds, h, cz - t / 2.0],
+                        [de, min_y, cz - t / 2.0],
+                        [ds, min_y, cz - t / 2.0],
+                        [0.0, 0.0, -1.0],
+                        [0.0, 0.0],
+                        [door_width, h],
+                    );
+                }
             }
         }
     }
@@ -704,75 +966,85 @@ fn generate_window_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
 
     for y in 0..grid.height {
         for x in 0..grid.width {
-            if grid.get(x, y) != TileType::Window {
+            let TileType::Wall(wall) = grid.get(x, y) else {
+                continue;
+            };
+            if !matches!(
+                wall.opening,
+                Some(WallOpening::Window { render_glass: true })
+            ) {
                 continue;
             }
 
-            let (bounds, _face_dir) = wall_bounds(grid, x, y, config);
+            let bounds = wall_bounds_for_tile(grid, x, y, wall, config);
             let [min_x, _min_y, min_z] = bounds.0;
             let [max_x, _max_y, max_z] = bounds.1;
             let sill = config.window_sill_height;
             let wh = config.window_height;
 
-            let along_z = grid.wall_runs_along_z(x, y);
-            if along_z {
-                let width = max_z - min_z;
-                let win_start = (width - config.window_width) / 2.0;
-                let ws = min_z + win_start;
-                let we = ws + config.window_width;
-                let offset = 0.02;
+            match wall.main_axis() {
+                WallAxis::Z => {
+                    let width = max_z - min_z;
+                    let window_width = config.window_width.min(width);
+                    let win_start = (width - window_width) / 2.0;
+                    let ws = min_z + win_start;
+                    let we = ws + window_width;
+                    let offset = 0.02;
 
-                // Glass at exterior face (+X side), facing outward
-                append_quad(
-                    &mut mesh,
-                    [max_x - offset, sill + wh, ws],
-                    [max_x - offset, sill + wh, we],
-                    [max_x - offset, sill, ws],
-                    [max_x - offset, sill, we],
-                    [1.0, 0.0, 0.0],
-                    [0.0, 0.0],
-                    [config.window_width, wh],
-                );
-                // Glass at interior face (-X side), facing inward
-                append_quad(
-                    &mut mesh,
-                    [min_x + offset, sill + wh, we],
-                    [min_x + offset, sill + wh, ws],
-                    [min_x + offset, sill, we],
-                    [min_x + offset, sill, ws],
-                    [-1.0, 0.0, 0.0],
-                    [0.0, 0.0],
-                    [config.window_width, wh],
-                );
-            } else {
-                let width = max_x - min_x;
-                let win_start = (width - config.window_width) / 2.0;
-                let ws = min_x + win_start;
-                let we = ws + config.window_width;
-                let offset = 0.02;
+                    // Glass at exterior face (+X side), facing outward
+                    append_quad(
+                        &mut mesh,
+                        [max_x - offset, sill + wh, ws],
+                        [max_x - offset, sill + wh, we],
+                        [max_x - offset, sill, ws],
+                        [max_x - offset, sill, we],
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0],
+                        [window_width, wh],
+                    );
+                    // Glass at interior face (-X side), facing inward
+                    append_quad(
+                        &mut mesh,
+                        [min_x + offset, sill + wh, we],
+                        [min_x + offset, sill + wh, ws],
+                        [min_x + offset, sill, we],
+                        [min_x + offset, sill, ws],
+                        [-1.0, 0.0, 0.0],
+                        [0.0, 0.0],
+                        [window_width, wh],
+                    );
+                }
+                WallAxis::X | WallAxis::Both => {
+                    let width = max_x - min_x;
+                    let window_width = config.window_width.min(width);
+                    let win_start = (width - window_width) / 2.0;
+                    let ws = min_x + win_start;
+                    let we = ws + window_width;
+                    let offset = 0.02;
 
-                // Glass at exterior face (+Z side), facing outward
-                append_quad(
-                    &mut mesh,
-                    [ws, sill + wh, max_z - offset],
-                    [we, sill + wh, max_z - offset],
-                    [ws, sill, max_z - offset],
-                    [we, sill, max_z - offset],
-                    [0.0, 0.0, 1.0],
-                    [0.0, 0.0],
-                    [config.window_width, wh],
-                );
-                // Glass at interior face (-Z side), facing inward
-                append_quad(
-                    &mut mesh,
-                    [we, sill + wh, min_z + offset],
-                    [ws, sill + wh, min_z + offset],
-                    [we, sill, min_z + offset],
-                    [ws, sill, min_z + offset],
-                    [0.0, 0.0, -1.0],
-                    [0.0, 0.0],
-                    [config.window_width, wh],
-                );
+                    // Glass at exterior face (+Z side), facing outward
+                    append_quad(
+                        &mut mesh,
+                        [ws, sill + wh, max_z - offset],
+                        [we, sill + wh, max_z - offset],
+                        [ws, sill, max_z - offset],
+                        [we, sill, max_z - offset],
+                        [0.0, 0.0, 1.0],
+                        [0.0, 0.0],
+                        [window_width, wh],
+                    );
+                    // Glass at interior face (-Z side), facing inward
+                    append_quad(
+                        &mut mesh,
+                        [we, sill + wh, min_z + offset],
+                        [ws, sill + wh, min_z + offset],
+                        [we, sill, min_z + offset],
+                        [ws, sill, min_z + offset],
+                        [0.0, 0.0, -1.0],
+                        [0.0, 0.0],
+                        [window_width, wh],
+                    );
+                }
             }
         }
     }
@@ -946,6 +1218,10 @@ fn normalize3(v: [f32; 3]) -> [f32; 3] {
 mod tests {
     use super::*;
 
+    fn exterior_wall(shape: WallShape) -> TileType {
+        TileType::Wall(WallTile::exterior(shape))
+    }
+
     #[test]
     fn test_unit_cube_vertices() {
         let vertices = unit_cube();
@@ -967,7 +1243,10 @@ mod tests {
     #[test]
     fn test_tile_scale_wall() {
         let config = BuildingConfig::default();
-        let (x, y, z) = tile_scale(TileType::Wall, &config);
+        let (x, y, z) = tile_scale(
+            exterior_wall(WallShape::Straight(CardinalDir::Top)),
+            &config,
+        );
         assert_eq!(x, config.tile_size);
         assert_eq!(y, config.wall_height);
         assert_eq!(z, config.wall_thickness);
@@ -1003,6 +1282,10 @@ mod tests {
 
         assert!(!bmesh.wall_mesh.is_empty(), "wall mesh should not be empty");
         assert!(
+            !bmesh.wall_top_mesh.is_empty(),
+            "wall top mesh should not be empty"
+        );
+        assert!(
             !bmesh.floor_mesh.is_empty(),
             "floor mesh should not be empty"
         );
@@ -1030,11 +1313,19 @@ mod tests {
 
         for (name, data) in [
             ("wall", &bmesh.wall_mesh),
+            ("wall_top", &bmesh.wall_top_mesh),
+            ("exterior_wall", &bmesh.exterior_wall_mesh),
+            ("exterior_corner", &bmesh.exterior_corner_mesh),
+            ("exterior_t_junction", &bmesh.exterior_t_junction_mesh),
             ("floor", &bmesh.floor_mesh),
             ("roof", &bmesh.roof_mesh),
             ("door", &bmesh.door_mesh),
             ("window", &bmesh.window_mesh),
         ] {
+            if data.is_empty() {
+                continue;
+            }
+
             let max_idx = data.indices.iter().copied().max().unwrap_or(0) as usize;
             assert!(
                 max_idx < data.vertices.len(),
@@ -1070,22 +1361,128 @@ mod tests {
         for (floor_x, floor_y) in [(1, 2), (2, 1)] {
             let mut plain_grid = TileGrid::new(3, 3, config.tile_size, Vec2::ZERO);
             let mut window_grid = TileGrid::new(3, 3, config.tile_size, Vec2::ZERO);
+            let shape = if floor_x == 1 {
+                WallShape::Straight(CardinalDir::Bottom)
+            } else {
+                WallShape::Straight(CardinalDir::Left)
+            };
 
-            plain_grid.set(1, 1, TileType::Wall);
+            plain_grid.set(1, 1, exterior_wall(shape));
             plain_grid.set(floor_x, floor_y, TileType::Floor);
-            window_grid.set(1, 1, TileType::Window);
+            window_grid.set(
+                1,
+                1,
+                exterior_wall(shape).wall().map_or(TileType::Empty, |wall| {
+                    TileType::Wall(wall.with_opening(WallOpening::Window { render_glass: true }))
+                }),
+            );
             window_grid.set(floor_x, floor_y, TileType::Floor);
 
-            let plain_mesh = generate_wall_mesh(&plain_grid, &config);
-            let window_mesh = generate_wall_mesh(&window_grid, &config);
+            let plain_meshes = generate_wall_meshes(&plain_grid, &config);
+            let window_meshes = generate_wall_meshes(&window_grid, &config);
+            let plain_vertices = wall_mesh_vertices(&plain_meshes);
+            let window_vertices = wall_mesh_vertices(&window_meshes);
 
             // A window cuts the exterior and room-side wall faces. Each cut face
             // replaces one full quad with four sub-quads: 16 - 4 vertices.
-            assert_eq!(
-                window_mesh.vertices.len() - plain_mesh.vertices.len(),
-                2 * 12
-            );
+            assert_eq!(window_vertices - plain_vertices, 2 * 12);
         }
+    }
+
+    fn wall_mesh_vertices(meshes: &WallMeshes) -> usize {
+        meshes.wall.vertices.len()
+            + meshes.top.vertices.len()
+            + meshes.exterior.vertices.len()
+            + meshes.exterior_corner.vertices.len()
+            + meshes.exterior_t_junction.vertices.len()
+    }
+
+    #[test]
+    fn test_interior_wall_uses_interior_thickness() {
+        use crate::config::BuildingConfig;
+        use crate::geometry::{Rect, Vec2};
+
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 3.0, 3.0),
+            tile_size: 1.0,
+            wall_thickness: 0.5,
+            interior_wall_thickness: 0.25,
+            ..Default::default()
+        };
+
+        let mut grid = TileGrid::new(3, 3, config.tile_size, Vec2::ZERO);
+        let wall = WallTile::interior(WallShape::Straight(CardinalDir::Left));
+        grid.set(1, 1, TileType::Wall(wall));
+        grid.set(0, 1, TileType::Floor);
+        grid.set(2, 1, TileType::Floor);
+
+        let (min, max) = wall_bounds_for_tile(&grid, 1, 1, wall, &config);
+        assert_eq!(max[0] - min[0], config.interior_wall_thickness);
+
+        let wall = WallTile::exterior(WallShape::Straight(CardinalDir::Left));
+        grid.set(1, 1, TileType::Wall(wall));
+        let (min, max) = wall_bounds_for_tile(&grid, 1, 1, wall, &config);
+        assert_eq!(max[0] - min[0], config.wall_thickness);
+    }
+
+    #[test]
+    fn test_wall_corner_uses_full_tile_bounds() {
+        use crate::config::BuildingConfig;
+        use crate::geometry::{Rect, Vec2};
+
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 1.0, 1.0),
+            tile_size: 1.0,
+            wall_thickness: 0.4,
+            interior_wall_thickness: 0.2,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(1, 1, config.tile_size, Vec2::ZERO);
+        let wall = WallTile::exterior(WallShape::Corner(crate::tile::CornerDir::BottomLeft));
+        grid.set(0, 0, TileType::Wall(wall));
+
+        let (min, max) = wall_bounds_for_tile(&grid, 0, 0, wall, &config);
+        assert_eq!(max[0] - min[0], config.tile_size);
+        assert_eq!(max[2] - min[2], config.tile_size);
+    }
+
+    #[test]
+    fn test_door_mesh_width_is_clamped_to_wall_segment() {
+        use crate::config::BuildingConfig;
+        use crate::geometry::{Rect, Vec2};
+
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 1.0, 3.0),
+            tile_size: 0.5,
+            door_width: 0.9,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(1, 3, config.tile_size, Vec2::ZERO);
+        grid.set(
+            0,
+            1,
+            exterior_wall(WallShape::Straight(CardinalDir::Bottom))
+                .wall()
+                .map_or(TileType::Empty, |wall| {
+                    TileType::Wall(wall.with_opening(WallOpening::Door { render_panel: true }))
+                }),
+        );
+        grid.set(0, 2, TileType::Floor);
+
+        let mesh = generate_door_mesh(&grid, &config);
+        let min_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v[0])
+            .fold(f32::INFINITY, f32::min);
+        let max_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v[0])
+            .fold(f32::NEG_INFINITY, f32::max);
+
+        assert!(min_x >= 0.0);
+        assert!(max_x <= config.tile_size);
     }
 
     #[test]

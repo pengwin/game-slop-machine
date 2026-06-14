@@ -19,8 +19,16 @@ pub fn generate_roof(bounds: Rect, config: &BuildingConfig) -> RoofGeometry {
         Axis::Horizontal => {
             let ridge_y = center.y;
             RoofGeometry {
-                ridge_start: Vec3::new(bounds.min.x - overhang, config.wall_height + config.roof_height, ridge_y),
-                ridge_end: Vec3::new(bounds.max.x + overhang, config.wall_height + config.roof_height, ridge_y),
+                ridge_start: Vec3::new(
+                    bounds.min.x - overhang,
+                    config.wall_height + config.roof_height,
+                    ridge_y,
+                ),
+                ridge_end: Vec3::new(
+                    bounds.max.x + overhang,
+                    config.wall_height + config.roof_height,
+                    ridge_y,
+                ),
                 slope_height: config.roof_height,
                 overhang,
             }
@@ -28,8 +36,16 @@ pub fn generate_roof(bounds: Rect, config: &BuildingConfig) -> RoofGeometry {
         Axis::Vertical => {
             let ridge_x = center.x;
             RoofGeometry {
-                ridge_start: Vec3::new(ridge_x, config.wall_height + config.roof_height, bounds.min.y - overhang),
-                ridge_end: Vec3::new(ridge_x, config.wall_height + config.roof_height, bounds.max.y + overhang),
+                ridge_start: Vec3::new(
+                    ridge_x,
+                    config.wall_height + config.roof_height,
+                    bounds.min.y - overhang,
+                ),
+                ridge_end: Vec3::new(
+                    ridge_x,
+                    config.wall_height + config.roof_height,
+                    bounds.max.y + overhang,
+                ),
                 slope_height: config.roof_height,
                 overhang,
             }
@@ -37,7 +53,11 @@ pub fn generate_roof(bounds: Rect, config: &BuildingConfig) -> RoofGeometry {
     }
 }
 
-pub fn generate_roof_vertices(bounds: Rect, _roof: &RoofGeometry, config: &BuildingConfig) -> Vec<[f32; 3]> {
+pub fn generate_roof_vertices(
+    bounds: Rect,
+    _roof: &RoofGeometry,
+    config: &BuildingConfig,
+) -> Vec<[f32; 3]> {
     let overhang = config.roof_overhang;
     let wall_h = config.wall_height;
 
@@ -60,14 +80,7 @@ pub fn generate_roof_vertices(bounds: Rect, _roof: &RoofGeometry, config: &Build
 }
 
 pub fn generate_roof_indices() -> Vec<u32> {
-    vec![
-        0, 1, 2,
-        0, 2, 3,
-        1, 5, 4,
-        1, 4, 2,
-        4, 5, 2,
-        4, 2, 3,
-    ]
+    vec![0, 1, 2, 0, 2, 3, 1, 5, 4, 1, 4, 2, 4, 5, 2, 4, 2, 3]
 }
 
 pub fn generate_roof_normals() -> Vec<[f32; 3]> {

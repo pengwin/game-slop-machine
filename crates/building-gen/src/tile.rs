@@ -4,29 +4,179 @@ use crate::geometry::Vec2;
 pub enum TileType {
     Empty,
     Floor,
-    Wall,
-    Doorway,
-    Door,
-    Window,
-    WallCorner,
+    Wall(WallTile),
 }
 
-impl TileType {
-    pub fn is_solid(self) -> bool {
-        matches!(self, Self::Wall | Self::WallCorner)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WallTile {
+    pub kind: WallKind,
+    pub shape: WallShape,
+    pub opening: Option<WallOpening>,
+}
+
+impl WallTile {
+    pub fn new(kind: WallKind, shape: WallShape) -> Self {
+        Self {
+            kind,
+            shape,
+            opening: None,
+        }
     }
 
-    pub fn is_opening(self) -> bool {
-        matches!(self, Self::Doorway | Self::Door | Self::Window)
+    pub fn exterior(shape: WallShape) -> Self {
+        Self::new(WallKind::Exterior, shape)
+    }
+
+    pub fn interior(shape: WallShape) -> Self {
+        Self::new(WallKind::Interior, shape)
+    }
+
+    pub fn with_opening(mut self, opening: WallOpening) -> Self {
+        self.opening = Some(opening);
+        self
+    }
+
+    pub fn is_solid(self) -> bool {
+        !matches!(
+            self.opening,
+            Some(WallOpening::Doorway)
+                | Some(WallOpening::Door {
+                    render_panel: false
+                })
+                | Some(WallOpening::Window {
+                    render_glass: false
+                })
+        )
     }
 
     pub fn is_passable(self) -> bool {
-        matches!(self, Self::Floor | Self::Doorway | Self::Door)
+        matches!(
+            self.opening,
+            Some(WallOpening::Doorway)
+                | Some(WallOpening::Door {
+                    render_panel: false
+                })
+        )
     }
 
-    /// Returns true if this tile is a room-interior tile (counts as "room side" for wall orientation).
+    pub fn main_axis(self) -> WallAxis {
+        match self.shape {
+            WallShape::Straight(CardinalDir::Left | CardinalDir::Right) => WallAxis::Z,
+            WallShape::Straight(CardinalDir::Bottom | CardinalDir::Top) => WallAxis::X,
+            WallShape::Corner(_) | WallShape::TJunction(_) | WallShape::Cross => WallAxis::Both,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WallKind {
+    Exterior,
+    Interior,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CardinalDir {
+    Left,
+    Right,
+    Bottom,
+    Top,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CornerDir {
+    BottomLeft,
+    BottomRight,
+    TopLeft,
+    TopRight,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TJunctionDir {
+    Left,
+    Right,
+    Bottom,
+    Top,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WallShape {
+    Straight(CardinalDir),
+    Corner(CornerDir),
+    TJunction(TJunctionDir),
+    Cross,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WallOpening {
+    Door { render_panel: bool },
+    Window { render_glass: bool },
+    Doorway,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WallAxis {
+    X,
+    Z,
+    Both,
+}
+
+impl TileType {
+    pub fn is_wall(self) -> bool {
+        matches!(self, Self::Wall(_))
+    }
+
+    pub fn wall(self) -> Option<WallTile> {
+        match self {
+            Self::Wall(wall) => Some(wall),
+            _ => None,
+        }
+    }
+
+    pub fn is_solid(self) -> bool {
+        matches!(self, Self::Wall(wall) if wall.is_solid())
+    }
+
+    pub fn is_opening(self) -> bool {
+        matches!(
+            self,
+            Self::Wall(WallTile {
+                opening: Some(_),
+                ..
+            })
+        )
+    }
+
+    pub fn is_passable(self) -> bool {
+        matches!(self, Self::Floor) || matches!(self, Self::Wall(wall) if wall.is_passable())
+    }
+
+    /// Returns true if this tile counts as a room side for wall classification.
     pub fn is_room_adjacent(self) -> bool {
-        matches!(self, Self::Floor | Self::Doorway | Self::Door | Self::Window)
+        matches!(self, Self::Floor) || self.is_passable()
+    }
+
+    pub fn ascii_char(self) -> char {
+        match self {
+            Self::Empty => '.',
+            Self::Floor => ' ',
+            Self::Wall(wall) => match wall.opening {
+                Some(WallOpening::Door { render_panel: true }) => 'd',
+                Some(
+                    WallOpening::Door {
+                        render_panel: false,
+                    }
+                    | WallOpening::Doorway,
+                ) => 'D',
+                Some(WallOpening::Window { .. }) => 'w',
+                None => match wall.shape {
+                    WallShape::Corner(_) => '+',
+                    WallShape::TJunction(_) => 'T',
+                    WallShape::Cross => 'X',
+                    WallShape::Straight(CardinalDir::Left | CardinalDir::Right) => '|',
+                    WallShape::Straight(CardinalDir::Bottom | CardinalDir::Top) => '-',
+                },
+            },
+        }
     }
 }
 
@@ -61,6 +211,16 @@ impl TileGrid {
     pub fn set(&mut self, x: usize, y: usize, tile: TileType) {
         if x < self.width && y < self.height {
             self.tiles[y * self.width + x] = tile;
+        }
+    }
+
+    pub fn set_wall_opening(&mut self, x: usize, y: usize, opening: WallOpening) -> bool {
+        match self.get(x, y) {
+            TileType::Wall(wall) => {
+                self.set(x, y, TileType::Wall(wall.with_opening(opening)));
+                true
+            }
+            _ => false,
         }
     }
 
@@ -104,13 +264,14 @@ impl TileGrid {
         self.tiles.iter().filter(|&&t| t == tile_type).count()
     }
 
-    /// Returns true if the tile at (x, y) is a room-interior tile (Floor, Doorway, Door, Window).
+    pub fn count_matching_tiles(&self, matches: impl Fn(TileType) -> bool) -> usize {
+        self.tiles.iter().filter(|&&t| matches(t)).count()
+    }
+
     pub fn is_room_tile(&self, x: usize, y: usize) -> bool {
         self.get(x, y).is_room_adjacent()
     }
 
-    /// Returns true if the neighbor in direction (dx, dy) is a room tile.
-    /// Returns false if out of bounds (treats border as empty/exterior).
     pub fn is_room_neighbor(&self, x: usize, y: usize, dx: i32, dy: i32) -> bool {
         let nx = x as i32 + dx;
         let ny = y as i32 + dy;
@@ -120,58 +281,6 @@ impl TileGrid {
         self.is_room_tile(nx as usize, ny as usize)
     }
 
-    /// Returns true if a wall at (x, y) runs along the Z axis (thin in X).
-    /// A wall runs along Z if it has room neighbors to the left/right (X axis)
-    /// but NOT up/down (Y axis).
-    /// Falls back to checking wall neighbors if no room neighbors exist.
-    pub fn wall_runs_along_z(&self, x: usize, y: usize) -> bool {
-        let left = self.is_room_neighbor(x, y, -1, 0);
-        let right = self.is_room_neighbor(x, y, 1, 0);
-        let down = self.is_room_neighbor(x, y, 0, -1);
-        let up = self.is_room_neighbor(x, y, 0, 1);
-
-        if left || right {
-            if down || up {
-                // Room on both axes: prefer the axis with fewer room neighbors
-                // (the wall runs along the axis where rooms are NOT).
-                // If room is left/right but also up/down, this is a corner.
-                // Default to the axis with more room neighbors.
-                let x_rooms = (left as u8) + (right as u8);
-                let z_rooms = (down as u8) + (up as u8);
-                return x_rooms <= z_rooms;
-            }
-            return true;
-        }
-        if down || up {
-            return false;
-        }
-
-        // No room neighbors: check wall neighbors as fallback.
-        let wall_left = self.get(x.wrapping_sub(1), y).is_solid() && x > 0;
-        let wall_right = x + 1 < self.width && self.get(x + 1, y).is_solid();
-        let wall_down = self.get(x, y.wrapping_sub(1)).is_solid() && y > 0;
-        let wall_up = y + 1 < self.height && self.get(x, y + 1).is_solid();
-
-        // If wall neighbors form a line along X, wall runs along X (not Z).
-        // If wall neighbors form a line along Z, wall runs along Z.
-        if wall_left || wall_right {
-            if wall_down || wall_up {
-                // Corner or junction: default to X.
-                return false;
-            }
-            // Wall neighbors only along X: wall runs along X.
-            return false;
-        }
-        if wall_down || wall_up {
-            // Wall neighbors only along Z: wall runs along Z.
-            return true;
-        }
-
-        // Completely isolated wall: default to X.
-        false
-    }
-
-    /// Returns true if the neighbor in direction (dx, dy) is empty or out of bounds.
     pub fn is_empty_neighbor(&self, x: usize, y: usize, dx: i32, dy: i32) -> bool {
         let nx = x as i32 + dx;
         let ny = y as i32 + dy;
@@ -181,7 +290,6 @@ impl TileGrid {
         self.get(nx as usize, ny as usize) == TileType::Empty
     }
 
-    /// Returns the tile type of the neighbor in direction (dx, dy), or None if out of bounds.
     pub fn get_neighbor(&self, x: usize, y: usize, dx: i32, dy: i32) -> Option<TileType> {
         let nx = x as i32 + dx;
         let ny = y as i32 + dy;
@@ -207,8 +315,9 @@ mod tests {
     #[test]
     fn test_grid_set_get() {
         let mut grid = TileGrid::new(10, 10, 1.0, Vec2::ZERO);
-        grid.set(3, 4, TileType::Wall);
-        assert_eq!(grid.get(3, 4), TileType::Wall);
+        let wall = TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top)));
+        grid.set(3, 4, wall);
+        assert_eq!(grid.get(3, 4), wall);
         assert_eq!(grid.get(3, 5), TileType::Empty);
     }
 
@@ -235,10 +344,18 @@ mod tests {
 
     #[test]
     fn test_tile_properties() {
-        assert!(TileType::Wall.is_solid());
+        let wall = TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top)));
+        let open_door = TileType::Wall(
+            WallTile::interior(WallShape::Straight(CardinalDir::Top)).with_opening(
+                WallOpening::Door {
+                    render_panel: false,
+                },
+            ),
+        );
+        assert!(wall.is_solid());
         assert!(!TileType::Floor.is_solid());
-        assert!(TileType::Door.is_opening());
-        assert!(TileType::Doorway.is_passable());
-        assert!(!TileType::Wall.is_passable());
+        assert!(open_door.is_opening());
+        assert!(open_door.is_passable());
+        assert!(!wall.is_passable());
     }
 }

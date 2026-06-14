@@ -29,14 +29,15 @@
 //! ```rust
 //! use building_gen::{generate_layout, tile_scale, tile_color};
 //! use building_gen::config::BuildingConfig;
-//! use building_gen::tile::TileType;
+//! use building_gen::tile::{CardinalDir, TileType, WallShape, WallTile};
 //!
 //! let config = BuildingConfig::default();
 //! let layout = generate_layout(&config, 42); // seed = 42
 //!
 //! // Get scale and color for a wall tile
-//! let (sx, sy, sz) = tile_scale(TileType::Wall, &config);
-//! let (r, g, b) = tile_color(TileType::Wall);
+//! let wall = TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top)));
+//! let (sx, sy, sz) = tile_scale(wall, &config);
+//! let (r, g, b) = tile_color(wall);
 //!
 //! // layout.rooms contains the room list
 //! // layout.tile_grid contains the 2D tile representation
@@ -169,7 +170,7 @@ pub fn generate_building_mesh(
 mod tests {
     use super::*;
     use geometry::Rect;
-    use tile::TileType;
+    use tile::{CardinalDir, TileType, WallShape, WallTile};
 
     fn test_config() -> BuildingConfig {
         BuildingConfig {
@@ -210,8 +211,7 @@ mod tests {
     fn test_generate_layout_has_walls() {
         let config = test_config();
         let layout = generate_layout(&config, 42);
-        let wall_count = layout.tile_grid.count_tiles(TileType::Wall)
-            + layout.tile_grid.count_tiles(TileType::WallCorner);
+        let wall_count = layout.tile_grid.count_matching_tiles(TileType::is_wall);
         assert!(wall_count > 0);
     }
 
@@ -219,10 +219,7 @@ mod tests {
     fn test_generate_layout_has_doorways() {
         let config = test_config();
         let layout = generate_layout(&config, 42);
-        assert!(
-            !layout.doorways.is_empty(),
-            "No doorways generated"
-        );
+        assert!(!layout.doorways.is_empty(), "No doorways generated");
     }
 
     #[test]
@@ -245,18 +242,22 @@ mod tests {
                 .zip(layout2.rooms.iter())
                 .any(|(a, b)| a.bounds != b.bounds);
 
-        assert!(rooms_different, "Different seeds should produce different layouts");
+        assert!(
+            rooms_different,
+            "Different seeds should produce different layouts"
+        );
     }
 
     #[test]
     fn test_tile_scale_and_color() {
         let config = test_config();
-        let (x, y, z) = tile_scale(TileType::Wall, &config);
+        let wall = TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top)));
+        let (x, y, z) = tile_scale(wall, &config);
         assert_eq!(x, config.tile_size);
         assert_eq!(y, config.wall_height);
         assert_eq!(z, config.wall_thickness);
 
-        let (r, g, b) = tile_color(TileType::Wall);
+        let (r, g, b) = tile_color(wall);
         assert!(r > 0.0);
         assert!(g > 0.0);
         assert!(b > 0.0);

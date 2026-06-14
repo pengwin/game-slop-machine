@@ -6,6 +6,7 @@ pub struct BuildingConfig {
     pub tile_size: f32,
     pub wall_height: f32,
     pub wall_thickness: f32,
+    pub interior_wall_thickness: f32,
     pub min_room_size: f32,
     pub target_rooms: usize,
     pub door_width: f32,
@@ -16,6 +17,9 @@ pub struct BuildingConfig {
     pub window_spacing: f32,
     pub roof_height: f32,
     pub roof_overhang: f32,
+    pub interior_door_render_panel: bool,
+    pub exterior_window_render_glass: bool,
+    pub interior_window_render_glass: bool,
 }
 
 impl Default for BuildingConfig {
@@ -24,7 +28,8 @@ impl Default for BuildingConfig {
             footprint: Rect::new(0.0, 0.0, 10.0, 8.0),
             tile_size: 0.5,
             wall_height: 3.0,
-            wall_thickness: 0.5,  // Same as tile_size so walls fill their tile
+            wall_thickness: 0.5, // Same as tile_size so exterior walls fill their tile
+            interior_wall_thickness: 0.2, // Thinner dividers between rooms
             min_room_size: 2.5,
             target_rooms: 4,
             door_width: 0.9,
@@ -35,6 +40,9 @@ impl Default for BuildingConfig {
             window_spacing: 1.5,
             roof_height: 2.0,
             roof_overhang: 0.5,
+            interior_door_render_panel: false,
+            exterior_window_render_glass: true,
+            interior_window_render_glass: false,
         }
     }
 }

@@ -13,7 +13,9 @@
 use crate::config::BuildingConfig;
 use crate::geometry::Vec2;
 use crate::layout::{Room, Wall, WallType};
-use crate::tile::{TileGrid, TileType};
+use crate::tile::{
+    CardinalDir, CornerDir, TJunctionDir, TileGrid, TileType, WallKind, WallShape, WallTile,
+};
 
 /// Converts BSP rooms into a tile grid with walls and floors.
 ///
@@ -32,7 +34,7 @@ pub fn rooms_to_tile_grid(rooms: &[Room], config: &BuildingConfig) -> TileGrid {
         fill_room_interior(&mut grid, room, config);
     }
 
-    mark_wall_corners(&mut grid);
+    classify_wall_tiles(&mut grid);
 
     grid
 }
@@ -47,10 +49,8 @@ fn room_tile_bounds(
     let min_y = world_to_grid_line(room.bounds.min.y, config.footprint.min.y, config.tile_size)
         .min(grid.height.saturating_sub(1));
     let max_x = world_to_grid_line(room.bounds.max.x, config.footprint.min.x, config.tile_size)
-        .saturating_sub(1)
         .min(grid.width.saturating_sub(1));
     let max_y = world_to_grid_line(room.bounds.max.y, config.footprint.min.y, config.tile_size)
-        .saturating_sub(1)
         .min(grid.height.saturating_sub(1));
 
     (min_x, min_y, max_x.max(min_x), max_y.max(min_y))
@@ -64,13 +64,13 @@ fn mark_room_perimeter(grid: &mut TileGrid, room: &Room, config: &BuildingConfig
     let (min_x, min_y, max_x, max_y) = room_tile_bounds(grid, room, config);
 
     for x in min_x..=max_x {
-        grid.set(x, min_y, TileType::Wall);
-        grid.set(x, max_y, TileType::Wall);
+        grid.set(x, min_y, raw_wall());
+        grid.set(x, max_y, raw_wall());
     }
 
     for y in min_y..=max_y {
-        grid.set(min_x, y, TileType::Wall);
-        grid.set(max_x, y, TileType::Wall);
+        grid.set(min_x, y, raw_wall());
+        grid.set(max_x, y, raw_wall());
     }
 }
 
@@ -90,27 +90,121 @@ fn fill_room_interior(grid: &mut TileGrid, room: &Room, config: &BuildingConfig)
     }
 }
 
-fn mark_wall_corners(grid: &mut TileGrid) {
+fn raw_wall() -> TileType {
+    TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top)))
+}
+
+pub fn classify_wall_tiles(grid: &mut TileGrid) {
     let width = grid.width;
     let height = grid.height;
+    let mut classified = Vec::new();
 
     for y in 0..height {
         for x in 0..width {
-            if grid.get(x, y) == TileType::Wall && is_corner(grid, x, y) {
-                grid.set(x, y, TileType::WallCorner);
+            if !grid.get(x, y).is_wall() {
+                continue;
             }
+            classified.push((x, y, classify_wall_tile(grid, x, y)));
         }
+    }
+    for (x, y, wall) in classified {
+        grid.set(x, y, TileType::Wall(wall));
     }
 }
 
-/// Determines if a wall tile is a corner piece.
-///
-/// A corner is defined as a wall tile where:
-/// - Is one of the footprint's outer corners
-///
-/// This identifies walls at building corners where two walls meet at 90 degrees.
-fn is_corner(grid: &TileGrid, x: usize, y: usize) -> bool {
-    (x == 0 || x == grid.width - 1) && (y == 0 || y == grid.height - 1)
+fn classify_wall_tile(grid: &TileGrid, x: usize, y: usize) -> WallTile {
+    let floor_left = grid.is_room_neighbor(x, y, -1, 0);
+    let floor_right = grid.is_room_neighbor(x, y, 1, 0);
+    let floor_bottom = grid.is_room_neighbor(x, y, 0, -1);
+    let floor_top = grid.is_room_neighbor(x, y, 0, 1);
+
+    let wall_left = is_wall_neighbor(grid, x, y, -1, 0);
+    let wall_right = is_wall_neighbor(grid, x, y, 1, 0);
+    let wall_bottom = is_wall_neighbor(grid, x, y, 0, -1);
+    let wall_top = is_wall_neighbor(grid, x, y, 0, 1);
+
+    let kind = if is_exterior_boundary(grid, x, y) {
+        WallKind::Exterior
+    } else {
+        WallKind::Interior
+    };
+
+    let connections =
+        (wall_left as u8) + (wall_right as u8) + (wall_bottom as u8) + (wall_top as u8);
+
+    let shape = if connections >= 4 {
+        WallShape::Cross
+    } else if connections == 3 {
+        if !wall_left {
+            WallShape::TJunction(TJunctionDir::Left)
+        } else if !wall_right {
+            WallShape::TJunction(TJunctionDir::Right)
+        } else if !wall_bottom {
+            WallShape::TJunction(TJunctionDir::Bottom)
+        } else {
+            WallShape::TJunction(TJunctionDir::Top)
+        }
+    } else if is_corner_connection(wall_left, wall_right, wall_bottom, wall_top) {
+        match (wall_left, wall_right, wall_bottom, wall_top) {
+            (false, true, false, true) => WallShape::Corner(CornerDir::TopRight),
+            (true, false, false, true) => WallShape::Corner(CornerDir::TopLeft),
+            (false, true, true, false) => WallShape::Corner(CornerDir::BottomRight),
+            (true, false, true, false) => WallShape::Corner(CornerDir::BottomLeft),
+            _ => straight_shape(floor_left, floor_right, floor_bottom, floor_top),
+        }
+    } else {
+        straight_shape(floor_left, floor_right, floor_bottom, floor_top)
+    };
+
+    WallTile::new(kind, shape)
+}
+
+fn is_exterior_boundary(grid: &TileGrid, x: usize, y: usize) -> bool {
+    x == 0
+        || y == 0
+        || x == grid.width - 1
+        || y == grid.height - 1
+        || touches_empty_neighbor(grid, x, y)
+}
+
+fn touches_empty_neighbor(grid: &TileGrid, x: usize, y: usize) -> bool {
+    [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        .into_iter()
+        .any(|(dx, dy)| {
+            matches!(
+                grid.get_neighbor(x, y, dx, dy),
+                None | Some(TileType::Empty)
+            )
+        })
+}
+
+fn is_wall_neighbor(grid: &TileGrid, x: usize, y: usize, dx: i32, dy: i32) -> bool {
+    matches!(grid.get_neighbor(x, y, dx, dy), Some(tile) if tile.is_wall())
+}
+
+fn is_corner_connection(left: bool, right: bool, bottom: bool, top: bool) -> bool {
+    ((left || right) && (bottom || top)) && !((left && right) || (bottom && top))
+}
+
+fn straight_shape(
+    floor_left: bool,
+    floor_right: bool,
+    floor_bottom: bool,
+    floor_top: bool,
+) -> WallShape {
+    if floor_left && !floor_right {
+        WallShape::Straight(CardinalDir::Right)
+    } else if floor_right && !floor_left {
+        WallShape::Straight(CardinalDir::Left)
+    } else if floor_bottom && !floor_top {
+        WallShape::Straight(CardinalDir::Top)
+    } else if floor_top && !floor_bottom {
+        WallShape::Straight(CardinalDir::Bottom)
+    } else if floor_left || floor_right {
+        WallShape::Straight(CardinalDir::Left)
+    } else {
+        WallShape::Straight(CardinalDir::Bottom)
+    }
 }
 
 /// Converts wall tiles into Wall structs for the building layout.
@@ -125,7 +219,7 @@ pub fn detect_walls(grid: &TileGrid) -> Vec<Wall> {
     for y in 0..grid.height {
         for x in 0..grid.width {
             let tile = grid.get(x, y);
-            if tile == TileType::Wall || tile == TileType::WallCorner {
+            if tile.is_wall() {
                 let wall_type = classify_wall(grid, x, y);
                 let world_pos = grid.world_pos(x, y);
                 let half = grid.tile_size / 2.0;
@@ -154,23 +248,10 @@ pub fn detect_walls(grid: &TileGrid) -> Vec<Wall> {
 /// they're on the building's outer edge, because they're adjacent to
 /// floor tiles from two different rooms.
 fn classify_wall(grid: &TileGrid, x: usize, y: usize) -> WallType {
-    // Walls at the grid edge are always exterior
-    if x == 0 || y == 0 || x == grid.width - 1 || y == grid.height - 1 {
+    if is_exterior_boundary(grid, x, y) {
         return WallType::Exterior;
     }
-
-    let neighbors = grid.neighbors(x, y);
-    let floor_count = neighbors
-        .iter()
-        .filter(|(_, _, t)| *t == TileType::Floor)
-        .count();
-
-    // Walls adjacent to 2+ floor tiles are interior (shared between rooms)
-    if floor_count >= 2 {
-        WallType::Interior
-    } else {
-        WallType::Exterior
-    }
+    WallType::Interior
 }
 
 /// Finds pairs of room indices that are adjacent (share a wall).
@@ -239,36 +320,54 @@ pub fn find_doorway_positions_between_rooms(
 ) -> Vec<(usize, usize)> {
     let mut positions = Vec::new();
 
-    // Convert room bounds to tile coordinates
-    let min_x_a = ((room_a.bounds.min.x) / grid.tile_size).floor() as i32;
-    let min_y_a = ((room_a.bounds.min.y) / grid.tile_size).floor() as i32;
-    let max_x_a = ((room_a.bounds.max.x) / grid.tile_size).ceil() as i32;
-    let max_y_a = ((room_a.bounds.max.y) / grid.tile_size).ceil() as i32;
+    let (min_x_a, min_y_a, max_x_a, max_y_a) = room_grid_lines(grid, room_a);
+    let (min_x_b, min_y_b, max_x_b, max_y_b) = room_grid_lines(grid, room_b);
 
-    let min_x_b = ((room_b.bounds.min.x) / grid.tile_size).floor() as i32;
-    let min_y_b = ((room_b.bounds.min.y) / grid.tile_size).floor() as i32;
-    let max_x_b = ((room_b.bounds.max.x) / grid.tile_size).ceil() as i32;
-    let max_y_b = ((room_b.bounds.max.y) / grid.tile_size).ceil() as i32;
+    if max_x_a == min_x_b || max_x_b == min_x_a {
+        let x = if max_x_a == min_x_b { max_x_a } else { max_x_b };
+        let start_y = min_y_a.max(min_y_b).saturating_add(1);
+        let end_y = max_y_a.min(max_y_b);
 
-    // Find wall tiles that are near both rooms
-    for y in 0..grid.height as i32 {
-        for x in 0..grid.width as i32 {
-            let tile = grid.get(x as usize, y as usize);
-            if tile != TileType::Wall && tile != TileType::WallCorner {
-                continue;
+        for y in start_y..end_y {
+            if grid.get(x, y).is_wall() {
+                positions.push((x, y));
             }
+        }
+    } else if max_y_a == min_y_b || max_y_b == min_y_a {
+        let y = if max_y_a == min_y_b { max_y_a } else { max_y_b };
+        let start_x = min_x_a.max(min_x_b).saturating_add(1);
+        let end_x = max_x_a.min(max_x_b);
 
-            // Check if this wall tile is near both rooms (with 1-tile margin)
-            let near_a = x >= min_x_a - 1 && x <= max_x_a && y >= min_y_a - 1 && y <= max_y_a;
-            let near_b = x >= min_x_b - 1 && x <= max_x_b && y >= min_y_b - 1 && y <= max_y_b;
-
-            if near_a && near_b {
-                positions.push((x as usize, y as usize));
+        for x in start_x..end_x {
+            if grid.get(x, y).is_wall() {
+                positions.push((x, y));
             }
         }
     }
 
     positions
+}
+
+fn room_grid_lines(grid: &TileGrid, room: &Room) -> (usize, usize, usize, usize) {
+    let min_x = ((room.bounds.min.x - grid.origin.x) / grid.tile_size)
+        .round()
+        .max(0.0) as usize;
+    let min_y = ((room.bounds.min.y - grid.origin.y) / grid.tile_size)
+        .round()
+        .max(0.0) as usize;
+    let max_x = ((room.bounds.max.x - grid.origin.x) / grid.tile_size)
+        .round()
+        .max(0.0) as usize;
+    let max_y = ((room.bounds.max.y - grid.origin.y) / grid.tile_size)
+        .round()
+        .max(0.0) as usize;
+
+    (
+        min_x.min(grid.width.saturating_sub(1)),
+        min_y.min(grid.height.saturating_sub(1)),
+        max_x.min(grid.width.saturating_sub(1)),
+        max_y.min(grid.height.saturating_sub(1)),
+    )
 }
 
 #[cfg(test)]
@@ -307,7 +406,7 @@ mod tests {
         let rooms = collect_rooms(&tree);
         let grid = rooms_to_tile_grid(&rooms, &config);
 
-        let wall_count = grid.count_tiles(TileType::Wall) + grid.count_tiles(TileType::WallCorner);
+        let wall_count = grid.count_matching_tiles(TileType::is_wall);
         assert!(wall_count > 0, "No walls detected");
     }
 

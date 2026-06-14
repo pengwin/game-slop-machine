@@ -15,7 +15,7 @@
 use crate::config::BuildingConfig;
 use crate::layout::{Doorway, Room, Wall, WallId, WallType, Window};
 use crate::random::SeededRng;
-use crate::tile::{TileGrid, TileType};
+use crate::tile::{CardinalDir, TileGrid, TileType, WallKind, WallOpening, WallShape};
 use crate::tile_converter::{find_adjacent_rooms, find_doorway_positions_between_rooms};
 
 /// Places doorways between adjacent rooms and one exterior door.
@@ -45,7 +45,7 @@ pub fn place_doorways(
             // Place doorway at the middle of the shared wall
             let candidates: Vec<_> = positions
                 .into_iter()
-                .filter(|&(x, y)| grid.get(x, y) == TileType::Wall)
+                .filter(|&(x, y)| is_straight_wall(grid.get(x, y)))
                 .collect();
 
             if candidates.is_empty() {
@@ -55,8 +55,13 @@ pub fn place_doorways(
             let mid = candidates.len() / 2;
             let (wx, wy) = candidates[mid];
 
-            // Mark the tile as a doorway
-            grid.set(wx, wy, TileType::Doorway);
+            grid.set_wall_opening(
+                wx,
+                wy,
+                WallOpening::Door {
+                    render_panel: config.interior_door_render_panel,
+                },
+            );
 
             let pos = grid.world_pos(wx, wy);
             doorways.push(Doorway {
@@ -79,10 +84,8 @@ pub fn place_doorways(
         let mid = wall.segment.midpoint();
 
         if let Some((x, y)) = grid.tile_coord(mid) {
-            let tile = grid.get(x, y);
-            if tile == TileType::Wall {
-                // Mark the tile as a door
-                grid.set(x, y, TileType::Door);
+            if is_straight_wall(grid.get(x, y)) {
+                grid.set_wall_opening(x, y, WallOpening::Door { render_panel: true });
 
                 doorways.push(Doorway {
                     wall_id: wall.id,
@@ -122,12 +125,16 @@ pub fn place_windows(
         let mid = wall.segment.midpoint();
         if let Some((x, y)) = grid.tile_coord(mid) {
             let tile = grid.get(x, y);
-            if tile == TileType::Wall {
+            if is_straight_wall(tile) {
+                if tile.is_opening() {
+                    continue;
+                }
+
                 // Check if there's a door or window nearby
                 let has_door = grid
                     .neighbors(x, y)
                     .iter()
-                    .any(|(_, _, t)| *t == TileType::Door || *t == TileType::Doorway);
+                    .any(|(_, _, t)| is_door_like(*t));
                 let has_window = has_window_near(grid, x, y, config);
 
                 // 30% chance to place window, skip if door nearby
@@ -136,9 +143,19 @@ pub fn place_windows(
                     if positions.len() != window_tiles {
                         continue;
                     }
+                    if window_near_corner_or_junction(grid, &positions, config) {
+                        continue;
+                    }
 
                     for (wx, wy) in positions {
-                        grid.set(wx, wy, TileType::Window);
+                        if !is_straight_wall(grid.get(wx, wy)) || grid.get(wx, wy).is_opening() {
+                            continue;
+                        }
+                        let render_glass = match grid.get(wx, wy).wall().map(|wall| wall.kind) {
+                            Some(WallKind::Interior) => config.interior_window_render_glass,
+                            _ => config.exterior_window_render_glass,
+                        };
+                        grid.set_wall_opening(wx, wy, WallOpening::Window { render_glass });
                     }
 
                     windows.push(Window {
@@ -154,6 +171,63 @@ pub fn place_windows(
     }
 
     windows
+}
+
+fn is_straight_wall(tile: TileType) -> bool {
+    matches!(
+        tile.wall().map(|wall| wall.shape),
+        Some(WallShape::Straight(_))
+    )
+}
+
+fn window_near_corner_or_junction(
+    grid: &TileGrid,
+    positions: &[(usize, usize)],
+    _config: &BuildingConfig,
+) -> bool {
+    positions
+        .iter()
+        .any(|&(x, y)| near_non_straight_wall(grid, x, y, 1))
+}
+
+fn near_non_straight_wall(grid: &TileGrid, x: usize, y: usize, margin: isize) -> bool {
+    let Some(axis_x) = straight_wall_axis_x(grid.get(x, y)) else {
+        return true;
+    };
+
+    for offset in -margin..=margin {
+        if offset == 0 {
+            continue;
+        }
+
+        let coord = if axis_x {
+            x.checked_add_signed(offset)
+                .filter(|&nx| nx < grid.width)
+                .map(|nx| (nx, y))
+        } else {
+            y.checked_add_signed(offset)
+                .filter(|&ny| ny < grid.height)
+                .map(|ny| (x, ny))
+        };
+
+        let Some((nx, ny)) = coord else {
+            return true;
+        };
+        let tile = grid.get(nx, ny);
+        if tile.is_wall() && !is_straight_wall(tile) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn straight_wall_axis_x(tile: TileType) -> Option<bool> {
+    match tile.wall().map(|wall| wall.shape) {
+        Some(WallShape::Straight(CardinalDir::Bottom | CardinalDir::Top)) => Some(true),
+        Some(WallShape::Straight(CardinalDir::Left | CardinalDir::Right)) => Some(false),
+        _ => None,
+    }
 }
 
 fn window_positions(
@@ -184,7 +258,7 @@ fn window_positions(
         };
 
         if let (Some(wx), Some(wy)) = (wx, wy) {
-            if wx < grid.width && wy < grid.height && grid.get(wx, wy) == TileType::Wall {
+            if wx < grid.width && wy < grid.height && grid.get(wx, wy).is_wall() {
                 result.push((wx, wy));
             }
         }
@@ -194,7 +268,7 @@ fn window_positions(
 }
 
 fn has_wall(grid: &TileGrid, x: usize, y: usize) -> bool {
-    x < grid.width && y < grid.height && grid.get(x, y) == TileType::Wall
+    x < grid.width && y < grid.height && is_straight_wall(grid.get(x, y))
 }
 
 fn has_window_near(grid: &TileGrid, x: usize, y: usize, config: &BuildingConfig) -> bool {
@@ -211,7 +285,12 @@ fn has_window_near(grid: &TileGrid, x: usize, y: usize, config: &BuildingConfig)
                 continue;
             }
 
-            if grid.get(nx as usize, ny as usize) == TileType::Window {
+            if matches!(
+                grid.get(nx as usize, ny as usize)
+                    .wall()
+                    .and_then(|wall| wall.opening),
+                Some(WallOpening::Window { .. })
+            ) {
                 return true;
             }
         }
@@ -220,11 +299,19 @@ fn has_window_near(grid: &TileGrid, x: usize, y: usize, config: &BuildingConfig)
     false
 }
 
+fn is_door_like(tile: TileType) -> bool {
+    matches!(
+        tile.wall().and_then(|wall| wall.opening),
+        Some(WallOpening::Door { .. } | WallOpening::Doorway)
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::bsp::{bsp_subdivide, collect_rooms};
     use crate::geometry::Rect;
+    use crate::tile::{CornerDir, WallTile};
     use crate::tile_converter::rooms_to_tile_grid;
 
     fn test_config() -> BuildingConfig {
@@ -274,5 +361,48 @@ mod tests {
                 "Window placed on interior wall"
             );
         }
+    }
+
+    #[test]
+    fn test_windows_not_placed_near_corners() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 5.0, 3.0),
+            tile_size: 1.0,
+            window_width: 1.0,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(5, 3, config.tile_size, config.footprint.min);
+
+        grid.set(
+            0,
+            0,
+            TileType::Wall(WallTile::exterior(WallShape::Corner(CornerDir::BottomLeft))),
+        );
+        for x in 1..4 {
+            grid.set(
+                x,
+                0,
+                TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top))),
+            );
+        }
+        grid.set(
+            4,
+            0,
+            TileType::Wall(WallTile::exterior(WallShape::Corner(
+                CornerDir::BottomRight,
+            ))),
+        );
+        for x in 1..4 {
+            grid.set(x, 1, TileType::Floor);
+        }
+
+        assert!(
+            window_near_corner_or_junction(&grid, &[(1, 0)], &config),
+            "a window adjacent to a corner should be rejected"
+        );
+        assert!(
+            !window_near_corner_or_junction(&grid, &[(2, 0)], &config),
+            "a window with a straight wall tile on both sides should be allowed"
+        );
     }
 }

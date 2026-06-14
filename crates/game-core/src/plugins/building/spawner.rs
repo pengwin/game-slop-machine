@@ -5,7 +5,8 @@ use bevy::render::render_resource::PrimitiveTopology;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::{Rect, Vec2};
 use building_gen::mesh::{generate_building_mesh, MeshData};
-use building_gen::tile::{TileGrid, TileType};
+use building_gen::tile::{CardinalDir, TileGrid, TileType, WallShape, WallTile};
+use building_gen::tile_converter::classify_wall_tiles;
 
 #[derive(Resource)]
 pub struct CurrentBuilding {
@@ -57,6 +58,74 @@ pub fn spawn_building_on_command(
         );
     }
 
+    if !bmesh.wall_top_mesh.is_empty() {
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&bmesh.wall_top_mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.18, 0.18, 0.18),
+                        cull_mode: None,
+                        ..default()
+                    })),
+                    Transform::default(),
+                    Name::new("Wall Top Faces"),
+                ))
+                .id(),
+        );
+    }
+
+    if !bmesh.exterior_wall_mesh.is_empty() {
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_wall_mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.92, 0.88, 0.68),
+                        cull_mode: None,
+                        ..default()
+                    })),
+                    Transform::default(),
+                    Name::new("Exterior Wall Faces"),
+                ))
+                .id(),
+        );
+    }
+
+    if !bmesh.exterior_corner_mesh.is_empty() {
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_corner_mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.96, 0.9, 0.62),
+                        cull_mode: None,
+                        ..default()
+                    })),
+                    Transform::default(),
+                    Name::new("Exterior Corner Faces"),
+                ))
+                .id(),
+        );
+    }
+
+    if !bmesh.exterior_t_junction_mesh.is_empty() {
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_t_junction_mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.86, 0.78, 0.48),
+                        cull_mode: None,
+                        ..default()
+                    })),
+                    Transform::default(),
+                    Name::new("Exterior T-Junction Faces"),
+                ))
+                .id(),
+        );
+    }
+
     if !bmesh.floor_mesh.is_empty() {
         entities.push(
             commands
@@ -88,7 +157,11 @@ pub fn spawn_building_on_command(
             commands
                 .spawn((
                     Mesh3d(meshes.add(convert_mesh(&bmesh.door_mesh))),
-                    MeshMaterial3d(materials.add(Color::srgb(0.4, 0.2, 0.0))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(0.4, 0.2, 0.0),
+                        cull_mode: None,
+                        ..default()
+                    })),
                     Transform::default(),
                     Name::new("Doors"),
                 ))
@@ -133,16 +206,19 @@ fn build_corner_grid(config: &BuildingConfig) -> TileGrid {
     let h = config.tiles_y();
     let origin = Vec2::new(config.footprint.min.x, config.footprint.min.y);
     let mut grid = TileGrid::new(w, h, config.tile_size, origin);
+    let wall = TileType::Wall(WallTile::exterior(WallShape::Straight(CardinalDir::Top)));
 
     for y in 0..h {
         for x in 0..w {
             if x == 0 || x == w - 1 || y == 0 || y == h - 1 {
-                grid.set(x, y, TileType::Wall);
+                grid.set(x, y, wall);
             } else {
                 grid.set(x, y, TileType::Floor);
             }
         }
     }
+
+    classify_wall_tiles(&mut grid);
 
     grid
 }
