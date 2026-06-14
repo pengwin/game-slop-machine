@@ -1,5 +1,6 @@
-use bevy::prelude::*;
 use bevy::camera::ScalingMode;
+use bevy::light::ShadowFilteringMethod;
+use bevy::prelude::*;
 
 use super::camera_config::CameraConfig;
 
@@ -10,6 +11,7 @@ pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
     commands.spawn((
         MainCamera,
         Camera3d::default(),
+        ShadowFilteringMethod::Gaussian,
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::FixedVertical {
                 viewport_height: config.viewport_height,

@@ -174,7 +174,12 @@ pub fn spawn_building_on_command(
             commands
                 .spawn((
                     Mesh3d(meshes.add(convert_mesh(&bmesh.window_mesh))),
-                    MeshMaterial3d(materials.add(Color::srgba(0.5, 0.7, 1.0, 0.6))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgba(0.45, 0.7, 1.0, 0.45),
+                        alpha_mode: AlphaMode::Blend,
+                        cull_mode: None,
+                        ..default()
+                    })),
                     Transform::default(),
                     Name::new("Windows"),
                 ))

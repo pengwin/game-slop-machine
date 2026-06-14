@@ -1,5 +1,6 @@
 use bevy::{
     camera::RenderTarget,
+    light::ShadowFilteringMethod,
     prelude::*,
     render::{
         render_resource::TextureFormat,
@@ -38,6 +39,7 @@ pub fn setup_screenshot(
 
     commands.spawn((
         Camera3d::default(),
+        ShadowFilteringMethod::Gaussian,
         Camera {
             order: 1,
             ..default()

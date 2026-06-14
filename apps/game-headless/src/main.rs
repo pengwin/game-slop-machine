@@ -251,7 +251,8 @@ fn generate_building(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.window_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.3, 0.5, 1.0),
+                base_color: Color::srgba(0.45, 0.7, 1.0, 0.45),
+                alpha_mode: AlphaMode::Blend,
                 cull_mode: None,
                 ..default()
             })),
