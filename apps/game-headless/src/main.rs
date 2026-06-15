@@ -5,14 +5,16 @@ use bevy::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};
 use building_gen::config::BuildingConfig;
+use building_gen::district::config::TradeDistrictConfig;
+use building_gen::district::generate_district;
 use building_gen::geometry::{Rect, Vec2};
 use building_gen::mesh::{generate_building_mesh, MeshData};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
+use game_core::plugins::scene::camera_config::CameraConfig;
+use game_core::plugins::scene::scene_config::SceneConfig;
 use game_core::plugins::GamePlugin;
 use std::time::Duration;
-
-
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -60,6 +62,118 @@ fn generate_building(
     mut materials: ResMut<Assets<StandardMaterial>>,
     fixture: Res<HeadlessFixture>,
 ) {
+    // District fixture: generate a trade district with zoomed-out camera
+    if fixture.0 == "district" {
+        commands.insert_resource(CameraConfig {
+            position: Vec3::new(30.0, 30.0, 30.0),
+            target: Vec3::new(0.0, 0.0, 0.0),
+            viewport_height: 50.0,
+        });
+        commands.insert_resource(SceneConfig {
+            ground_size: 70.0,
+            ..Default::default()
+        });
+
+        let district_config = TradeDistrictConfig::default();
+        let district = generate_district(&district_config);
+        let mut entity_count = 0;
+
+        // Town square
+        let sq = district_config.town_square_radius;
+        let sq_mesh = make_ground_quad(Vec3::new(0.0, 0.005, 0.0), sq * 2.0, sq * 2.0);
+        commands.spawn((
+            Mesh3d(meshes.add(sq_mesh)),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.76, 0.70, 0.50),
+                perceptual_roughness: 0.95,
+                ..default()
+            })),
+            Transform::default(),
+            Name::new("Town Square"),
+        ));
+        entity_count += 1;
+
+        // Roads
+        for (i, road) in district.roads.iter().enumerate() {
+            let dx = road.end.x - road.start.x;
+            let dz = road.end.y - road.start.y;
+            let length = (dx * dx + dz * dz).sqrt();
+            if length < 0.01 {
+                continue;
+            }
+            let angle = dz.atan2(dx);
+            let cx = (road.start.x + road.end.x) / 2.0;
+            let cz = (road.start.y + road.end.y) / 2.0;
+
+            let road_mesh = make_ground_quad(Vec3::ZERO, length, road.width);
+            commands.spawn((
+                Mesh3d(meshes.add(road_mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.55, 0.45, 0.35),
+                    perceptual_roughness: 0.95,
+                    ..default()
+                })),
+                Transform {
+                    translation: Vec3::new(cx, 0.005, cz),
+                    rotation: Quat::from_rotation_y(-angle),
+                    ..default()
+                },
+                Name::new(format!("Road {}", i)),
+            ));
+            entity_count += 1;
+        }
+
+        // Lots
+        for (i, lot) in district.lots.iter().enumerate() {
+            let width_axis_rotation = lot.rotation + std::f32::consts::FRAC_PI_2;
+
+            let lot_mesh = make_ground_quad(Vec3::ZERO, lot.width, lot.depth);
+            commands.spawn((
+                Mesh3d(meshes.add(lot_mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.82, 0.75, 0.55),
+                    perceptual_roughness: 0.95,
+                    ..default()
+                })),
+                Transform {
+                    translation: Vec3::new(lot.position.x, 0.01, lot.position.y),
+                    rotation: Quat::from_rotation_y(-width_axis_rotation),
+                    ..default()
+                },
+                Name::new(format!("Lot {}", i)),
+            ));
+            entity_count += 1;
+
+            // Entrance marker centered on the entrance point.
+            let marker_width = (lot.width * 0.18).clamp(0.8, 1.8);
+            let marker_depth = 0.45;
+            let marker_mesh = make_ground_quad(Vec3::ZERO, marker_width, marker_depth);
+            commands.spawn((
+                Mesh3d(meshes.add(marker_mesh)),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.45, 0.38, 0.28),
+                    perceptual_roughness: 0.95,
+                    ..default()
+                })),
+                Transform {
+                    translation: Vec3::new(lot.entrance.x, 0.015, lot.entrance.y),
+                    rotation: Quat::from_rotation_y(-width_axis_rotation),
+                    ..default()
+                },
+                Name::new(format!("Lot {} Entrance", i)),
+            ));
+            entity_count += 1;
+        }
+
+        println!(
+            "District generated: {} lots, {} roads, {} entities",
+            district.lots.len(),
+            district.roads.len(),
+            entity_count
+        );
+        return;
+    }
+
     let config = config_for_fixture(&fixture.0);
     let grid = match fixture.0.as_str() {
         "procedural" | "with-roof" => building_gen::generate_layout(&config, 42).tile_grid,
@@ -409,6 +523,37 @@ fn convert_mesh(data: &MeshData) -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals.clone());
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs.clone());
     mesh.insert_indices(Indices::U32(data.indices.clone()));
+
+    mesh
+}
+
+fn make_ground_quad(center: Vec3, width: f32, depth: f32) -> Mesh {
+    let hw = width / 2.0;
+    let hd = depth / 2.0;
+    let mut mesh = Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+    );
+
+    let cx = center.x;
+    let cy = center.y;
+    let cz = center.z;
+
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        vec![
+            [cx - hw, cy, cz - hd],
+            [cx + hw, cy, cz - hd],
+            [cx + hw, cy, cz + hd],
+            [cx - hw, cy, cz + hd],
+        ],
+    );
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 4]);
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_UV_0,
+        vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+    );
+    mesh.insert_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]));
 
     mesh
 }

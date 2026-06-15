@@ -53,6 +53,7 @@ pub mod random;
 pub mod roof;
 pub mod tile;
 pub mod tile_converter;
+pub mod district;
 
 use config::BuildingConfig;
 use layout::BuildingLayout;

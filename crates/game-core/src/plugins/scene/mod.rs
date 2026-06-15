@@ -2,7 +2,7 @@ pub mod camera;
 pub mod camera_config;
 mod light;
 mod objects;
-mod scene_config;
+pub mod scene_config;
 
 use bevy::prelude::*;
 

@@ -1,12 +1,11 @@
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::Indices;
 use bevy::prelude::*;
-use bevy::render::render_resource::PrimitiveTopology;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::{Rect, Vec2};
-use building_gen::mesh::{generate_building_mesh, MeshData};
+use building_gen::mesh::generate_building_mesh;
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
+
+use super::mesh_util::convert_mesh;
 
 #[derive(Resource)]
 pub struct CurrentBuilding {
@@ -277,19 +276,4 @@ fn build_corner_grid(config: &BuildingConfig) -> TileGrid {
     classify_wall_tiles(&mut grid);
 
     grid
-}
-
-/// Converts a `MeshData` into a Bevy `Mesh`.
-fn convert_mesh(data: &MeshData) -> Mesh {
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
-    );
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, data.vertices.clone());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals.clone());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs.clone());
-    mesh.insert_indices(Indices::U32(data.indices.clone()));
-
-    mesh
 }
