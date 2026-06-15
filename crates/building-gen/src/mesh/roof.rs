@@ -69,11 +69,7 @@ pub fn generate_roof_mesh(bounds: Rect, roof: &RoofGeometry, config: &BuildingCo
     mesh
 }
 
-pub fn generate_gable_mesh(
-    bounds: Rect,
-    roof: &RoofGeometry,
-    config: &BuildingConfig,
-) -> MeshData {
+pub fn generate_gable_mesh(bounds: Rect, roof: &RoofGeometry, config: &BuildingConfig) -> MeshData {
     let mut mesh = MeshData::default();
     let overhang = config.roof_overhang;
     let wall_h = building_top_y(config);

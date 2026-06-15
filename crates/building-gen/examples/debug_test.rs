@@ -1,4 +1,4 @@
-use building_gen::config::BuildingConfig;
+use building_gen::config::{BuildingConfig, RoomSpec};
 use building_gen::geometry::Rect;
 use building_gen::tile::TileType;
 use building_gen::*;
@@ -8,7 +8,12 @@ fn main() {
         footprint: Rect::new(0.0, 0.0, 10.0, 8.0),
         tile_size: 0.5,
         min_room_size: 2.5,
-        target_rooms: 4,
+        room_specs: vec![
+            RoomSpec::new("hall", 1),
+            RoomSpec::new("kitchen", 2),
+            RoomSpec::new("bedroom", 1),
+            RoomSpec::new("bathroom", 0),
+        ],
         ..Default::default()
     };
 

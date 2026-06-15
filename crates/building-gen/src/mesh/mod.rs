@@ -8,8 +8,8 @@
 //! - A scale transform (width, height, depth)
 //! - A color/material hint
 
-mod foundation;
 mod floor;
+mod foundation;
 mod math_util;
 mod opening;
 mod primitives;
@@ -21,8 +21,8 @@ use crate::layout::RoofGeometry;
 use crate::tile::TileGrid;
 
 pub use primitives::{floor_quad, floor_quad_indices, floor_quad_normals, floor_quad_uvs};
-pub use primitives::{unit_cube, unit_cube_indices, unit_cube_normals, unit_cube_uvs};
 pub use primitives::{tile_color, tile_scale};
+pub use primitives::{unit_cube, unit_cube_indices, unit_cube_normals, unit_cube_uvs};
 
 /// Raw mesh data (vertices, normals, UVs, indices).
 #[derive(Debug, Clone, Default)]
@@ -119,7 +119,10 @@ mod tests {
             "floor mesh should not be empty"
         );
         assert!(!bmesh.roof_mesh.is_empty(), "roof mesh should not be empty");
-        assert!(!bmesh.gable_mesh.is_empty(), "gable mesh should not be empty");
+        assert!(
+            !bmesh.gable_mesh.is_empty(),
+            "gable mesh should not be empty"
+        );
     }
 
     #[test]

@@ -85,6 +85,7 @@ fn fill_room_interior(grid: &mut TileGrid, room: &Room, config: &BuildingConfig)
         for x in (min_x + 1)..max_x {
             if grid.get(x, y) == TileType::Empty {
                 grid.set(x, y, TileType::Floor);
+                grid.set_room_label(x, y, &room.label);
             }
         }
     }
@@ -373,16 +374,21 @@ fn room_grid_lines(grid: &TileGrid, room: &Room) -> (usize, usize, usize, usize)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bsp::{bsp_subdivide, collect_rooms};
+    use crate::config::RoomSpec;
     use crate::geometry::Rect;
-    use crate::random::SeededRng;
+    use crate::zone_layout;
 
     fn test_config() -> BuildingConfig {
         BuildingConfig {
             footprint: Rect::new(0.0, 0.0, 10.0, 8.0),
             tile_size: 0.5,
             min_room_size: 2.5,
-            target_rooms: 4,
+            room_specs: vec![
+                RoomSpec::new("hall", 1),
+                RoomSpec::new("kitchen", 1),
+                RoomSpec::new("bedroom", 1),
+                RoomSpec::new("bathroom", 0),
+            ],
             ..Default::default()
         }
     }
@@ -390,20 +396,29 @@ mod tests {
     #[test]
     fn test_rooms_flood_to_grid() {
         let config = test_config();
-        let mut rng = SeededRng::new(42);
-        let tree = bsp_subdivide(&config, &mut rng);
-        let rooms = collect_rooms(&tree);
+        let (rooms, _) = zone_layout::generate_rooms(&config);
         let grid = rooms_to_tile_grid(&rooms, &config);
 
         assert!(grid.count_tiles(TileType::Floor) > 0);
     }
 
     #[test]
+    fn test_floor_tiles_keep_room_labels() {
+        let config = test_config();
+        let (rooms, _) = zone_layout::generate_rooms(&config);
+        let grid = rooms_to_tile_grid(&rooms, &config);
+
+        let hall = rooms.iter().find(|room| room.label == "hall").unwrap();
+        let center = hall.bounds.center();
+        let (x, y) = grid.tile_coord(center).unwrap();
+
+        assert_eq!(grid.room_label(x, y), Some("hall"));
+    }
+
+    #[test]
     fn test_walls_detected() {
         let config = test_config();
-        let mut rng = SeededRng::new(42);
-        let tree = bsp_subdivide(&config, &mut rng);
-        let rooms = collect_rooms(&tree);
+        let (rooms, _) = zone_layout::generate_rooms(&config);
         let grid = rooms_to_tile_grid(&rooms, &config);
 
         let wall_count = grid.count_matching_tiles(TileType::is_wall);
@@ -413,9 +428,7 @@ mod tests {
     #[test]
     fn test_grid_dimensions() {
         let config = test_config();
-        let mut rng = SeededRng::new(42);
-        let tree = bsp_subdivide(&config, &mut rng);
-        let rooms = collect_rooms(&tree);
+        let (rooms, _) = zone_layout::generate_rooms(&config);
         let grid = rooms_to_tile_grid(&rooms, &config);
 
         assert_eq!(grid.width, 20);
@@ -425,9 +438,7 @@ mod tests {
     #[test]
     fn test_adjacent_rooms_detected() {
         let config = test_config();
-        let mut rng = SeededRng::new(42);
-        let tree = bsp_subdivide(&config, &mut rng);
-        let rooms = collect_rooms(&tree);
+        let (rooms, _) = zone_layout::generate_rooms(&config);
         let grid = rooms_to_tile_grid(&rooms, &config);
 
         let pairs = find_adjacent_rooms(&grid, &rooms);

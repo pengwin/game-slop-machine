@@ -187,6 +187,7 @@ pub struct TileGrid {
     pub tile_size: f32,
     pub origin: Vec2,
     tiles: Vec<TileType>,
+    room_labels: Vec<Option<String>>,
 }
 
 impl TileGrid {
@@ -197,6 +198,7 @@ impl TileGrid {
             tile_size,
             origin,
             tiles: vec![TileType::Empty; width * height],
+            room_labels: vec![None; width * height],
         }
     }
 
@@ -211,6 +213,23 @@ impl TileGrid {
     pub fn set(&mut self, x: usize, y: usize, tile: TileType) {
         if x < self.width && y < self.height {
             self.tiles[y * self.width + x] = tile;
+            if !matches!(tile, TileType::Floor) {
+                self.room_labels[y * self.width + x] = None;
+            }
+        }
+    }
+
+    pub fn set_room_label(&mut self, x: usize, y: usize, label: &str) {
+        if x < self.width && y < self.height && self.get(x, y) == TileType::Floor {
+            self.room_labels[y * self.width + x] = Some(label.to_string());
+        }
+    }
+
+    pub fn room_label(&self, x: usize, y: usize) -> Option<&str> {
+        if x < self.width && y < self.height {
+            self.room_labels[y * self.width + x].as_deref()
+        } else {
+            None
         }
     }
 

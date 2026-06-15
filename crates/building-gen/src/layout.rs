@@ -1,5 +1,6 @@
 use crate::geometry::{LineSegment2D, Rect, Vec2, Vec3};
 use crate::tile::TileGrid;
+use crate::zone_layout::CorridorInfo;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RoomId(pub u32);
@@ -11,13 +12,15 @@ pub struct WallId(pub u32);
 pub struct Room {
     pub id: RoomId,
     pub bounds: Rect,
+    pub label: String,
 }
 
 impl Room {
-    pub fn new(id: u32, bounds: Rect) -> Self {
+    pub fn new(id: u32, bounds: Rect, label: &str) -> Self {
         Self {
             id: RoomId(id),
             bounds,
+            label: label.to_string(),
         }
     }
 }
@@ -79,6 +82,7 @@ pub struct BuildingLayout {
     pub tile_grid: TileGrid,
     pub roof: RoofGeometry,
     pub bounds: Rect,
+    pub corridor: Option<CorridorInfo>,
 }
 
 impl BuildingLayout {
@@ -136,9 +140,10 @@ mod tests {
 
     #[test]
     fn test_room_creation() {
-        let room = Room::new(0, Rect::new(0.0, 0.0, 5.0, 4.0));
+        let room = Room::new(0, Rect::new(0.0, 0.0, 5.0, 4.0), "hall");
         assert_eq!(room.id, RoomId(0));
         assert_eq!(room.bounds.width(), 5.0);
+        assert_eq!(room.label, "hall");
     }
 
     #[test]

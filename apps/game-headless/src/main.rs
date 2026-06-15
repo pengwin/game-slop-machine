@@ -4,7 +4,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};
-use building_gen::config::BuildingConfig;
+use building_gen::config::{BuildingConfig, RoomSpec};
 use building_gen::district::config::TradeDistrictConfig;
 use building_gen::district::generate_district;
 use building_gen::geometry::{Rect, Vec2};
@@ -176,7 +176,9 @@ fn generate_building(
 
     let config = config_for_fixture(&fixture.0);
     let grid = match fixture.0.as_str() {
-        "procedural" | "with-roof" => building_gen::generate_layout(&config, 42).tile_grid,
+        "procedural" | "with-roof" | "corridor" => {
+            building_gen::generate_layout(&config, 42).tile_grid
+        }
         "four-doors" => {
             build_perimeter_opening_grid(&config, WallOpening::Door { render_panel: true })
         }
@@ -434,9 +436,35 @@ fn generate_building(
 
 fn config_for_fixture(fixture: &str) -> BuildingConfig {
     match fixture {
-        "procedural" => BuildingConfig::default(),
+        "procedural" => BuildingConfig {
+            room_specs: vec![
+                RoomSpec::new("hall", 1),
+                RoomSpec::new("kitchen", 2),
+                RoomSpec::new("bedroom", 1),
+                RoomSpec::new("bathroom", 0),
+            ],
+            ..Default::default()
+        },
         "with-roof" => BuildingConfig {
+            room_specs: vec![
+                RoomSpec::new("hall", 1),
+                RoomSpec::new("kitchen", 2),
+                RoomSpec::new("bedroom", 1),
+                RoomSpec::new("bathroom", 0),
+            ],
             render_roof: true,
+            ..Default::default()
+        },
+        "corridor" => BuildingConfig {
+            room_specs: vec![
+                RoomSpec::new("hall", 1),
+                RoomSpec::new("kitchen", 2),
+                RoomSpec::new("bedroom", 1),
+                RoomSpec::new("bathroom", 0),
+            ],
+            has_corridor: true,
+            corridor_width: 1.0,
+            render_roof: false,
             ..Default::default()
         },
         _ => BuildingConfig {
@@ -446,6 +474,7 @@ fn config_for_fixture(fixture: &str) -> BuildingConfig {
             interior_wall_thickness: 0.18,
             wall_height: 3.0,
             door_width: 0.8,
+            room_specs: vec![RoomSpec::new("room", 0)],
             ..Default::default()
         },
     }
