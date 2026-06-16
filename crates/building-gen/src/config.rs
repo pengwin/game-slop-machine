@@ -105,6 +105,35 @@ impl RoomDefaults {
 }
 
 #[derive(Debug, Clone)]
+pub struct BuildingVisualStyle {
+    pub wall_color: [f32; 3],
+    pub exterior_wall_color: [f32; 3],
+    pub corner_color: [f32; 3],
+    pub t_junction_color: [f32; 3],
+    pub roof_color: [f32; 3],
+    pub door_color: [f32; 3],
+    pub trim_color: [f32; 3],
+    pub foundation_color: [f32; 3],
+    pub floor_color: [f32; 3],
+}
+
+impl Default for BuildingVisualStyle {
+    fn default() -> Self {
+        Self {
+            wall_color: [0.8, 0.8, 0.8],
+            exterior_wall_color: [0.92, 0.88, 0.68],
+            corner_color: [0.96, 0.9, 0.62],
+            t_junction_color: [0.86, 0.78, 0.48],
+            roof_color: [0.55, 0.35, 0.2],
+            door_color: [0.4, 0.2, 0.0],
+            trim_color: [0.18, 0.16, 0.13],
+            foundation_color: [0.42, 0.42, 0.38],
+            floor_color: [0.6, 0.6, 0.6],
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BuildingConfig {
     pub footprint: Rect,
     /// World-space point on the exterior wall where the main entrance should be placed.
@@ -150,6 +179,7 @@ pub struct BuildingConfig {
     pub exterior_window_render_glass: bool,
     pub interior_window_render_glass: bool,
     pub render_roof: bool,
+    pub visual_style: BuildingVisualStyle,
 }
 
 impl Default for BuildingConfig {
@@ -185,6 +215,7 @@ impl Default for BuildingConfig {
             exterior_window_render_glass: true,
             interior_window_render_glass: false,
             render_roof: false,
+            visual_style: BuildingVisualStyle::default(),
         }
     }
 }

@@ -7,14 +7,16 @@ use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::
 use building_gen::config::{BuildingConfig, RoomSpec};
 use building_gen::district::config::TradeDistrictConfig;
 use building_gen::district::generate_district;
+use building_gen::district::layout::TradeDistrictLayout;
 use building_gen::geometry::{Rect, Vec2};
 use building_gen::mesh::{generate_building_mesh, MeshData};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
+use game_core::plugins::building::render::spawn_building_layout;
 use game_core::plugins::scene::camera_config::CameraConfig;
 use game_core::plugins::scene::scene_config::SceneConfig;
 use game_core::plugins::GamePlugin;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -56,27 +58,92 @@ fn main() {
 #[derive(Resource)]
 struct HeadlessFixture(String);
 
+fn spawn_lot_debug_view(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    district: &TradeDistrictLayout,
+) -> usize {
+    let mut entity_count = 0;
+
+    for (i, lot) in district.lots.iter().enumerate() {
+        let width_axis_rotation = lot.rotation + std::f32::consts::FRAC_PI_2;
+
+        let lot_mesh = make_ground_quad(Vec3::ZERO, lot.width, lot.depth);
+        commands.spawn((
+            Mesh3d(meshes.add(lot_mesh)),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.82, 0.75, 0.55),
+                perceptual_roughness: 0.95,
+                ..default()
+            })),
+            Transform {
+                translation: Vec3::new(lot.position.x, 0.01, lot.position.y),
+                rotation: Quat::from_rotation_y(-width_axis_rotation),
+                ..default()
+            },
+            Name::new(format!("Lot {}", i)),
+        ));
+        entity_count += 1;
+
+        let marker_width = (lot.width * 0.18).clamp(0.8, 1.8);
+        let marker_depth = 0.45;
+        let marker_mesh = make_ground_quad(Vec3::ZERO, marker_width, marker_depth);
+        commands.spawn((
+            Mesh3d(meshes.add(marker_mesh)),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.45, 0.38, 0.28),
+                perceptual_roughness: 0.95,
+                ..default()
+            })),
+            Transform {
+                translation: Vec3::new(lot.entrance.x, 0.015, lot.entrance.y),
+                rotation: Quat::from_rotation_y(-width_axis_rotation),
+                ..default()
+            },
+            Name::new(format!("Lot {} Entrance", i)),
+        ));
+        entity_count += 1;
+    }
+
+    entity_count
+}
+
 fn generate_building(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     fixture: Res<HeadlessFixture>,
 ) {
-    // District fixture: generate a trade district with zoomed-out camera
-    if fixture.0 == "district" {
+    // District fixtures: normal building preview and lot-placement debug preview.
+    if fixture.0 == "district" || fixture.0 == "district-lots" {
         commands.insert_resource(CameraConfig {
-            position: Vec3::new(30.0, 30.0, 30.0),
+            position: Vec3::new(42.0, 42.0, 42.0),
             target: Vec3::new(0.0, 0.0, 0.0),
-            viewport_height: 50.0,
+            viewport_height: 70.0,
         });
         commands.insert_resource(SceneConfig {
-            ground_size: 70.0,
+            ground_size: 100.0,
             ..Default::default()
         });
 
-        let district_config = TradeDistrictConfig::default();
+        let seed = fixture_seed();
+        let district_config = TradeDistrictConfig {
+            seed,
+            ring_spacing: random_range(seed, 0, 20.0, 24.0),
+            lot_gap: random_range(seed, 1, 0.4, 0.7),
+            lot_width: 1.0,
+            lot_height: random_range(seed, 2, 0.38, 0.5),
+            lot_depth: random_range(seed, 3, 0.05, 0.15),
+            lot_width_randomness: 0.0,
+            lot_height_randomness: random_range(seed, 4, 0.05, 0.15),
+            lot_depth_randomness: random_range(seed, 5, 0.02, 0.08),
+            building_lot_inset: random_range(seed, 6, 0.05, 0.15),
+            ..Default::default()
+        };
         let district = generate_district(&district_config);
         let mut entity_count = 0;
+        let show_lots = fixture.0 == "district-lots";
 
         // Town square
         let sq = district_config.town_square_radius;
@@ -123,51 +190,55 @@ fn generate_building(
             entity_count += 1;
         }
 
-        // Lots
-        for (i, lot) in district.lots.iter().enumerate() {
-            let width_axis_rotation = lot.rotation + std::f32::consts::FRAC_PI_2;
-
-            let lot_mesh = make_ground_quad(Vec3::ZERO, lot.width, lot.depth);
-            commands.spawn((
-                Mesh3d(meshes.add(lot_mesh)),
-                MeshMaterial3d(materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.82, 0.75, 0.55),
-                    perceptual_roughness: 0.95,
-                    ..default()
-                })),
-                Transform {
-                    translation: Vec3::new(lot.position.x, 0.01, lot.position.y),
-                    rotation: Quat::from_rotation_y(-width_axis_rotation),
-                    ..default()
-                },
-                Name::new(format!("Lot {}", i)),
-            ));
-            entity_count += 1;
-
-            // Entrance marker centered on the entrance point.
-            let marker_width = (lot.width * 0.18).clamp(0.8, 1.8);
-            let marker_depth = 0.45;
-            let marker_mesh = make_ground_quad(Vec3::ZERO, marker_width, marker_depth);
-            commands.spawn((
-                Mesh3d(meshes.add(marker_mesh)),
-                MeshMaterial3d(materials.add(StandardMaterial {
-                    base_color: Color::srgb(0.45, 0.38, 0.28),
-                    perceptual_roughness: 0.95,
-                    ..default()
-                })),
-                Transform {
-                    translation: Vec3::new(lot.entrance.x, 0.015, lot.entrance.y),
-                    rotation: Quat::from_rotation_y(-width_axis_rotation),
-                    ..default()
-                },
-                Name::new(format!("Lot {} Entrance", i)),
-            ));
-            entity_count += 1;
+        if show_lots {
+            entity_count +=
+                spawn_lot_debug_view(&mut commands, &mut meshes, &mut materials, &district);
+        } else {
+            for building in &district.buildings {
+                let lot = &district.lots[building.lot_index];
+                let door_local_position = building
+                    .exterior_door_position()
+                    .unwrap_or(building.config.entrance);
+                let door_world_position = local_to_world(
+                    building.world_position,
+                    building.rotation,
+                    door_local_position,
+                );
+                let spawned = spawn_building_layout(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    &building.config,
+                    &building.layout,
+                    Transform {
+                        translation: Vec3::new(
+                            building.world_position.x,
+                            0.0,
+                            building.world_position.y,
+                        ),
+                        rotation: Quat::from_rotation_y(building.rotation),
+                        ..default()
+                    },
+                    &format!("District Building {}", building.lot_index),
+                );
+                entity_count += spawned.len();
+                if spawn_entrance_approach(
+                    &mut commands,
+                    &mut meshes,
+                    &mut materials,
+                    lot.entrance,
+                    door_world_position,
+                    building.lot_index,
+                ) {
+                    entity_count += 1;
+                }
+            }
         }
 
         println!(
-            "District generated: {} lots, {} roads, {} entities",
+            "District generated: {} lots, {} buildings, {} roads, {} entities",
             district.lots.len(),
+            district.buildings.len(),
             district.roads.len(),
             entity_count
         );
@@ -585,4 +656,67 @@ fn make_ground_quad(center: Vec3, width: f32, depth: f32) -> Mesh {
     mesh.insert_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]));
 
     mesh
+}
+
+fn local_to_world(origin: Vec2, rotation: f32, local: Vec2) -> Vec2 {
+    let sin = rotation.sin();
+    let cos = rotation.cos();
+    Vec2::new(
+        origin.x + local.x * cos + local.y * sin,
+        origin.y - local.x * sin + local.y * cos,
+    )
+}
+
+fn fixture_seed() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos() as u64)
+        .unwrap_or(42)
+}
+
+fn random_range(seed: u64, stream: u64, min: f32, max: f32) -> f32 {
+    let mut value = seed ^ stream.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    value ^= value >> 30;
+    value = value.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    value ^= value >> 27;
+    value = value.wrapping_mul(0x94D0_49BB_1331_11EB);
+    value ^= value >> 31;
+
+    let unit = ((value >> 40) as f32) / ((1_u64 << 24) as f32);
+    min + (max - min) * unit
+}
+
+fn spawn_entrance_approach(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    start: Vec2,
+    end: Vec2,
+    lot_index: usize,
+) -> bool {
+    let dx = end.x - start.x;
+    let dz = end.y - start.y;
+    let length = (dx * dx + dz * dz).sqrt();
+    if length < 0.05 {
+        return false;
+    }
+
+    let angle = dz.atan2(dx);
+    let center = Vec2::new((start.x + end.x) / 2.0, (start.y + end.y) / 2.0);
+    commands.spawn((
+        Mesh3d(meshes.add(make_ground_quad(Vec3::ZERO, length, 0.75))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.24, 0.18, 0.12),
+            perceptual_roughness: 0.95,
+            ..default()
+        })),
+        Transform {
+            translation: Vec3::new(center.x, 0.035, center.y),
+            rotation: Quat::from_rotation_y(-angle),
+            ..default()
+        },
+        Name::new(format!("District Building {} Entrance Approach", lot_index)),
+    ));
+
+    true
 }

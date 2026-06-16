@@ -1,5 +1,6 @@
 pub mod config;
 pub mod mesh_util;
+pub mod render;
 pub mod spawner;
 
 use bevy::prelude::*;

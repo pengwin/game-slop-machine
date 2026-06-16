@@ -44,37 +44,33 @@ pub fn place_lots(
 
             // Try multiple times in this block with different random offsets
             for _attempt in 0..30 {
-                let Some(mut lot) = try_place_lot_in_block(block, config, rng, center) else {
+                let Some(lot) = try_place_lot_in_block(block, config, rng, center) else {
                     break;
                 };
 
                 // Try the requested fill first, then shrink locally if this
-                // trapezoid segment needs extra clearance near road chords.
-                for scale in [1.0, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52] {
+                // trapezoid segment needs extra clearance near road chords or neighboring lots.
+                let mut fitted_lot = None;
+                for scale in [1.0, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36] {
                     let candidate = scaled_lot(&lot, scale);
-                    if !lot_overlaps_roads(&candidate, roads, config.road_width) {
-                        lot = candidate;
+                    let overlaps_roads = lot_overlaps_roads(&candidate, roads, config.road_width);
+                    let overlaps_lots = lots
+                        .iter()
+                        .any(|existing| lots_overlap(&candidate, existing, 0.0));
+                    if !overlaps_roads && !overlaps_lots {
+                        fitted_lot = Some(candidate);
                         break;
                     }
                 }
 
-                if lot_overlaps_roads(&lot, roads, config.road_width) {
+                let Some(lot) = fitted_lot else {
                     continue;
-                }
+                };
 
-                // Check overlap with existing lots
-                let lot_radius = bounding_radius(lot.width, lot.depth);
-                let overlaps = lots.iter().any(|existing| {
-                    let existing_radius = bounding_radius(existing.width, existing.depth);
-                    lot.position.distance_to(existing.position)
-                        < lot_radius + existing_radius + config.lot_gap
-                });
-                if !overlaps {
-                    lots.push(lot);
-                    placed_per_block[block_idx] += 1;
-                    remaining -= 1;
-                    break;
-                }
+                lots.push(lot);
+                placed_per_block[block_idx] += 1;
+                remaining -= 1;
+                break;
             }
         }
         if remaining == 0 {
@@ -83,6 +79,174 @@ pub fn place_lots(
     }
 
     lots
+}
+
+/// Splits large parcel lots into building lots, each with its own frontage entrance.
+pub fn split_lots_for_buildings(lots: &[Lot], config: &TradeDistrictConfig) -> Vec<Lot> {
+    if config.max_buildings_per_lot <= 1 {
+        return lots.to_vec();
+    }
+
+    lots.iter()
+        .flat_map(|lot| split_lot_for_buildings(lot, config))
+        .collect()
+}
+
+fn split_lot_for_buildings(lot: &Lot, config: &TradeDistrictConfig) -> Vec<Lot> {
+    let area = lot.width * lot.depth;
+    let is_large_parcel = area >= config.preserve_large_lot_area;
+    if deterministic_unit(lot, config.seed) > config.building_lot_split_chance.clamp(0.0, 1.0) {
+        return vec![single_building_lot(lot, config, is_large_parcel)];
+    }
+
+    let count = choose_building_lot_count(lot, config);
+    if count <= 1 {
+        return vec![single_building_lot(lot, config, is_large_parcel)];
+    }
+    split_lot_evenly_with_jitter(lot, config, count).unwrap_or_else(|| vec![lot.clone()])
+}
+
+fn single_building_lot(lot: &Lot, config: &TradeDistrictConfig, is_large_parcel: bool) -> Lot {
+    if !is_large_parcel {
+        return lot.clone();
+    }
+
+    let landmark_pick = deterministic_unit(lot, config.seed ^ 0xD1B5_4A32_D192_ED03);
+    if landmark_pick <= config.landmark_lot_chance.clamp(0.0, 1.0) {
+        return lot.clone();
+    }
+
+    let width = (lot.width * config.standalone_lot_width_scale.clamp(0.25, 1.0)).max(3.0);
+    let depth = (lot.depth * config.standalone_lot_depth_scale.clamp(0.25, 1.0)).max(3.0);
+    scaled_lot_around_entrance(lot, width.min(lot.width), depth.min(lot.depth))
+}
+
+fn choose_building_lot_count(lot: &Lot, config: &TradeDistrictConfig) -> usize {
+    let max_buildings = config.max_buildings_per_lot.clamp(1, 3);
+    if max_buildings <= 1 {
+        return 1;
+    }
+
+    let weights = [
+        config.one_building_lot_weight.max(0.0),
+        if max_buildings >= 2 {
+            config.two_building_lot_weight.max(0.0)
+        } else {
+            0.0
+        },
+        if max_buildings >= 3 {
+            config.three_building_lot_weight.max(0.0)
+        } else {
+            0.0
+        },
+    ];
+    let total_weight: f32 = weights.iter().sum();
+    if total_weight <= f32::EPSILON {
+        return 1;
+    }
+
+    let pick = deterministic_unit(lot, config.seed ^ 0xA24B_AED4_963E_E407) * total_weight;
+    if pick < weights[0] {
+        1
+    } else if pick < weights[0] + weights[1] {
+        2
+    } else {
+        3
+    }
+}
+
+fn split_lot_evenly_with_jitter(
+    lot: &Lot,
+    config: &TradeDistrictConfig,
+    count: usize,
+) -> Option<Vec<Lot>> {
+    let min_building_width = 3.0;
+    let side_inset = config.building_lot_inset.min(lot.width * 0.2).max(0.0);
+    let gap = config.building_gap.max(0.0);
+    let usable_width = lot.width - side_inset * 2.0 - gap * (count.saturating_sub(1) as f32);
+    if usable_width <= 0.0 {
+        return None;
+    }
+
+    let split_jitter = config.building_lot_split_jitter.clamp(0.0, 0.35);
+    let mut weights = Vec::with_capacity(count);
+    for index in 0..count {
+        let unit = deterministic_unit(
+            lot,
+            config.seed ^ (0x9E37_79B9_u64.wrapping_mul(index as u64 + 1)),
+        );
+        weights.push((1.0 + (unit - 0.5) * split_jitter).max(0.2));
+    }
+    let total_weight: f32 = weights.iter().sum();
+    let widths: Vec<f32> = weights
+        .into_iter()
+        .map(|weight| usable_width * weight / total_weight)
+        .collect();
+    if widths.iter().any(|width| *width < min_building_width) {
+        return None;
+    }
+
+    let right = lot_right_axis(lot);
+    let total_frontage = usable_width + gap * (count.saturating_sub(1) as f32);
+    let mut cursor = -total_frontage / 2.0;
+    let mut lots = Vec::with_capacity(count);
+    for width in widths {
+        let center_offset = cursor + width / 2.0;
+        lots.push(sub_lot_from_center(
+            lot,
+            lot.position + right * center_offset,
+            width,
+        ));
+        cursor += width + gap;
+    }
+
+    Some(lots)
+}
+
+fn sub_lot_from_center(parent: &Lot, position: Vec2, width: f32) -> Lot {
+    let to_center = Vec2::new(-parent.entrance_dir.x, -parent.entrance_dir.y);
+    let entrance = position + to_center * (parent.depth / 2.0);
+
+    Lot {
+        position,
+        width,
+        depth: parent.depth,
+        rotation: parent.rotation,
+        entrance,
+        entrance_dir: parent.entrance_dir,
+    }
+}
+
+fn scaled_lot_around_entrance(parent: &Lot, width: f32, depth: f32) -> Lot {
+    let interior = parent.entrance_dir;
+    let position = parent.entrance + interior * (depth / 2.0);
+
+    Lot {
+        position,
+        width,
+        depth,
+        rotation: parent.rotation,
+        entrance: parent.entrance,
+        entrance_dir: parent.entrance_dir,
+    }
+}
+
+fn lot_right_axis(lot: &Lot) -> Vec2 {
+    Vec2::new(lot.entrance_dir.y, -lot.entrance_dir.x)
+}
+
+fn deterministic_unit(lot: &Lot, seed: u64) -> f32 {
+    let mut hash = seed
+        ^ (lot.position.x.to_bits() as u64).wrapping_mul(0x9E37_79B1_85EB_CA87)
+        ^ (lot.position.y.to_bits() as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
+        ^ (lot.width.to_bits() as u64).wrapping_mul(0x1656_67B1_9E37_79F9)
+        ^ (lot.depth.to_bits() as u64).wrapping_mul(0x85EB_CA77_C2B2_AE63);
+    hash ^= hash >> 33;
+    hash = hash.wrapping_mul(0xff51_afd7_ed55_8ccd);
+    hash ^= hash >> 33;
+    hash = hash.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
+    hash ^= hash >> 33;
+    (hash as f64 / u64::MAX as f64) as f32
 }
 
 fn scaled_lot(lot: &Lot, scale: f32) -> Lot {
@@ -167,8 +331,10 @@ fn try_place_lot_in_block(
     let r = inner_lot_edge + setback + depth / 2.0;
 
     let inner_face_radius = r - depth / 2.0;
-    let max_width =
+    let chord_width =
         2.0 * (inner_face_radius * (block.angle_span / 2.0).tan() - road_clearance) * width_fill;
+    let angular_width = 2.0 * ((block.angle_span / 2.0) * r - road_clearance) * width_fill;
+    let max_width = chord_width.min(angular_width);
     if max_width <= 0.0 {
         return None;
     }
@@ -227,6 +393,53 @@ fn randomized_fill(base: f32, randomness: f32, rng: &mut SeededRng) -> f32 {
 /// Returns the bounding circle radius for a lot.
 pub fn bounding_radius(width: f32, depth: f32) -> f32 {
     ((width * width + depth * depth).sqrt()) / 2.0
+}
+
+pub(crate) fn lots_overlap(a: &Lot, b: &Lot, gap: f32) -> bool {
+    let a_corners = lot_corners(a);
+    let b_corners = lot_corners(b);
+    let axes = [
+        normalized(a_corners[1] - a_corners[0]),
+        normalized(a_corners[3] - a_corners[0]),
+        normalized(b_corners[1] - b_corners[0]),
+        normalized(b_corners[3] - b_corners[0]),
+    ];
+
+    for axis in axes {
+        let (a_min, a_max) = project_polygon(&a_corners, axis);
+        let (b_min, b_max) = project_polygon(&b_corners, axis);
+        if a_max + gap < b_min || b_max + gap < a_min {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn normalized(v: Vec2) -> Vec2 {
+    let length = v.length();
+    if length <= f32::EPSILON {
+        Vec2::ZERO
+    } else {
+        v / length
+    }
+}
+
+fn project_polygon(corners: &[Vec2; 4], axis: Vec2) -> (f32, f32) {
+    let mut min = dot(corners[0], axis);
+    let mut max = min;
+
+    for corner in corners.iter().skip(1) {
+        let projection = dot(*corner, axis);
+        min = min.min(projection);
+        max = max.max(projection);
+    }
+
+    (min, max)
+}
+
+fn dot(a: Vec2, b: Vec2) -> f32 {
+    a.x * b.x + a.y * b.y
 }
 
 /// Checks whether a lot rectangle crosses any road segment.
@@ -428,20 +641,175 @@ mod tests {
 
         for i in 0..lots.len() {
             for j in (i + 1)..lots.len() {
-                let ri = bounding_radius(lots[i].width, lots[i].depth);
-                let rj = bounding_radius(lots[j].width, lots[j].depth);
-                let dist = lots[i].position.distance_to(lots[j].position);
                 assert!(
-                    dist >= ri + rj - 0.01,
-                    "Lots {} and {} overlap (dist={:.2}, radii={:.2}+{:.2})",
+                    !lots_overlap(&lots[i], &lots[j], 0.0),
+                    "Lots {} and {} overlap",
                     i,
                     j,
-                    dist,
-                    ri,
-                    rj,
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_lot_width_one_still_places_requested_lots() {
+        let config = TradeDistrictConfig {
+            lot_width: 1.0,
+            lot_width_randomness: 0.0,
+            lot_height_randomness: 0.0,
+            lot_depth_randomness: 0.0,
+            ..Default::default()
+        };
+        let roads = super::super::road::generate_road_network(&config);
+        let mut rng = SeededRng::new(config.seed);
+        let lots = place_lots(&config, &mut rng, &roads);
+
+        assert_eq!(lots.len(), config.lot_count);
+    }
+
+    #[test]
+    fn test_wide_lot_splits_into_building_lots_with_own_entrances() {
+        let lot = Lot {
+            position: Vec2::new(10.0, 4.0),
+            width: 24.0,
+            depth: 9.0,
+            rotation: 0.0,
+            entrance: Vec2::new(10.0, -0.5),
+            entrance_dir: Vec2::new(0.0, 1.0),
+        };
+        let config = TradeDistrictConfig {
+            building_lot_inset: 1.0,
+            max_buildings_per_lot: 2,
+            building_gap: 1.0,
+            preserve_large_lot_area: f32::MAX,
+            building_lot_split_chance: 1.0,
+            one_building_lot_weight: 0.0,
+            two_building_lot_weight: 1.0,
+            three_building_lot_weight: 0.0,
+            building_lot_split_jitter: 0.3,
+            ..Default::default()
+        };
+        let lots = split_lots_for_buildings(&[lot.clone()], &config);
+
+        assert_eq!(lots.len(), 2);
+        assert!(lots[0].position.distance_to(lots[1].position) > config.building_gap);
+        assert!(lots[0].entrance.distance_to(lots[1].entrance) > config.building_gap);
+        assert!((lots[0].width - lots[1].width).abs() > 0.01);
+        assert_eq!(lots[0].entrance_dir, Vec2::new(0.0, 1.0));
+        assert_eq!(lots[1].entrance_dir, Vec2::new(0.0, 1.0));
+    }
+
+    #[test]
+    fn test_wide_lot_can_split_into_three_small_building_lots() {
+        let lot = Lot {
+            position: Vec2::new(10.0, 4.0),
+            width: 24.0,
+            depth: 9.0,
+            rotation: 0.0,
+            entrance: Vec2::new(10.0, -0.5),
+            entrance_dir: Vec2::new(0.0, 1.0),
+        };
+        let config = TradeDistrictConfig {
+            building_lot_inset: 1.0,
+            max_buildings_per_lot: 3,
+            building_gap: 1.0,
+            preserve_large_lot_area: f32::MAX,
+            building_lot_split_chance: 1.0,
+            one_building_lot_weight: 0.0,
+            two_building_lot_weight: 0.0,
+            three_building_lot_weight: 1.0,
+            building_lot_split_jitter: 0.3,
+            ..Default::default()
+        };
+        let lots = split_lots_for_buildings(&[lot.clone()], &config);
+
+        assert_eq!(lots.len(), 3);
+        assert!(lots
+            .windows(2)
+            .all(|pair| pair[0].position.distance_to(pair[1].position) > config.building_gap));
+        assert!(lots.iter().all(|lot| lot.width >= 3.0));
+        assert!(lots
+            .iter()
+            .all(|lot| lot.entrance_dir == Vec2::new(0.0, 1.0)));
+    }
+
+    #[test]
+    fn test_large_lot_can_be_preserved_for_landmark_building() {
+        let lot = Lot {
+            position: Vec2::new(10.0, 4.0),
+            width: 24.0,
+            depth: 9.0,
+            rotation: 0.0,
+            entrance: Vec2::new(10.0, -0.5),
+            entrance_dir: Vec2::new(0.0, 1.0),
+        };
+        let config = TradeDistrictConfig {
+            max_buildings_per_lot: 2,
+            preserve_large_lot_area: 100.0,
+            building_lot_split_chance: 1.0,
+            one_building_lot_weight: 1.0,
+            two_building_lot_weight: 0.0,
+            three_building_lot_weight: 0.0,
+            landmark_lot_chance: 1.0,
+            ..Default::default()
+        };
+        let lots = split_lots_for_buildings(&[lot], &config);
+
+        assert_eq!(lots.len(), 1);
+        assert_eq!(lots[0].width, 24.0);
+        assert_eq!(lots[0].depth, 9.0);
+    }
+
+    #[test]
+    fn test_large_lot_can_hold_one_smaller_standalone_building() {
+        let lot = Lot {
+            position: Vec2::new(10.0, 4.0),
+            width: 24.0,
+            depth: 9.0,
+            rotation: 0.0,
+            entrance: Vec2::new(10.0, -0.5),
+            entrance_dir: Vec2::new(0.0, 1.0),
+        };
+        let original_width = lot.width;
+        let original_depth = lot.depth;
+        let original_entrance = lot.entrance;
+        let config = TradeDistrictConfig {
+            max_buildings_per_lot: 3,
+            preserve_large_lot_area: 100.0,
+            building_lot_split_chance: 1.0,
+            one_building_lot_weight: 1.0,
+            two_building_lot_weight: 0.0,
+            three_building_lot_weight: 0.0,
+            landmark_lot_chance: 0.0,
+            standalone_lot_width_scale: 0.5,
+            standalone_lot_depth_scale: 0.75,
+            ..Default::default()
+        };
+        let lots = split_lots_for_buildings(&[lot], &config);
+
+        assert_eq!(lots.len(), 1);
+        assert!(lots[0].width < original_width);
+        assert!(lots[0].depth < original_depth);
+        assert_eq!(lots[0].entrance, original_entrance);
+    }
+
+    #[test]
+    fn test_max_one_building_per_lot_disables_lot_splitting() {
+        let lot = Lot {
+            position: Vec2::new(10.0, 4.0),
+            width: 24.0,
+            depth: 9.0,
+            rotation: 0.0,
+            entrance: Vec2::new(10.0, -0.5),
+            entrance_dir: Vec2::new(0.0, 1.0),
+        };
+        let config = TradeDistrictConfig {
+            max_buildings_per_lot: 1,
+            ..Default::default()
+        };
+        let lots = split_lots_for_buildings(&[lot], &config);
+
+        assert_eq!(lots.len(), 1);
     }
 
     #[test]

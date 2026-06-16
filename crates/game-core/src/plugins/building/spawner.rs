@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::{Rect, Vec2};
-use building_gen::mesh::generate_building_mesh;
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
 
-use super::mesh_util::convert_mesh;
+use super::render::spawn_building_layout;
 
 #[derive(Resource)]
 pub struct CurrentBuilding {
@@ -39,203 +38,19 @@ pub fn spawn_building_on_command(
     };
     let grid = build_corner_grid(&config);
 
-    let roof = building_gen::roof::generate_roof(config.footprint, &config);
-    let bmesh = generate_building_mesh(&grid, &config, &roof);
-
-    let mut entities = Vec::new();
-
-    if !bmesh.foundation_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.42, 0.42, 0.38),
-                        perceptual_roughness: 0.95,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Foundation"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.wall_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.wall_mesh))),
-                    MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
-                    Transform::default(),
-                    Name::new("Walls"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.wall_top_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.wall_top_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.18, 0.18, 0.18),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Wall Top Faces"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.exterior_wall_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_wall_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.92, 0.88, 0.68),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Exterior Wall Faces"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.exterior_corner_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_corner_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.96, 0.9, 0.62),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Exterior Corner Faces"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.exterior_t_junction_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_t_junction_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.86, 0.78, 0.48),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Exterior T-Junction Faces"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.floor_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.floor_mesh))),
-                    MeshMaterial3d(materials.add(Color::srgb(0.6, 0.6, 0.6))),
-                    Transform::default(),
-                    Name::new("Floor"),
-                ))
-                .id(),
-        );
-    }
-
-    if config.render_roof && !bmesh.roof_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.roof_mesh))),
-                    MeshMaterial3d(materials.add(Color::srgb(0.55, 0.35, 0.2))),
-                    Transform::default(),
-                    Name::new("Roof"),
-                ))
-                .id(),
-        );
-    }
-
-    if config.render_roof && !bmesh.gable_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.gable_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.92, 0.88, 0.68),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Gables"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.door_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.door_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.4, 0.2, 0.0),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Doors"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.opening_trim_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.opening_trim_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.18, 0.16, 0.13),
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Opening Trim"),
-                ))
-                .id(),
-        );
-    }
-
-    if !bmesh.window_mesh.is_empty() {
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&bmesh.window_mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgba(0.45, 0.7, 1.0, 0.45),
-                        alpha_mode: AlphaMode::Blend,
-                        cull_mode: None,
-                        ..default()
-                    })),
-                    Transform::default(),
-                    Name::new("Windows"),
-                ))
-                .id(),
-        );
-    }
+    let layout = building_gen::generate_layout(&config, 42);
+    let entities = spawn_building_layout(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &config,
+        &building_gen::layout::BuildingLayout {
+            tile_grid: grid,
+            ..layout
+        },
+        Transform::default(),
+        "Building",
+    );
 
     commands.insert_resource(CurrentBuilding { entities });
 }

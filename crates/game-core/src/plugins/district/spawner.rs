@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use building_gen::district::generate_district;
 
 use super::config::DistrictGenConfig;
+use crate::plugins::building::render::spawn_building_layout;
 
 /// Tracks entities spawned for the current district.
 #[derive(Resource)]
@@ -82,57 +83,46 @@ pub fn spawn_district_on_command(
         );
     }
 
-    // Lots
-    for (i, lot) in district.lots.iter().enumerate() {
-        let width_axis_rotation = lot.rotation + std::f32::consts::FRAC_PI_2;
-
-        let lot_mesh = make_ground_quad(Vec3::ZERO, lot.width, lot.depth);
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(lot_mesh)),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.82, 0.75, 0.55),
-                        perceptual_roughness: 0.95,
-                        ..default()
-                    })),
-                    Transform {
-                        translation: Vec3::new(lot.position.x, 0.01, lot.position.y),
-                        rotation: Quat::from_rotation_y(-width_axis_rotation),
-                        ..default()
-                    },
-                    Name::new(format!("Lot {}", i)),
-                ))
-                .id(),
+    // Buildings
+    for building in &district.buildings {
+        let lot = &district.lots[building.lot_index];
+        let door_local_position = building
+            .exterior_door_position()
+            .unwrap_or(building.config.entrance);
+        let door_world_position = local_to_world(
+            building.world_position,
+            building.rotation,
+            door_local_position,
         );
-
-        // Entrance marker centered on the entrance point.
-        let marker_width = (lot.width * 0.18).clamp(0.8, 1.8);
-        let marker_depth = 0.45;
-        let marker_mesh = make_ground_quad(Vec3::ZERO, marker_width, marker_depth);
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(marker_mesh)),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(0.45, 0.38, 0.28),
-                        perceptual_roughness: 0.95,
-                        ..default()
-                    })),
-                    Transform {
-                        translation: Vec3::new(lot.entrance.x, 0.015, lot.entrance.y),
-                        rotation: Quat::from_rotation_y(-width_axis_rotation),
-                        ..default()
-                    },
-                    Name::new(format!("Lot {} Entrance", i)),
-                ))
-                .id(),
-        );
+        entities.extend(spawn_building_layout(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &building.config,
+            &building.layout,
+            Transform {
+                translation: Vec3::new(building.world_position.x, 0.0, building.world_position.y),
+                rotation: Quat::from_rotation_y(building.rotation),
+                ..default()
+            },
+            &format!("District Building {}", building.lot_index),
+        ));
+        if let Some(approach) = spawn_entrance_approach(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            lot.entrance,
+            door_world_position,
+            building.lot_index,
+        ) {
+            entities.push(approach);
+        }
     }
 
     println!(
-        "District spawned: {} lots, {} roads",
+        "District spawned: {} lots, {} buildings, {} roads",
         district.lots.len(),
+        district.buildings.len(),
         district.roads.len()
     );
 
@@ -169,4 +159,55 @@ fn make_ground_quad(center: Vec3, width: f32, depth: f32) -> Mesh {
     mesh.insert_indices(bevy::mesh::Indices::U32(vec![0, 2, 1, 0, 3, 2]));
 
     mesh
+}
+
+fn local_to_world(
+    origin: building_gen::geometry::Vec2,
+    rotation: f32,
+    local: building_gen::geometry::Vec2,
+) -> building_gen::geometry::Vec2 {
+    let sin = rotation.sin();
+    let cos = rotation.cos();
+    building_gen::geometry::Vec2::new(
+        origin.x + local.x * cos + local.y * sin,
+        origin.y - local.x * sin + local.y * cos,
+    )
+}
+
+fn spawn_entrance_approach(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    start: building_gen::geometry::Vec2,
+    end: building_gen::geometry::Vec2,
+    lot_index: usize,
+) -> Option<Entity> {
+    let dx = end.x - start.x;
+    let dz = end.y - start.y;
+    let length = (dx * dx + dz * dz).sqrt();
+    if length < 0.05 {
+        return None;
+    }
+    let angle = dz.atan2(dx);
+    let center =
+        building_gen::geometry::Vec2::new((start.x + end.x) / 2.0, (start.y + end.y) / 2.0);
+
+    Some(
+        commands
+            .spawn((
+                Mesh3d(meshes.add(make_ground_quad(Vec3::ZERO, length, 0.75))),
+                MeshMaterial3d(materials.add(StandardMaterial {
+                    base_color: Color::srgb(0.24, 0.18, 0.12),
+                    perceptual_roughness: 0.95,
+                    ..default()
+                })),
+                Transform {
+                    translation: Vec3::new(center.x, 0.035, center.y),
+                    rotation: Quat::from_rotation_y(-angle),
+                    ..default()
+                },
+                Name::new(format!("District Building {} Entrance Approach", lot_index)),
+            ))
+            .id(),
+    )
 }
