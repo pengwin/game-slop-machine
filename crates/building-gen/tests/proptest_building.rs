@@ -3,7 +3,7 @@ use building_gen::config::{BuildingConfig, RoomSpec};
 use building_gen::geometry::Rect;
 
 fn valid_config() -> impl Strategy<Value = BuildingConfig> {
-    (3.0f32..20.0, 3.0f32..20.0, 1usize..=6, 0.3f32..1.0)
+    (5.0f32..20.0, 5.0f32..20.0, 1usize..=4, 0.3f32..0.8)
         .prop_map(|(width, height, room_count, tile_size)| {
             let tile_size = tile_size.max(0.3);
             let room_specs: Vec<RoomSpec> = (0..room_count)

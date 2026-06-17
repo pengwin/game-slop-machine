@@ -10,7 +10,7 @@
 
 mod floor;
 mod foundation;
-mod math_util;
+pub mod math_util;
 mod opening;
 mod primitives;
 mod roof;
@@ -23,6 +23,7 @@ use crate::tile::TileGrid;
 pub use primitives::{floor_quad, floor_quad_indices, floor_quad_normals, floor_quad_uvs};
 pub use primitives::{tile_color, tile_scale};
 pub use primitives::{unit_cube, unit_cube_indices, unit_cube_normals, unit_cube_uvs};
+pub use wall::building_base_y;
 
 /// Raw mesh data (vertices, normals, UVs, indices).
 #[derive(Debug, Clone, Default)]

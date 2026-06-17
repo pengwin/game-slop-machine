@@ -171,3 +171,46 @@ fn window_material() -> StandardMaterial {
         ..default()
     }
 }
+
+/// Spawns furniture items as Bevy entities.
+pub fn spawn_furniture(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    items: &[building_gen::furniture::FurnitureItem],
+    transform: Transform,
+    name_prefix: &str,
+) -> Vec<Entity> {
+    let mut entities = Vec::new();
+
+    for (i, item) in items.iter().enumerate() {
+        if item.mesh.is_empty() {
+            continue;
+        }
+
+        let local_transform = Transform {
+            translation: Vec3::new(item.position.x, item.position.y, item.position.z),
+            rotation: Quat::from_rotation_y(item.rotation),
+            ..default()
+        };
+
+        let world_transform = transform * local_transform;
+
+        entities.push(
+            commands
+                .spawn((
+                    Mesh3d(meshes.add(convert_mesh(&item.mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(item.color[0], item.color[1], item.color[2]),
+                        perceptual_roughness: 0.85,
+                        ..default()
+                    })),
+                    world_transform,
+                    Name::new(format!("{} {:?} {}", name_prefix, item.item_type, i)),
+                ))
+                .id(),
+        );
+    }
+
+    entities
+}

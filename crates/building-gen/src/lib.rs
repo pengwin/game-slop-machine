@@ -47,6 +47,7 @@
 
 pub mod config;
 pub mod district;
+pub mod furniture;
 pub mod geometry;
 pub mod layout;
 pub mod mesh;
@@ -107,7 +108,18 @@ pub fn generate_layout(config: &BuildingConfig) -> BuildingLayout {
         roof,
         bounds: config.footprint,
         corridor,
+        furniture: Vec::new(),
     }
+}
+
+/// Generates furniture for a building layout. Can be called independently.
+///
+/// Returns furniture items placed in rooms based on room labels.
+/// Kitchen rooms get stoves, counters, tables, chairs.
+/// Bedroom rooms get beds, desks, chairs.
+/// Other rooms get tables and chairs.
+pub fn generate_furniture(layout: &BuildingLayout, config: &config::BuildingConfig) -> Vec<furniture::FurnitureItem> {
+    furniture::place_furniture(&layout.rooms, &layout.tile_grid, config, &layout.doorways)
 }
 
 /// Marks the corridor strip as enclosed floor tiles in the grid.

@@ -3,7 +3,7 @@ use building_gen::district::generate_district;
 
 use super::config::DistrictGenConfig;
 use crate::plugins::building::mesh_util::{local_to_world, make_ground_quad};
-use crate::plugins::building::render::spawn_building_layout;
+use crate::plugins::building::render::{spawn_building_layout, spawn_furniture};
 use crate::plugins::seed::GenerationSeed;
 
 /// Tracks entities spawned for the current district.
@@ -112,6 +112,24 @@ pub fn spawn_district_on_command(
             },
             &format!("District Building {}", building.lot_index),
         ));
+
+        // Generate and spawn furniture for this building
+        let furniture = building_gen::generate_furniture(&building.layout, &building.config);
+        if !furniture.is_empty() {
+            entities.extend(spawn_furniture(
+                &mut commands,
+                &mut meshes,
+                &mut materials,
+                &furniture,
+                Transform {
+                    translation: Vec3::new(building.world_position.x, 0.0, building.world_position.y),
+                    rotation: Quat::from_rotation_y(building.rotation),
+                    ..default()
+                },
+                &format!("District Building {} Furniture", building.lot_index),
+            ));
+        }
+
         if let Some(approach) = spawn_entrance_approach(
             &mut commands,
             &mut meshes,

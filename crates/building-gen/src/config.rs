@@ -214,6 +214,8 @@ pub struct BuildingConfig {
     pub interior_window_render_glass: bool,
     /// Whether to generate and render roof geometry.
     pub render_roof: bool,
+    /// Whether to generate furniture for rooms (kitchen, bedroom, etc.).
+    pub furniture: bool,
     /// Color palette for walls, roof, trim, floor, etc.
     pub visual_style: BuildingVisualStyle,
 }
@@ -251,6 +253,7 @@ impl Default for BuildingConfig {
             exterior_window_render_glass: true,
             interior_window_render_glass: false,
             render_roof: false,
+            furniture: true,
             visual_style: BuildingVisualStyle::default(),
         }
     }
