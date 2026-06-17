@@ -1,4 +1,4 @@
-use super::math_util::append_quad;
+use super::math_util::{append_quad, Quad};
 use super::wall::building_base_y;
 use super::MeshData;
 use crate::config::BuildingConfig;
@@ -23,13 +23,15 @@ pub fn generate_floor_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData
 
             append_quad(
                 &mut mesh,
-                [x0, floor_y, z1],
-                [x1, floor_y, z1],
-                [x0, floor_y, z0],
-                [x1, floor_y, z0],
-                [0.0, 1.0, 0.0],
-                [x0, z0],
-                [x1, z1],
+                Quad {
+                    tl: [x0, floor_y, z1],
+                    tr: [x1, floor_y, z1],
+                    bl: [x0, floor_y, z0],
+                    br: [x1, floor_y, z0],
+                    normal: [0.0, 1.0, 0.0],
+                    uv_min: [x0, z0],
+                    uv_max: [x1, z1],
+                },
             );
         }
     }

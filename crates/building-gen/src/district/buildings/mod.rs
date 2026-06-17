@@ -33,7 +33,7 @@ fn building_for_lot(
         district_config.seed + lot_index as u64,
     );
     let config = config_apply::building_config_for_lot(lot, description, district_config);
-    let layout = generate_layout(&config, district_config.seed + lot_index as u64);
+    let layout = generate_layout(&config);
     let world_position = footprint::building_origin_for_lot(lot, &config);
     let rotation = footprint::building_rotation_for_lot(lot);
 

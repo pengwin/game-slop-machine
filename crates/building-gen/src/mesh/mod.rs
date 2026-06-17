@@ -96,7 +96,7 @@ mod tests {
             footprint: Rect::new(0.0, 0.0, 10.0, 8.0),
             ..Default::default()
         };
-        let layout = crate::generate_layout(&config, 42);
+        let layout = crate::generate_layout(&config);
         let roof = RoofGeometry {
             ridge_start: crate::geometry::Vec3::new(0.0, 5.0, 4.0),
             ridge_end: crate::geometry::Vec3::new(10.0, 5.0, 4.0),
@@ -131,7 +131,7 @@ mod tests {
             footprint: Rect::new(0.0, 0.0, 10.0, 8.0),
             ..Default::default()
         };
-        let layout = crate::generate_layout(&config, 42);
+        let layout = crate::generate_layout(&config);
         let roof = RoofGeometry {
             ridge_start: crate::geometry::Vec3::new(0.0, 5.0, 4.0),
             ridge_end: crate::geometry::Vec3::new(10.0, 5.0, 4.0),

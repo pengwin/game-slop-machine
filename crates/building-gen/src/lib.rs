@@ -39,7 +39,7 @@
 //!     ],
 //!     ..Default::default()
 //! };
-//! let layout = generate_layout(&config, 42);
+//! let layout = generate_layout(&config);
 //!
 //! // layout.rooms contains the room list with labels
 //! // layout.tile_grid contains the 2D tile representation
@@ -70,7 +70,7 @@ use layout::BuildingLayout;
 /// 5. Generates roof geometry
 ///
 /// The seed ensures deterministic output - same seed always produces same building.
-pub fn generate_layout(config: &BuildingConfig, _seed: u64) -> BuildingLayout {
+pub fn generate_layout(config: &BuildingConfig) -> BuildingLayout {
     // Step 1: Zone-row layout to create room rectangles
     let (rooms, corridor) = zone_layout::generate_rooms(config);
 
@@ -232,15 +232,15 @@ mod tests {
     #[test]
     fn test_generate_layout_returns_rooms() {
         let config = test_config();
-        let layout = generate_layout(&config, 42);
+        let layout = generate_layout(&config);
         assert!(!layout.rooms.is_empty());
     }
 
     #[test]
     fn test_generate_layout_deterministic() {
         let config = test_config();
-        let layout1 = generate_layout(&config, 42);
-        let layout2 = generate_layout(&config, 42);
+        let layout1 = generate_layout(&config);
+        let layout2 = generate_layout(&config);
 
         assert_eq!(layout1.rooms.len(), layout2.rooms.len());
         assert_eq!(layout1.walls.len(), layout2.walls.len());
@@ -250,14 +250,14 @@ mod tests {
     #[test]
     fn test_generate_layout_has_floor_tiles() {
         let config = test_config();
-        let layout = generate_layout(&config, 42);
+        let layout = generate_layout(&config);
         assert!(layout.tile_grid.count_tiles(TileType::Floor) > 0);
     }
 
     #[test]
     fn test_generate_layout_has_walls() {
         let config = test_config();
-        let layout = generate_layout(&config, 42);
+        let layout = generate_layout(&config);
         let wall_count = layout.tile_grid.count_matching_tiles(TileType::is_wall);
         assert!(wall_count > 0);
     }
@@ -265,21 +265,21 @@ mod tests {
     #[test]
     fn test_generate_layout_has_doorways() {
         let config = test_config();
-        let layout = generate_layout(&config, 42);
+        let layout = generate_layout(&config);
         assert!(!layout.doorways.is_empty(), "No doorways generated");
     }
 
     #[test]
     fn test_generate_layout_connected() {
         let config = test_config();
-        let layout = generate_layout(&config, 42);
+        let layout = generate_layout(&config);
         assert!(layout.is_connected(), "Building layout is not connected");
     }
 
     #[test]
     fn test_room_labels_preserved() {
         let config = test_config();
-        let layout = generate_layout(&config, 42);
+        let layout = generate_layout(&config);
         assert_eq!(layout.rooms[0].label, "hall");
         assert_eq!(layout.rooms[1].label, "kitchen");
         assert_eq!(layout.rooms[2].label, "bathroom");
@@ -289,8 +289,8 @@ mod tests {
     #[test]
     fn test_different_seeds_same_layout() {
         let config = test_config();
-        let layout1 = generate_layout(&config, 42);
-        let layout2 = generate_layout(&config, 43);
+        let layout1 = generate_layout(&config);
+        let layout2 = generate_layout(&config);
 
         // Zone-row is deterministic from config, not seed
         // (rooms are the same, only window/door randomness differs)

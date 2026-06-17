@@ -2,7 +2,7 @@ use super::classify::{ExteriorFaceClass, WallCutout, WallFaceDir};
 use super::WallMeshes;
 use crate::config::BuildingConfig;
 use crate::mesh::MeshData;
-use crate::mesh::math_util;
+use crate::mesh::math_util::{self, Quad};
 use crate::tile::WallAxis;
 
 pub fn append_wall_box(
@@ -51,6 +51,26 @@ pub fn append_wall_box(
     append_wall_face(&mut meshes.top, bounds, WallFaceDir::PosY, config, None);
 }
 
+struct FaceCorners {
+    normal: [f32; 3],
+    tl: [f32; 3],
+    tr: [f32; 3],
+    bl: [f32; 3],
+    br: [f32; 3],
+}
+
+fn face_quad(dir: WallFaceDir, bounds: ([f32; 3], [f32; 3])) -> FaceCorners {
+    let [min_x, min_y, min_z] = bounds.0;
+    let [max_x, max_y, max_z] = bounds.1;
+    match dir {
+        WallFaceDir::PosX => FaceCorners { normal: [1.0, 0.0, 0.0], tl: [max_x, max_y, min_z], tr: [max_x, max_y, max_z], bl: [max_x, min_y, min_z], br: [max_x, min_y, max_z] },
+        WallFaceDir::NegX => FaceCorners { normal: [-1.0, 0.0, 0.0], tl: [min_x, max_y, max_z], tr: [min_x, max_y, min_z], bl: [min_x, min_y, max_z], br: [min_x, min_y, min_z] },
+        WallFaceDir::PosZ => FaceCorners { normal: [0.0, 0.0, 1.0], tl: [max_x, max_y, max_z], tr: [min_x, max_y, max_z], bl: [max_x, min_y, max_z], br: [min_x, min_y, max_z] },
+        WallFaceDir::NegZ => FaceCorners { normal: [0.0, 0.0, -1.0], tl: [min_x, max_y, min_z], tr: [max_x, max_y, min_z], bl: [min_x, min_y, min_z], br: [max_x, min_y, min_z] },
+        WallFaceDir::PosY => FaceCorners { normal: [0.0, 1.0, 0.0], tl: [min_x, max_y, max_z], tr: [max_x, max_y, max_z], bl: [min_x, max_y, min_z], br: [max_x, max_y, min_z] },
+    }
+}
+
 fn append_wall_face(
     mesh: &mut MeshData,
     bounds: ([f32; 3], [f32; 3]),
@@ -58,65 +78,11 @@ fn append_wall_face(
     config: &BuildingConfig,
     cutout: Option<WallCutout>,
 ) {
-    let [min_x, min_y, min_z] = bounds.0;
-    let [max_x, max_y, max_z] = bounds.1;
-
-    let (normal, tl, tr, bl, br) = match dir {
-        WallFaceDir::PosX => {
-            let n = [1.0, 0.0, 0.0];
-            (
-                n,
-                [max_x, max_y, min_z],
-                [max_x, max_y, max_z],
-                [max_x, min_y, min_z],
-                [max_x, min_y, max_z],
-            )
-        }
-        WallFaceDir::NegX => {
-            let n = [-1.0, 0.0, 0.0];
-            (
-                n,
-                [min_x, max_y, max_z],
-                [min_x, max_y, min_z],
-                [min_x, min_y, max_z],
-                [min_x, min_y, min_z],
-            )
-        }
-        WallFaceDir::PosZ => {
-            let n = [0.0, 0.0, 1.0];
-            (
-                n,
-                [max_x, max_y, max_z],
-                [min_x, max_y, max_z],
-                [max_x, min_y, max_z],
-                [min_x, min_y, max_z],
-            )
-        }
-        WallFaceDir::NegZ => {
-            let n = [0.0, 0.0, -1.0];
-            (
-                n,
-                [min_x, max_y, min_z],
-                [max_x, max_y, min_z],
-                [min_x, min_y, min_z],
-                [max_x, min_y, min_z],
-            )
-        }
-        WallFaceDir::PosY => {
-            let n = [0.0, 1.0, 0.0];
-            (
-                n,
-                [min_x, max_y, max_z],
-                [max_x, max_y, max_z],
-                [min_x, max_y, min_z],
-                [max_x, max_y, min_z],
-            )
-        }
-    };
+    let [_, min_y, max_y] = [bounds.0[0], bounds.0[1], bounds.1[1]];
+    let FaceCorners { normal, tl, tr, bl, br } = face_quad(dir, bounds);
 
     let u_axis = math_util::sub3(tr, tl);
     let v_axis = math_util::sub3(bl, tl);
-
     let u_len = math_util::vec3_length(u_axis);
     let v_len = math_util::vec3_length(v_axis);
 
@@ -126,9 +92,7 @@ fn append_wall_face(
             let door_start = (u_len - door_width) / 2.0;
             let door_end = door_start + door_width;
             let door_h = config.door_height.min(max_y - min_y);
-            append_wall_sub_faces(
-                mesh, tl, tr, bl, br, normal, u_len, v_len, door_start, door_end, 0.0, door_h,
-            );
+            append_wall_sub_faces(mesh, tl, tr, bl, br, normal, u_len, v_len, door_start, door_end, 0.0, door_h);
         }
         Some(WallCutout::Window) => {
             let window_width = config.window_width.min(u_len);
@@ -136,16 +100,15 @@ fn append_wall_face(
             let win_end = win_start + window_width;
             let sill = config.window_sill_height;
             let win_top = (sill + config.window_height).min(max_y - min_y);
-            append_wall_sub_faces(
-                mesh, tl, tr, bl, br, normal, u_len, v_len, win_start, win_end, sill, win_top,
-            );
+            append_wall_sub_faces(mesh, tl, tr, bl, br, normal, u_len, v_len, win_start, win_end, sill, win_top);
         }
         None => {
-            math_util::append_quad(mesh, tl, tr, bl, br, normal, [0.0, 0.0], [u_len, v_len]);
+            math_util::append_quad(mesh, Quad { tl, tr, bl, br, normal, uv_min: [0.0, 0.0], uv_max: [u_len, v_len] });
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn append_wall_sub_faces(
     mesh: &mut MeshData,
     tl: [f32; 3],
@@ -178,7 +141,7 @@ fn append_wall_sub_faces(
         let b = lerp_face(cs, 0.0);
         let c = lerp_face(cs, v_len);
         let d = lerp_face(0.0, v_len);
-        math_util::append_quad(mesh, d, c, a, b, normal, [0.0, 0.0], [cs, v_len]);
+        math_util::append_quad(mesh, Quad { tl: d, tr: c, bl: a, br: b, normal, uv_min: [0.0, 0.0], uv_max: [cs, v_len] });
     }
 
     if ce < u_len {
@@ -186,7 +149,7 @@ fn append_wall_sub_faces(
         let b = lerp_face(u_len, 0.0);
         let c = lerp_face(u_len, v_len);
         let d = lerp_face(ce, v_len);
-        math_util::append_quad(mesh, d, c, a, b, normal, [ce, 0.0], [u_len, v_len]);
+        math_util::append_quad(mesh, Quad { tl: d, tr: c, bl: a, br: b, normal, uv_min: [ce, 0.0], uv_max: [u_len, v_len] });
     }
 
     if cb > 0.0 {
@@ -194,7 +157,7 @@ fn append_wall_sub_faces(
         let b = lerp_face(ce, 0.0);
         let c = lerp_face(ce, cb);
         let d = lerp_face(cs, cb);
-        math_util::append_quad(mesh, d, c, a, b, normal, [cs, 0.0], [ce, cb]);
+        math_util::append_quad(mesh, Quad { tl: d, tr: c, bl: a, br: b, normal, uv_min: [cs, 0.0], uv_max: [ce, cb] });
     }
 
     if ct < v_len {
@@ -202,6 +165,6 @@ fn append_wall_sub_faces(
         let b = lerp_face(ce, ct);
         let c = lerp_face(ce, v_len);
         let d = lerp_face(cs, v_len);
-        math_util::append_quad(mesh, d, c, a, b, normal, [cs, ct], [ce, v_len]);
+        math_util::append_quad(mesh, Quad { tl: d, tr: c, bl: a, br: b, normal, uv_min: [cs, ct], uv_max: [ce, v_len] });
     }
 }

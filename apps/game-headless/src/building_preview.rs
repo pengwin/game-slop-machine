@@ -15,7 +15,7 @@ pub fn spawn_building_preview(
 ) {
     let grid = match fixture {
         "procedural" | "with-roof" | "corridor" => {
-            building_gen::generate_layout(config, 42).tile_grid
+            building_gen::generate_layout(config).tile_grid
         }
         "four-doors" => build_perimeter_opening_grid(config, WallOpening::Door { render_panel: true }),
         "four-windows" => build_perimeter_opening_grid(

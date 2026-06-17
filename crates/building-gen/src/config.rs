@@ -104,17 +104,28 @@ impl RoomDefaults {
     }
 }
 
+/// Color palette for building mesh materials. Each field is an `[r, g, b]` array with values 0.0–1.0.
 #[derive(Debug, Clone)]
 pub struct BuildingVisualStyle {
+    /// Color for interior wall faces.
     pub wall_color: [f32; 3],
+    /// Color for the top face of walls (slightly darker for depth).
     pub wall_top_color: [f32; 3],
+    /// Color for exterior wall faces.
     pub exterior_wall_color: [f32; 3],
+    /// Color for exterior corner wall faces.
     pub corner_color: [f32; 3],
+    /// Color for T-junction wall faces.
     pub t_junction_color: [f32; 3],
+    /// Color for roof surfaces.
     pub roof_color: [f32; 3],
+    /// Color for door panels.
     pub door_color: [f32; 3],
+    /// Color for opening trim frames.
     pub trim_color: [f32; 3],
+    /// Color for the foundation ledge.
     pub foundation_color: [f32; 3],
+    /// Color for floor tiles.
     pub floor_color: [f32; 3],
 }
 
@@ -137,6 +148,7 @@ impl Default for BuildingVisualStyle {
 
 #[derive(Debug, Clone)]
 pub struct BuildingConfig {
+    /// Building footprint rectangle in world space (min corner, max corner).
     pub footprint: Rect,
     /// World-space point on the exterior wall where the main entrance should be placed.
     pub entrance: Vec2,
@@ -158,29 +170,51 @@ pub struct BuildingConfig {
     /// Width of the center corridor in world units (only used when has_corridor=true).
     /// Used only when `corridor_width_tiles` is 0.
     pub corridor_width: f32,
+    /// Size of each grid tile in world units. Controls resolution of wall/door placement.
     pub tile_size: f32,
+    /// Height of exterior walls in world units.
     pub wall_height: f32,
+    /// Thickness of exterior walls in world units. Should be >= tile_size for full tile coverage.
     pub wall_thickness: f32,
+    /// Thickness of interior walls between rooms. Typically thinner than exterior walls.
     pub interior_wall_thickness: f32,
-    /// Minimum room dimension in world units.
+    /// Minimum room dimension in world units. Rooms smaller than this are merged or expanded.
     pub min_room_size: f32,
+    /// Width of door openings in world units.
     pub door_width: f32,
+    /// Height of door openings in world units.
     pub door_height: f32,
+    /// Width of window openings in world units.
     pub window_width: f32,
+    /// Height of window openings in world units.
     pub window_height: f32,
+    /// Distance from floor to bottom of window opening in world units.
     pub window_sill_height: f32,
+    /// Minimum spacing between adjacent windows in world units.
     pub window_spacing: f32,
+    /// Height of the roof ridge above the wall top in world units.
     pub roof_height: f32,
+    /// Horizontal overhang of the roof beyond the wall face in world units.
     pub roof_overhang: f32,
+    /// Width of the foundation ledge extending beyond the wall face in world units.
     pub foundation_width: f32,
+    /// Inward offset of the foundation wall from the exterior wall face in world units.
     pub foundation_wall_offset: f32,
+    /// Height of the foundation above ground in world units.
     pub foundation_height: f32,
+    /// Thickness of the trim frame around doors and windows in world units.
     pub opening_trim_thickness: f32,
+    /// Depth the trim protrudes from the wall face in world units.
     pub opening_trim_depth: f32,
+    /// Whether to render a solid panel for interior doors.
     pub interior_door_render_panel: bool,
+    /// Whether to render glass for exterior windows.
     pub exterior_window_render_glass: bool,
+    /// Whether to render glass for interior windows.
     pub interior_window_render_glass: bool,
+    /// Whether to generate and render roof geometry.
     pub render_roof: bool,
+    /// Color palette for walls, roof, trim, floor, etc.
     pub visual_style: BuildingVisualStyle,
 }
 

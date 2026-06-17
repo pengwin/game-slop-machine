@@ -58,6 +58,7 @@ pub fn spawn_building_mesh(
     entities
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_part(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,

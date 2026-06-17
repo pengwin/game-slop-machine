@@ -43,7 +43,7 @@ fn main() {
         ..Default::default()
     };
 
-    let layout = building_gen::generate_layout(&config, seed);
+    let layout = building_gen::generate_layout(&config);
 
     println!("Building Generator");
     println!("==================");

@@ -1,4 +1,4 @@
-use super::math_util::append_quad;
+use super::math_util::{append_quad, Quad};
 use super::MeshData;
 use crate::config::BuildingConfig;
 
@@ -21,124 +21,67 @@ pub fn generate_foundation_mesh(config: &BuildingConfig) -> MeshData {
     let outer_min_z = inner_min_z - width;
     let outer_max_z = inner_max_z + width;
 
-    append_foundation_quad(
-        &mut mesh,
-        outer_min_x,
-        outer_max_x,
-        outer_min_z,
-        inner_min_z,
-        top_y,
-    );
-    append_foundation_quad(
-        &mut mesh,
-        outer_min_x,
-        outer_max_x,
-        inner_max_z,
-        outer_max_z,
-        top_y,
-    );
-    append_foundation_quad(
-        &mut mesh,
-        outer_min_x,
-        inner_min_x,
-        inner_min_z,
-        inner_max_z,
-        top_y,
-    );
-    append_foundation_quad(
-        &mut mesh,
-        inner_max_x,
-        outer_max_x,
-        inner_min_z,
-        inner_max_z,
-        top_y,
-    );
-    append_foundation_sides(
-        &mut mesh,
-        outer_min_x,
-        outer_max_x,
-        outer_min_z,
-        outer_max_z,
-        bottom_y,
-        top_y,
-    );
+    append_foundation_quad(&mut mesh, outer_min_x, outer_max_x, outer_min_z, inner_min_z, top_y);
+    append_foundation_quad(&mut mesh, outer_min_x, outer_max_x, inner_max_z, outer_max_z, top_y);
+    append_foundation_quad(&mut mesh, outer_min_x, inner_min_x, inner_min_z, inner_max_z, top_y);
+    append_foundation_quad(&mut mesh, inner_max_x, outer_max_x, inner_min_z, inner_max_z, top_y);
+    append_foundation_sides(&mut mesh, outer_min_x, outer_max_x, outer_min_z, outer_max_z, bottom_y, top_y);
 
     mesh
 }
 
-fn append_foundation_quad(
-    mesh: &mut MeshData,
-    min_x: f32,
-    max_x: f32,
-    min_z: f32,
-    max_z: f32,
-    y: f32,
-) {
+fn append_foundation_quad(mesh: &mut MeshData, min_x: f32, max_x: f32, min_z: f32, max_z: f32, y: f32) {
     if max_x <= min_x || max_z <= min_z {
         return;
     }
-
-    append_quad(
-        mesh,
-        [min_x, y, max_z],
-        [max_x, y, max_z],
-        [min_x, y, min_z],
-        [max_x, y, min_z],
-        [0.0, 1.0, 0.0],
-        [min_x, min_z],
-        [max_x, max_z],
-    );
+    append_quad(mesh, Quad {
+        tl: [min_x, y, max_z],
+        tr: [max_x, y, max_z],
+        bl: [min_x, y, min_z],
+        br: [max_x, y, min_z],
+        normal: [0.0, 1.0, 0.0],
+        uv_min: [min_x, min_z],
+        uv_max: [max_x, max_z],
+    });
 }
 
-fn append_foundation_sides(
-    mesh: &mut MeshData,
-    min_x: f32,
-    max_x: f32,
-    min_z: f32,
-    max_z: f32,
-    bottom_y: f32,
-    top_y: f32,
-) {
-    append_quad(
-        mesh,
-        [min_x, top_y, min_z],
-        [max_x, top_y, min_z],
-        [min_x, bottom_y, min_z],
-        [max_x, bottom_y, min_z],
-        [0.0, 0.0, -1.0],
-        [min_x, bottom_y],
-        [max_x, top_y],
-    );
-    append_quad(
-        mesh,
-        [max_x, top_y, max_z],
-        [min_x, top_y, max_z],
-        [max_x, bottom_y, max_z],
-        [min_x, bottom_y, max_z],
-        [0.0, 0.0, 1.0],
-        [min_x, bottom_y],
-        [max_x, top_y],
-    );
-    append_quad(
-        mesh,
-        [min_x, top_y, max_z],
-        [min_x, top_y, min_z],
-        [min_x, bottom_y, max_z],
-        [min_x, bottom_y, min_z],
-        [-1.0, 0.0, 0.0],
-        [min_z, bottom_y],
-        [max_z, top_y],
-    );
-    append_quad(
-        mesh,
-        [max_x, top_y, min_z],
-        [max_x, top_y, max_z],
-        [max_x, bottom_y, min_z],
-        [max_x, bottom_y, max_z],
-        [1.0, 0.0, 0.0],
-        [min_z, bottom_y],
-        [max_z, top_y],
-    );
+fn append_foundation_sides(mesh: &mut MeshData, min_x: f32, max_x: f32, min_z: f32, max_z: f32, bottom_y: f32, top_y: f32) {
+    append_quad(mesh, Quad {
+        tl: [min_x, top_y, min_z],
+        tr: [max_x, top_y, min_z],
+        bl: [min_x, bottom_y, min_z],
+        br: [max_x, bottom_y, min_z],
+        normal: [0.0, 0.0, -1.0],
+        uv_min: [min_x, bottom_y],
+        uv_max: [max_x, top_y],
+    });
+    append_quad(mesh, Quad {
+        tl: [max_x, top_y, max_z],
+        tr: [min_x, top_y, max_z],
+        bl: [max_x, bottom_y, max_z],
+        br: [min_x, bottom_y, max_z],
+        normal: [0.0, 0.0, 1.0],
+        uv_min: [min_x, bottom_y],
+        uv_max: [max_x, top_y],
+    });
+    append_quad(mesh, Quad {
+        tl: [min_x, top_y, max_z],
+        tr: [min_x, top_y, min_z],
+        bl: [min_x, bottom_y, max_z],
+        br: [min_x, bottom_y, min_z],
+        normal: [-1.0, 0.0, 0.0],
+        uv_min: [min_z, bottom_y],
+        uv_max: [max_z, top_y],
+    });
+    append_quad(mesh, Quad {
+        tl: [max_x, top_y, min_z],
+        tr: [max_x, top_y, max_z],
+        bl: [max_x, bottom_y, min_z],
+        br: [max_x, bottom_y, max_z],
+        normal: [1.0, 0.0, 0.0],
+        uv_min: [min_z, bottom_y],
+        uv_max: [max_z, top_y],
+    });
 }
 
 #[cfg(test)]

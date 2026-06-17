@@ -1,4 +1,4 @@
-use super::math_util::{append_quad, cross3, normalize3, sub3};
+use super::math_util::{Quad, append_quad, cross3, normalize3, sub3};
 use super::wall::building_top_y;
 use super::MeshData;
 use crate::config::BuildingConfig;
@@ -135,7 +135,7 @@ fn append_roof_quad(
     uv_max: [f32; 2],
 ) {
     let normal = normalize3(cross3(sub3(tr, tl), sub3(bl, tl)));
-    append_quad(mesh, tl, tr, bl, br, normal, uv_min, uv_max);
+    append_quad(mesh, Quad { tl, tr, bl, br, normal, uv_min, uv_max });
 }
 
 fn append_roof_triangle(

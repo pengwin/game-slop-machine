@@ -1,35 +1,37 @@
 use super::MeshData;
 
+/// Four corners of a quad with normal and UV coordinates.
+pub struct Quad {
+    pub tl: [f32; 3],
+    pub tr: [f32; 3],
+    pub bl: [f32; 3],
+    pub br: [f32; 3],
+    pub normal: [f32; 3],
+    pub uv_min: [f32; 2],
+    pub uv_max: [f32; 2],
+}
+
 /// Appends a quad (two triangles) defined by four corners.
 ///
 /// Vertices are expected in winding order such that the cross product of
 /// (tr - tl) x (bl - tl) points in the same direction as `normal`.
-pub fn append_quad(
-    mesh: &mut MeshData,
-    tl: [f32; 3],
-    tr: [f32; 3],
-    bl: [f32; 3],
-    br: [f32; 3],
-    normal: [f32; 3],
-    uv_min: [f32; 2],
-    uv_max: [f32; 2],
-) {
+pub fn append_quad(mesh: &mut MeshData, quad: Quad) {
     let base = mesh.vertices.len() as u32;
 
-    mesh.vertices.push(tl);
-    mesh.vertices.push(tr);
-    mesh.vertices.push(bl);
-    mesh.vertices.push(br);
+    mesh.vertices.push(quad.tl);
+    mesh.vertices.push(quad.tr);
+    mesh.vertices.push(quad.bl);
+    mesh.vertices.push(quad.br);
 
-    mesh.normals.push(normal);
-    mesh.normals.push(normal);
-    mesh.normals.push(normal);
-    mesh.normals.push(normal);
+    mesh.normals.push(quad.normal);
+    mesh.normals.push(quad.normal);
+    mesh.normals.push(quad.normal);
+    mesh.normals.push(quad.normal);
 
-    mesh.uvs.push([uv_min[0], uv_max[1]]);
-    mesh.uvs.push([uv_max[0], uv_max[1]]);
-    mesh.uvs.push([uv_min[0], uv_min[1]]);
-    mesh.uvs.push([uv_max[0], uv_min[1]]);
+    mesh.uvs.push([quad.uv_min[0], quad.uv_max[1]]);
+    mesh.uvs.push([quad.uv_max[0], quad.uv_max[1]]);
+    mesh.uvs.push([quad.uv_min[0], quad.uv_min[1]]);
+    mesh.uvs.push([quad.uv_max[0], quad.uv_min[1]]);
 
     // Triangle 1: tl, tr, br  |  Triangle 2: tl, br, bl
     mesh.indices.push(base);
@@ -79,20 +81,20 @@ mod tests {
     #[test]
     fn test_append_quad_winding() {
         let mut mesh = MeshData::default();
-        // Quad in XZ plane at y=0, normal pointing up.
         append_quad(
             &mut mesh,
-            [0.0, 0.0, 1.0], // tl
-            [1.0, 0.0, 1.0], // tr
-            [0.0, 0.0, 0.0], // bl
-            [1.0, 0.0, 0.0], // br
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0],
-            [1.0, 1.0],
+            Quad {
+                tl: [0.0, 0.0, 1.0],
+                tr: [1.0, 0.0, 1.0],
+                bl: [0.0, 0.0, 0.0],
+                br: [1.0, 0.0, 0.0],
+                normal: [0.0, 1.0, 0.0],
+                uv_min: [0.0, 0.0],
+                uv_max: [1.0, 1.0],
+            },
         );
         assert_eq!(mesh.vertices.len(), 4);
         assert_eq!(mesh.indices.len(), 6);
-        // Indices should be: 0,1,3, 0,3,2
         assert_eq!(mesh.indices, vec![0, 1, 3, 0, 3, 2]);
     }
 }
