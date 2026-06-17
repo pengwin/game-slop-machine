@@ -1,10 +1,9 @@
 use super::wall_query::{has_window_near, is_exterior_wall, is_straight_wall, window_near_corner_or_junction};
 use crate::config::BuildingConfig;
-use crate::layout::{Room, Wall, WallId, Window};
+use crate::layout::{Room, WallId, Window};
 use crate::tile::{TileGrid, WallKind, WallOpening};
 
 pub fn place_windows(
-    _walls: &[Wall],
     grid: &mut TileGrid,
     rooms: &[Room],
     config: &BuildingConfig,

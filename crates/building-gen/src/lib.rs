@@ -59,7 +59,6 @@ pub mod zone_layout;
 
 use config::BuildingConfig;
 use layout::BuildingLayout;
-use random::SeededRng;
 
 /// Generates a complete building layout from config and seed.
 ///
@@ -71,9 +70,7 @@ use random::SeededRng;
 /// 5. Generates roof geometry
 ///
 /// The seed ensures deterministic output - same seed always produces same building.
-pub fn generate_layout(config: &BuildingConfig, seed: u64) -> BuildingLayout {
-    let mut rng = SeededRng::new(seed);
-
+pub fn generate_layout(config: &BuildingConfig, _seed: u64) -> BuildingLayout {
     // Step 1: Zone-row layout to create room rectangles
     let (rooms, corridor) = zone_layout::generate_rooms(config);
 
@@ -91,14 +88,12 @@ pub fn generate_layout(config: &BuildingConfig, seed: u64) -> BuildingLayout {
 
     // Step 4: Place openings (doors between rooms, windows per room spec)
     let doorways = opening::place_doorways(
-        &walls,
         &mut grid,
         &rooms,
-        &mut rng,
         config,
         corridor.as_ref(),
     );
-    let windows = opening::place_windows(&walls, &mut grid, &rooms, config);
+    let windows = opening::place_windows(&mut grid, &rooms, config);
 
     // Step 5: Generate roof geometry
     let roof = roof::generate_roof(config.footprint, config);

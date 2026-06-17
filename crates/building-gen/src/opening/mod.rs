@@ -4,16 +4,13 @@ mod wall_query;
 mod windows;
 
 use crate::config::BuildingConfig;
-use crate::layout::{Doorway, Room, Wall, Window};
-use crate::random::SeededRng;
+use crate::layout::{Doorway, Room, Window};
 use crate::tile::TileGrid;
 use crate::zone_layout::CorridorInfo;
 
 pub fn place_doorways(
-    walls: &[Wall],
     grid: &mut TileGrid,
     rooms: &[Room],
-    _rng: &mut SeededRng,
     config: &BuildingConfig,
     corridor: Option<&CorridorInfo>,
 ) -> Vec<Doorway> {
@@ -25,18 +22,17 @@ pub fn place_doorways(
         doorways::place_room_to_room_doorways(grid, rooms, config, &mut doorways);
     }
 
-    entrance::place_entrance_door(walls, grid, config, &mut doorways);
+    entrance::place_entrance_door(grid, config, &mut doorways);
 
     doorways
 }
 
 pub fn place_windows(
-    walls: &[Wall],
     grid: &mut TileGrid,
     rooms: &[Room],
     config: &BuildingConfig,
 ) -> Vec<Window> {
-    windows::place_windows(walls, grid, rooms, config)
+    windows::place_windows(grid, rooms, config)
 }
 
 #[cfg(test)]
@@ -69,7 +65,6 @@ mod tests {
     #[test]
     fn test_doorways_placed() {
         let config = test_config();
-        let mut rng = SeededRng::new(42);
         let (rooms, corridor) = zone_layout::generate_rooms(&config);
         let mut grid = rooms_to_tile_grid(&rooms, &config);
         if let Some(ref c) = corridor {
@@ -89,12 +84,9 @@ mod tests {
             }
         }
 
-        let walls = crate::tile_converter::detect_walls(&grid);
         let doorways = place_doorways(
-            &walls,
             &mut grid,
             &rooms,
-            &mut rng,
             &config,
             corridor.as_ref(),
         );
@@ -105,20 +97,16 @@ mod tests {
     #[test]
     fn test_windows_only_on_exterior() {
         let config = test_config();
-        let mut rng = SeededRng::new(42);
         let (rooms, corridor) = zone_layout::generate_rooms(&config);
         let mut grid = rooms_to_tile_grid(&rooms, &config);
 
-        let walls = crate::tile_converter::detect_walls(&grid);
         let _doorways = place_doorways(
-            &walls,
             &mut grid,
             &rooms,
-            &mut rng,
             &config,
             corridor.as_ref(),
         );
-        let windows = place_windows(&walls, &mut grid, &rooms, &config);
+        let windows = place_windows(&mut grid, &rooms, &config);
 
         for window in &windows {
             if let Some((x, y)) = grid.tile_coord(window.position) {

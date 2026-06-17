@@ -1,11 +1,10 @@
 use super::wall_query::{is_straight_wall, wall_tile_at};
 use crate::config::BuildingConfig;
-use crate::layout::{Doorway, Wall, WallId};
+use crate::layout::{Doorway, WallId};
 use crate::tile::{TileGrid, WallOpening};
 use crate::zone_layout::entrance_door_position;
 
 pub fn place_entrance_door(
-    _walls: &[Wall],
     grid: &mut TileGrid,
     config: &BuildingConfig,
     doorways: &mut Vec<Doorway>,
