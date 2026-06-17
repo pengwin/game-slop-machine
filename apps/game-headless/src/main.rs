@@ -1,6 +1,7 @@
 mod building_preview;
 mod district_render;
 mod fixtures;
+mod furniture_preview;
 mod screenshot;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};
@@ -55,6 +56,20 @@ fn generate_building(
 ) {
     if fixtures::is_district_fixture(&fixture.0) {
         district_render::spawn_district(
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &fixture.0,
+        );
+        return;
+    }
+
+    if fixtures::is_furniture_fixture(&fixture.0) {
+        commands.insert_resource(fixtures::furniture_camera_for_fixture(&fixture.0));
+        commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
+            ground_size: 10.0,
+        });
+        furniture_preview::spawn_furniture_preview(
             &mut commands,
             &mut meshes,
             &mut materials,

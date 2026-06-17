@@ -1,11 +1,13 @@
 mod catalog;
-mod placement;
+pub mod placement;
 
 use crate::config::BuildingConfig;
 use crate::geometry::Vec3;
 use crate::layout::{Doorway, Room};
 use crate::mesh::MeshData;
 use crate::tile::TileGrid;
+
+pub use catalog::single_item;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FurnitureType {

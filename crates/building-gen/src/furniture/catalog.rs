@@ -679,3 +679,63 @@ fn generate_bench_mesh(w: f32, h: f32, d: f32, _color: [f32; 3]) -> MeshData {
 
     mesh
 }
+
+/// Generates a single furniture item by type with default dimensions.
+/// Useful for previewing individual items.
+pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
+    use crate::geometry::Vec3;
+
+    let (w, h, d, color, mesh) = match item_type {
+        FurnitureType::Table => {
+            let (w, h, d) = (0.8, 0.75, 0.5);
+            (w, h, d, [0.6, 0.45, 0.25], generate_table_mesh(w, h, d, [0.6, 0.45, 0.25]))
+        }
+        FurnitureType::Chair => {
+            let (w, h, d) = (0.4, 0.45, 0.4);
+            (w, h, d, [0.5, 0.35, 0.2], generate_chair_mesh(w, h, d, [0.5, 0.35, 0.2]))
+        }
+        FurnitureType::Bed => {
+            let (w, h, d) = (1.0, 0.45, 0.9);
+            (w, h, d, [0.9, 0.9, 0.85], generate_bed_mesh(w, h, d, [0.9, 0.9, 0.85]))
+        }
+        FurnitureType::Stove => {
+            let (w, h, d) = (0.6, 0.85, 0.6);
+            (w, h, d, [0.25, 0.25, 0.25], generate_box_mesh(w, h, d, [0.25, 0.25, 0.25]))
+        }
+        FurnitureType::Counter => {
+            let (w, h, d) = (0.9, 0.9, 0.5);
+            (w, h, d, [0.55, 0.4, 0.25], generate_counter_mesh(w, h, d, [0.55, 0.4, 0.25]))
+        }
+        FurnitureType::Desk => {
+            let (w, h, d) = (0.7, 0.75, 0.45);
+            (w, h, d, [0.5, 0.35, 0.2], generate_desk_mesh(w, h, d, [0.5, 0.35, 0.2]))
+        }
+        FurnitureType::Barrel => {
+            let (d, h) = (0.4, 0.6);
+            (d, h, d, [0.4, 0.28, 0.15], generate_barrel_mesh(d, h, [0.4, 0.28, 0.15]))
+        }
+        FurnitureType::Crate => {
+            let (w, h, d) = (0.5, 0.5, 0.5);
+            (w, h, d, [0.65, 0.55, 0.35], generate_crate_mesh(w, h, d, [0.65, 0.55, 0.35]))
+        }
+        FurnitureType::Bench => {
+            let (w, h, d) = (0.8, 0.45, 0.35);
+            (w, h, d, [0.45, 0.32, 0.18], generate_bench_mesh(w, h, d, [0.45, 0.32, 0.18]))
+        }
+        FurnitureType::Shelf => {
+            let (w, h, d) = (0.6, 1.2, 0.3);
+            (w, h, d, [0.5, 0.35, 0.2], generate_box_mesh(w, h, d, [0.5, 0.35, 0.2]))
+        }
+    };
+
+    FurnitureItem {
+        position: Vec3::ZERO,
+        rotation: 0.0,
+        item_type,
+        width: w,
+        height: h,
+        depth: d,
+        color,
+        mesh,
+    }
+}

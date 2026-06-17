@@ -16,6 +16,36 @@ pub fn is_district_fixture(fixture: &str) -> bool {
     )
 }
 
+pub fn is_furniture_fixture(fixture: &str) -> bool {
+    matches!(
+        fixture,
+        "table"
+            | "chair"
+            | "bed"
+            | "stove"
+            | "counter"
+            | "desk"
+            | "barrel"
+            | "crate"
+            | "bench"
+            | "shelf"
+            | "all-furniture"
+    )
+}
+
+pub fn furniture_camera_for_fixture(fixture: &str) -> CameraConfig {
+    let (vh, pos) = if fixture == "all-furniture" {
+        (8.0, Vec3::new(6.0, 6.0, 6.0))
+    } else {
+        (3.0, Vec3::new(2.0, 2.0, 2.0))
+    };
+    CameraConfig {
+        position: pos,
+        target: Vec3::new(0.0, 0.2, 0.0),
+        viewport_height: vh,
+    }
+}
+
 pub fn is_district_lots_fixture(fixture: &str) -> bool {
     matches!(fixture, "district-lots" | "huge-trade-district-lots")
 }
