@@ -19,11 +19,7 @@ pub struct WallMeshes {
 }
 
 pub fn generate_wall_meshes(grid: &TileGrid, config: &BuildingConfig) -> WallMeshes {
-    let mut wall_mesh = MeshData::default();
-    let mut wall_top_mesh = MeshData::default();
-    let mut exterior_wall_mesh = MeshData::default();
-    let mut exterior_corner_mesh = MeshData::default();
-    let mut exterior_t_junction_mesh = MeshData::default();
+    let mut meshes = WallMeshes::default();
 
     for y in 0..grid.height {
         for x in 0..grid.width {
@@ -33,11 +29,7 @@ pub fn generate_wall_meshes(grid: &TileGrid, config: &BuildingConfig) -> WallMes
             let exterior_faces = classify::exterior_face_dirs(wall);
             for wall_box in boxes::wall_boxes(grid, x, y, wall, config) {
                 faces::append_wall_box(
-                    &mut wall_mesh,
-                    &mut wall_top_mesh,
-                    &mut exterior_wall_mesh,
-                    &mut exterior_corner_mesh,
-                    &mut exterior_t_junction_mesh,
+                    &mut meshes,
                     wall_box.bounds,
                     wall_box.axis,
                     wall_box.exterior_class,
@@ -49,13 +41,7 @@ pub fn generate_wall_meshes(grid: &TileGrid, config: &BuildingConfig) -> WallMes
         }
     }
 
-    WallMeshes {
-        wall: wall_mesh,
-        top: wall_top_mesh,
-        exterior: exterior_wall_mesh,
-        exterior_corner: exterior_corner_mesh,
-        exterior_t_junction: exterior_t_junction_mesh,
-    }
+    meshes
 }
 
 #[cfg(test)]

@@ -4,6 +4,7 @@ use building_gen::district::generate_district;
 use super::config::DistrictGenConfig;
 use crate::plugins::building::mesh_util::{local_to_world, make_ground_quad};
 use crate::plugins::building::render::spawn_building_layout;
+use crate::plugins::seed::GenerationSeed;
 
 /// Tracks entities spawned for the current district.
 #[derive(Resource)]
@@ -18,6 +19,7 @@ pub fn spawn_district_on_command(
     mut materials: ResMut<Assets<StandardMaterial>>,
     input: Res<ButtonInput<KeyCode>>,
     config: Res<DistrictGenConfig>,
+    seed: Res<GenerationSeed>,
     existing: Option<ResMut<CurrentDistrict>>,
 ) {
     if !input.just_pressed(KeyCode::KeyT) {
@@ -30,11 +32,13 @@ pub fn spawn_district_on_command(
         }
     }
 
-    let district = generate_district(&config.0);
+    let mut district_config = config.0.clone();
+    district_config.seed = seed.0;
+    let district = generate_district(&district_config);
     let mut entities = Vec::new();
 
     // Town square
-    let sq = config.0.town_square_radius;
+    let sq = district_config.town_square_radius;
     let sq_mesh = make_ground_quad(Vec3::new(0.0, 0.005, 0.0), sq * 2.0, sq * 2.0);
     entities.push(
         commands

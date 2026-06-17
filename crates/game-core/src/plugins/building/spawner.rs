@@ -5,6 +5,7 @@ use building_gen::tile::{CardinalDir, TileGrid, TileType, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
 
 use super::render::spawn_building_layout;
+use crate::plugins::seed::GenerationSeed;
 
 #[derive(Resource)]
 pub struct CurrentBuilding {
@@ -17,6 +18,7 @@ pub fn spawn_building_on_command(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     input: Res<ButtonInput<KeyCode>>,
+    seed: Res<GenerationSeed>,
     existing: Option<ResMut<CurrentBuilding>>,
 ) {
     if !input.just_pressed(KeyCode::KeyB) {
@@ -38,7 +40,7 @@ pub fn spawn_building_on_command(
     };
     let grid = build_corner_grid(&config);
 
-    let layout = building_gen::generate_layout(&config, 42);
+    let layout = building_gen::generate_layout(&config, seed.0);
     let entities = spawn_building_layout(
         &mut commands,
         &mut meshes,

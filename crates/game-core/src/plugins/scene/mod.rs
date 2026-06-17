@@ -6,7 +6,7 @@ pub mod scene_config;
 
 use bevy::prelude::*;
 
-use camera::spawn_camera;
+use camera::{camera_controls, spawn_camera};
 use camera_config::CameraConfig;
 use light::spawn_light;
 use objects::spawn_objects;
@@ -18,6 +18,7 @@ impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CameraConfig>()
             .init_resource::<SceneConfig>()
-            .add_systems(Startup, (spawn_camera, spawn_light, spawn_objects));
+            .add_systems(Startup, (spawn_camera, spawn_light, spawn_objects))
+            .add_systems(Update, camera_controls);
     }
 }

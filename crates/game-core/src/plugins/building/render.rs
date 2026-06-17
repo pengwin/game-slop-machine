@@ -36,143 +36,24 @@ pub fn spawn_building_mesh(
     name_prefix: &str,
 ) -> Vec<Entity> {
     let mut entities = Vec::new();
+    let name = |part: &str| format!("{} {}", name_prefix, part);
 
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.foundation_mesh,
-        foundation_material(config),
-        transform,
-        name_prefix,
-        "Foundation",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.wall_mesh,
-        wall_material(config),
-        transform,
-        name_prefix,
-        "Walls",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.wall_top_mesh,
-        wall_top_material(config),
-        transform,
-        name_prefix,
-        "Wall Top Faces",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.exterior_wall_mesh,
-        exterior_wall_material(config),
-        transform,
-        name_prefix,
-        "Exterior Wall Faces",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.exterior_corner_mesh,
-        exterior_corner_material(config),
-        transform,
-        name_prefix,
-        "Exterior Corner Faces",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.exterior_t_junction_mesh,
-        exterior_t_junction_material(config),
-        transform,
-        name_prefix,
-        "Exterior T-Junction Faces",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.floor_mesh,
-        floor_material(config),
-        transform,
-        name_prefix,
-        "Floor",
-    );
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.foundation_mesh, foundation_material(config), transform, &name("Foundation"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.wall_mesh, wall_material(config), transform, &name("Walls"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.wall_top_mesh, wall_top_material(config), transform, &name("Wall Top Faces"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.exterior_wall_mesh, exterior_wall_material(config), transform, &name("Exterior Wall Faces"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.exterior_corner_mesh, exterior_corner_material(config), transform, &name("Exterior Corner Faces"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.exterior_t_junction_mesh, exterior_t_junction_material(config), transform, &name("Exterior T-Junction Faces"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.floor_mesh, floor_material(config), transform, &name("Floor"));
 
     if config.render_roof {
-        spawn_part(
-            commands,
-            meshes,
-            materials,
-            &mut entities,
-            &bmesh.roof_mesh,
-            roof_material(config),
-            transform,
-            name_prefix,
-            "Roof",
-        );
-        spawn_part(
-            commands,
-            meshes,
-            materials,
-            &mut entities,
-            &bmesh.gable_mesh,
-            exterior_wall_material(config),
-            transform,
-            name_prefix,
-            "Gables",
-        );
+        spawn_part(commands, meshes, materials, &mut entities, &bmesh.roof_mesh, roof_material(config), transform, &name("Roof"));
+        spawn_part(commands, meshes, materials, &mut entities, &bmesh.gable_mesh, exterior_wall_material(config), transform, &name("Gables"));
     }
 
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.door_mesh,
-        door_material(config),
-        transform,
-        name_prefix,
-        "Doors",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.opening_trim_mesh,
-        opening_trim_material(config),
-        transform,
-        name_prefix,
-        "Opening Trim",
-    );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.window_mesh,
-        window_material(),
-        transform,
-        name_prefix,
-        "Windows",
-    );
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.door_mesh, door_material(config), transform, &name("Doors"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.opening_trim_mesh, opening_trim_material(config), transform, &name("Opening Trim"));
+    spawn_part(commands, meshes, materials, &mut entities, &bmesh.window_mesh, window_material(), transform, &name("Windows"));
 
     entities
 }
@@ -185,8 +66,7 @@ fn spawn_part(
     mesh_data: &MeshData,
     material: StandardMaterial,
     transform: Transform,
-    name_prefix: &str,
-    part_name: &str,
+    name: &str,
 ) {
     if mesh_data.is_empty() {
         return;
@@ -198,7 +78,7 @@ fn spawn_part(
                 Mesh3d(meshes.add(convert_mesh(mesh_data))),
                 MeshMaterial3d(materials.add(material)),
                 transform,
-                Name::new(format!("{} {}", name_prefix, part_name)),
+                Name::new(name.to_string()),
             ))
             .id(),
     );

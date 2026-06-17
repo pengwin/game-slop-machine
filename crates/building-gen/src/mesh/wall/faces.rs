@@ -1,15 +1,12 @@
 use super::classify::{ExteriorFaceClass, WallCutout, WallFaceDir};
+use super::WallMeshes;
 use crate::config::BuildingConfig;
 use crate::mesh::MeshData;
 use crate::mesh::math_util;
 use crate::tile::WallAxis;
 
 pub fn append_wall_box(
-    wall_mesh: &mut MeshData,
-    wall_top_mesh: &mut MeshData,
-    exterior_wall_mesh: &mut MeshData,
-    exterior_corner_mesh: &mut MeshData,
-    exterior_t_junction_mesh: &mut MeshData,
+    meshes: &mut WallMeshes,
     bounds: ([f32; 3], [f32; 3]),
     axis: WallAxis,
     exterior_class: ExteriorFaceClass,
@@ -40,18 +37,18 @@ pub fn append_wall_box(
             None
         };
         let mesh = match exterior_class {
-            ExteriorFaceClass::Corner if !exterior_faces.is_empty() => &mut *exterior_corner_mesh,
+            ExteriorFaceClass::Corner if !exterior_faces.is_empty() => &mut meshes.exterior_corner,
             ExteriorFaceClass::TJunction if exterior_faces.contains(&dir) => {
-                &mut *exterior_t_junction_mesh
+                &mut meshes.exterior_t_junction
             }
             ExteriorFaceClass::Straight if exterior_faces.contains(&dir) => {
-                &mut *exterior_wall_mesh
+                &mut meshes.exterior
             }
-            _ => &mut *wall_mesh,
+            _ => &mut meshes.wall,
         };
         append_wall_face(mesh, bounds, dir, config, face_cutout);
     }
-    append_wall_face(wall_top_mesh, bounds, WallFaceDir::PosY, config, None);
+    append_wall_face(&mut meshes.top, bounds, WallFaceDir::PosY, config, None);
 }
 
 fn append_wall_face(
