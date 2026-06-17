@@ -384,7 +384,6 @@ pub fn default_building_descriptions() -> Vec<BuildingDescription> {
                 [0.42, 0.24, 0.14],
                 [0.16, 0.11, 0.08],
             )),
-            ..Default::default()
         }),
         BuildingDescription::new(
             "grand hall",
@@ -423,7 +422,6 @@ pub fn default_building_descriptions() -> Vec<BuildingDescription> {
                 [0.30, 0.28, 0.25],
                 [0.12, 0.10, 0.09],
             )),
-            ..Default::default()
         }),
     ]
 }

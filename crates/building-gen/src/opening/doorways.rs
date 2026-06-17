@@ -47,7 +47,7 @@ fn find_corridor_doorway_position(
     let ts = config.tile_size;
     let origin = Vec2::new(config.footprint.min.x, config.footprint.min.y);
 
-    let candidates = if (rb.max.x - corridor_bounds.min.x).abs() < ts * 1.5 {
+    if (rb.max.x - corridor_bounds.min.x).abs() < ts * 1.5 {
         let x = ((rb.max.x - origin.x) / ts).round() as isize;
         let y_mid = ((rb.center().y - origin.y) / ts).round() as usize;
         find_wall_tile_along_axis(grid, x, y_mid, true, config)
@@ -65,9 +65,7 @@ fn find_corridor_doorway_position(
         find_wall_tile_along_axis(grid, y, x_mid, false, config)
     } else {
         None
-    };
-
-    candidates
+    }
 }
 
 pub fn place_room_to_room_doorways(

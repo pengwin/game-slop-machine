@@ -10,6 +10,7 @@ pub struct MainCamera;
 pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
     commands.spawn((
         MainCamera,
+        Name::new("Main Camera"),
         Camera3d::default(),
         ShadowFilteringMethod::Gaussian,
         Projection::Orthographic(OrthographicProjection {

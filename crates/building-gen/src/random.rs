@@ -2,6 +2,22 @@ use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
+/// Computes a deterministic unit float [0, 1) from lot geometry and a seed.
+/// Uses Wyhash mixing for fast, well-distributed hashing.
+pub fn deterministic_lot_unit(pos_x: f32, pos_y: f32, width: f32, depth: f32, seed: u64) -> f32 {
+    let mut hash = seed
+        ^ (pos_x.to_bits() as u64).wrapping_mul(0x9E37_79B1_85EB_CA87)
+        ^ (pos_y.to_bits() as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
+        ^ (width.to_bits() as u64).wrapping_mul(0x1656_67B1_9E37_79F9)
+        ^ (depth.to_bits() as u64).wrapping_mul(0x85EB_CA77_C2B2_AE63);
+    hash ^= hash >> 33;
+    hash = hash.wrapping_mul(0xff51_afd7_ed55_8ccd);
+    hash ^= hash >> 33;
+    hash = hash.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
+    hash ^= hash >> 33;
+    (hash as f64 / u64::MAX as f64) as f32
+}
+
 pub struct SeededRng {
     rng: ChaCha8Rng,
 }

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 pub fn spawn_light(mut commands: Commands) {
     commands.spawn((
+        Name::new("Directional Light"),
         DirectionalLight {
             illuminance: 6_500.0,
             shadows_enabled: true,

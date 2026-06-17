@@ -1,7 +1,6 @@
 mod building_preview;
 mod district_render;
 mod fixtures;
-mod mesh_util;
 mod screenshot;
 
 use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};

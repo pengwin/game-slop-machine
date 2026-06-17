@@ -1,5 +1,6 @@
 use crate::district::config::BuildingDescription;
 use crate::district::layout::Lot;
+use crate::random::deterministic_lot_unit;
 
 pub fn select_building_description_for_lot<'a>(
     lot: &Lot,
@@ -36,7 +37,7 @@ pub fn select_building_description_for_lot<'a>(
         .iter()
         .map(|(score, _)| 1.0 / (0.15 + score - best_score))
         .sum();
-    let mut pick = deterministic_unit(lot, seed) * total_weight;
+    let mut pick = deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, seed) * total_weight;
 
     for (score, description) in candidates {
         pick -= 1.0 / (0.15 + score - best_score);
@@ -147,18 +148,4 @@ pub(super) fn preferred_program_aspect(description: &BuildingDescription) -> f32
         6..=7 => 1.55,
         _ => 1.85,
     }
-}
-
-pub(super) fn deterministic_unit(lot: &Lot, seed: u64) -> f32 {
-    let mut hash = seed
-        ^ (lot.position.x.to_bits() as u64).wrapping_mul(0x9E37_79B1_85EB_CA87)
-        ^ (lot.position.y.to_bits() as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
-        ^ (lot.width.to_bits() as u64).wrapping_mul(0x1656_67B1_9E37_79F9)
-        ^ (lot.depth.to_bits() as u64).wrapping_mul(0x85EB_CA77_C2B2_AE63);
-    hash ^= hash >> 33;
-    hash = hash.wrapping_mul(0xff51_afd7_ed55_8ccd);
-    hash ^= hash >> 33;
-    hash = hash.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
-    hash ^= hash >> 33;
-    (hash as f64 / u64::MAX as f64) as f32
 }

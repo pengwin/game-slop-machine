@@ -1,8 +1,8 @@
-use super::mesh_util::{local_to_world, make_ground_quad};
 use bevy::prelude::*;
 use building_gen::district::generate_district;
 use building_gen::district::layout::TradeDistrictLayout;
 use building_gen::geometry::Vec2;
+use game_core::plugins::building::mesh_util::{local_to_world, make_ground_quad};
 use game_core::plugins::building::render::spawn_building_layout;
 use game_core::plugins::scene::scene_config::SceneConfig;
 
@@ -17,7 +17,6 @@ pub fn spawn_district(
     commands.insert_resource(fixtures::district_camera_for_fixture(fixture));
     commands.insert_resource(SceneConfig {
         ground_size: fixtures::district_ground_size_for_fixture(fixture),
-        ..Default::default()
     });
 
     let district_config = fixtures::district_config_for_fixture(fixture);

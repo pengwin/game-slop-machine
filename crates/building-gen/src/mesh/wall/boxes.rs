@@ -18,10 +18,10 @@ pub fn wall_boxes(
     wall: WallTile,
     config: &BuildingConfig,
 ) -> Vec<WallBox> {
-    if wall.kind == WallKind::Interior {
-        if let Some(boxes) = interior_connector_boxes(grid, x, y, wall, config) {
-            return boxes;
-        }
+    if wall.kind == WallKind::Interior
+        && let Some(boxes) = interior_connector_boxes(grid, x, y, wall, config)
+    {
+        return boxes;
     }
 
     let bounds = wall_bounds_for_tile(grid, x, y, wall, config);

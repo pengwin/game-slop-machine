@@ -50,10 +50,10 @@ fn find_entrance_wall_tile(
         (x, approx_y)
     };
 
-    if let Some(tile) = wall_tile_at(grid, exact) {
-        if !tile.is_opening() {
-            return Some((exact.0 as usize, exact.1 as usize));
-        }
+    if let Some(tile) = wall_tile_at(grid, exact)
+        && !tile.is_opening()
+    {
+        return Some((exact.0 as usize, exact.1 as usize));
     }
 
     let wall_candidates: Vec<(isize, isize)> =
@@ -78,10 +78,11 @@ fn find_entrance_wall_tile(
         };
 
     for (x, y) in wall_candidates {
-        if let Some(tile) = wall_tile_at(grid, (x, y)) {
-            if is_straight_wall(tile) && !tile.is_opening() {
-                return Some((x as usize, y as usize));
-            }
+        if let Some(tile) = wall_tile_at(grid, (x, y))
+            && is_straight_wall(tile)
+            && !tile.is_opening()
+        {
+            return Some((x as usize, y as usize));
         }
     }
 

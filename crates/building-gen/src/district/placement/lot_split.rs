@@ -1,6 +1,7 @@
 use super::super::config::TradeDistrictConfig;
 use super::super::layout::Lot;
 use crate::geometry::Vec2;
+use crate::random::deterministic_lot_unit;
 
 pub fn split_lots_for_buildings(lots: &[Lot], config: &TradeDistrictConfig) -> Vec<Lot> {
     if config.max_buildings_per_lot <= 1 {
@@ -15,7 +16,9 @@ pub fn split_lots_for_buildings(lots: &[Lot], config: &TradeDistrictConfig) -> V
 fn split_lot_for_buildings(lot: &Lot, config: &TradeDistrictConfig) -> Vec<Lot> {
     let area = lot.width * lot.depth;
     let is_large_parcel = area >= config.preserve_large_lot_area;
-    if deterministic_unit(lot, config.seed) > config.building_lot_split_chance.clamp(0.0, 1.0) {
+    if deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, config.seed)
+        > config.building_lot_split_chance.clamp(0.0, 1.0)
+    {
         return vec![single_building_lot(lot, config, is_large_parcel)];
     }
 
@@ -31,7 +34,8 @@ fn single_building_lot(lot: &Lot, config: &TradeDistrictConfig, is_large_parcel:
         return lot.clone();
     }
 
-    let landmark_pick = deterministic_unit(lot, config.seed ^ 0xD1B5_4A32_D192_ED03);
+    let landmark_pick =
+        deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, config.seed ^ 0xD1B5_4A32_D192_ED03);
     if landmark_pick <= config.landmark_lot_chance.clamp(0.0, 1.0) {
         return lot.clone();
     }
@@ -65,7 +69,7 @@ fn choose_building_lot_count(lot: &Lot, config: &TradeDistrictConfig) -> usize {
         return 1;
     }
 
-    let pick = deterministic_unit(lot, config.seed ^ 0xA24B_AED4_963E_E407) * total_weight;
+    let pick = deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, config.seed ^ 0xA24B_AED4_963E_E407) * total_weight;
     if pick < weights[0] {
         1
     } else if pick < weights[0] + weights[1] {
@@ -91,8 +95,11 @@ fn split_lot_evenly_with_jitter(
     let split_jitter = config.building_lot_split_jitter.clamp(0.0, 0.35);
     let mut weights = Vec::with_capacity(count);
     for index in 0..count {
-        let unit = deterministic_unit(
-            lot,
+        let unit = deterministic_lot_unit(
+            lot.position.x,
+            lot.position.y,
+            lot.width,
+            lot.depth,
             config.seed ^ (0x9E37_79B9_u64.wrapping_mul(index as u64 + 1)),
         );
         weights.push((1.0 + (unit - 0.5) * split_jitter).max(0.2));
@@ -153,20 +160,6 @@ fn scaled_lot_around_entrance(parent: &Lot, width: f32, depth: f32) -> Lot {
 
 fn lot_right_axis(lot: &Lot) -> Vec2 {
     Vec2::new(lot.entrance_dir.y, -lot.entrance_dir.x)
-}
-
-pub fn deterministic_unit(lot: &Lot, seed: u64) -> f32 {
-    let mut hash = seed
-        ^ (lot.position.x.to_bits() as u64).wrapping_mul(0x9E37_79B1_85EB_CA87)
-        ^ (lot.position.y.to_bits() as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
-        ^ (lot.width.to_bits() as u64).wrapping_mul(0x1656_67B1_9E37_79F9)
-        ^ (lot.depth.to_bits() as u64).wrapping_mul(0x85EB_CA77_C2B2_AE63);
-    hash ^= hash >> 33;
-    hash = hash.wrapping_mul(0xff51_afd7_ed55_8ccd);
-    hash ^= hash >> 33;
-    hash = hash.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
-    hash ^= hash >> 33;
-    (hash as f64 / u64::MAX as f64) as f32
 }
 
 pub fn scaled_lot(lot: &Lot, scale: f32) -> Lot {

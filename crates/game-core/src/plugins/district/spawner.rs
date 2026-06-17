@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use building_gen::district::generate_district;
 
 use super::config::DistrictGenConfig;
+use crate::plugins::building::mesh_util::{local_to_world, make_ground_quad};
 use crate::plugins::building::render::spawn_building_layout;
 
 /// Tracks entities spawned for the current district.
@@ -119,59 +120,7 @@ pub fn spawn_district_on_command(
         }
     }
 
-    println!(
-        "District spawned: {} lots, {} buildings, {} roads",
-        district.lots.len(),
-        district.buildings.len(),
-        district.roads.len()
-    );
-
     commands.insert_resource(CurrentDistrict { entities });
-}
-
-/// Creates a flat quad mesh at the given position.
-fn make_ground_quad(center: Vec3, width: f32, depth: f32) -> Mesh {
-    let hw = width / 2.0;
-    let hd = depth / 2.0;
-    let mut mesh = Mesh::new(
-        bevy::render::render_resource::PrimitiveTopology::TriangleList,
-        bevy::asset::RenderAssetUsages::MAIN_WORLD | bevy::asset::RenderAssetUsages::RENDER_WORLD,
-    );
-
-    let cx = center.x;
-    let cy = center.y;
-    let cz = center.z;
-
-    mesh.insert_attribute(
-        Mesh::ATTRIBUTE_POSITION,
-        vec![
-            [cx - hw, cy, cz - hd],
-            [cx + hw, cy, cz - hd],
-            [cx + hw, cy, cz + hd],
-            [cx - hw, cy, cz + hd],
-        ],
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 4]);
-    mesh.insert_attribute(
-        Mesh::ATTRIBUTE_UV_0,
-        vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
-    );
-    mesh.insert_indices(bevy::mesh::Indices::U32(vec![0, 2, 1, 0, 3, 2]));
-
-    mesh
-}
-
-fn local_to_world(
-    origin: building_gen::geometry::Vec2,
-    rotation: f32,
-    local: building_gen::geometry::Vec2,
-) -> building_gen::geometry::Vec2 {
-    let sin = rotation.sin();
-    let cos = rotation.cos();
-    building_gen::geometry::Vec2::new(
-        origin.x + local.x * cos + local.y * sin,
-        origin.y - local.x * sin + local.y * cos,
-    )
 }
 
 fn spawn_entrance_approach(
