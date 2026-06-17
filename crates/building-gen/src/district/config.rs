@@ -431,6 +431,7 @@ pub fn default_building_descriptions() -> Vec<BuildingDescription> {
 fn visual_style(wall: [f32; 3], roof: [f32; 3], trim: [f32; 3]) -> BuildingVisualStyle {
     BuildingVisualStyle {
         wall_color: lighten(wall, 0.06),
+        wall_top_color: darken(lighten(wall, 0.06), 0.34),
         exterior_wall_color: wall,
         corner_color: lighten(wall, 0.08),
         t_junction_color: darken(wall, 0.08),

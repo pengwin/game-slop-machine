@@ -454,20 +454,20 @@ fn append_wall_face(
             let n = [0.0, 0.0, 1.0];
             (
                 n,
-                [min_x, max_y, max_z],
                 [max_x, max_y, max_z],
-                [min_x, min_y, max_z],
+                [min_x, max_y, max_z],
                 [max_x, min_y, max_z],
+                [min_x, min_y, max_z],
             )
         }
         WallFaceDir::NegZ => {
             let n = [0.0, 0.0, -1.0];
             (
                 n,
-                [max_x, max_y, min_z],
                 [min_x, max_y, min_z],
-                [max_x, min_y, min_z],
+                [max_x, max_y, min_z],
                 [min_x, min_y, min_z],
+                [max_x, min_y, min_z],
             )
         }
         WallFaceDir::PosY => {
@@ -675,5 +675,61 @@ mod tests {
         let (min, max) = wall_bounds_for_tile(&grid, 0, 0, wall, &config);
         assert_eq!(max[0] - min[0], config.tile_size);
         assert_eq!(max[2] - min[2], config.tile_size);
+    }
+
+    #[test]
+    fn test_wall_triangle_winding_matches_normals() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 3.0, 3.0),
+            tile_size: 1.0,
+            wall_thickness: 0.25,
+            ..Default::default()
+        };
+
+        for shape in [
+            WallShape::Straight(CardinalDir::Left),
+            WallShape::Straight(CardinalDir::Right),
+            WallShape::Straight(CardinalDir::Bottom),
+            WallShape::Straight(CardinalDir::Top),
+        ] {
+            let mut grid = TileGrid::new(3, 3, config.tile_size, Vec2::ZERO);
+            grid.set(1, 1, exterior_wall(shape));
+
+            let meshes = generate_wall_meshes(&grid, &config);
+            for (name, mesh) in [
+                ("wall", &meshes.wall),
+                ("top", &meshes.top),
+                ("exterior", &meshes.exterior),
+                ("corner", &meshes.exterior_corner),
+                ("t_junction", &meshes.exterior_t_junction),
+            ] {
+                assert_mesh_winding_matches_normals(name, mesh);
+            }
+        }
+    }
+
+    fn assert_mesh_winding_matches_normals(name: &str, mesh: &MeshData) {
+        for triangle in mesh.indices.chunks_exact(3) {
+            let a_index = triangle[0] as usize;
+            let b_index = triangle[1] as usize;
+            let c_index = triangle[2] as usize;
+            let a = mesh.vertices[a_index];
+            let b = mesh.vertices[b_index];
+            let c = mesh.vertices[c_index];
+            let normal = mesh.normals[a_index];
+            let edge_ab = super::super::math_util::sub3(b, a);
+            let edge_ac = super::super::math_util::sub3(c, a);
+            let winding_normal = super::super::math_util::normalize3(
+                super::super::math_util::cross3(edge_ab, edge_ac),
+            );
+            let dot = winding_normal[0] * normal[0]
+                + winding_normal[1] * normal[1]
+                + winding_normal[2] * normal[2];
+
+            assert!(
+                dot > 0.99,
+                "{name}: triangle winding opposes normal: dot={dot}, normal={normal:?}, winding_normal={winding_normal:?}"
+            );
+        }
     }
 }

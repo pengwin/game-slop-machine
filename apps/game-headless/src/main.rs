@@ -16,7 +16,7 @@ use game_core::plugins::building::render::spawn_building_layout;
 use game_core::plugins::scene::camera_config::CameraConfig;
 use game_core::plugins::scene::scene_config::SceneConfig;
 use game_core::plugins::GamePlugin;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -115,35 +115,17 @@ fn generate_building(
     mut materials: ResMut<Assets<StandardMaterial>>,
     fixture: Res<HeadlessFixture>,
 ) {
-    // District fixtures: normal building preview and lot-placement debug preview.
-    if fixture.0 == "district" || fixture.0 == "district-lots" {
-        commands.insert_resource(CameraConfig {
-            position: Vec3::new(42.0, 42.0, 42.0),
-            target: Vec3::new(0.0, 0.0, 0.0),
-            viewport_height: 70.0,
-        });
+    if is_district_fixture(&fixture.0) {
+        commands.insert_resource(district_camera_for_fixture(&fixture.0));
         commands.insert_resource(SceneConfig {
-            ground_size: 100.0,
+            ground_size: district_ground_size_for_fixture(&fixture.0),
             ..Default::default()
         });
 
-        let seed = fixture_seed();
-        let district_config = TradeDistrictConfig {
-            seed,
-            ring_spacing: random_range(seed, 0, 20.0, 24.0),
-            lot_gap: random_range(seed, 1, 0.4, 0.7),
-            lot_width: 1.0,
-            lot_height: random_range(seed, 2, 0.38, 0.5),
-            lot_depth: random_range(seed, 3, 0.05, 0.15),
-            lot_width_randomness: 0.0,
-            lot_height_randomness: random_range(seed, 4, 0.05, 0.15),
-            lot_depth_randomness: random_range(seed, 5, 0.02, 0.08),
-            building_lot_inset: random_range(seed, 6, 0.05, 0.15),
-            ..Default::default()
-        };
+        let district_config = district_config_for_fixture(&fixture.0);
         let district = generate_district(&district_config);
         let mut entity_count = 0;
-        let show_lots = fixture.0 == "district-lots";
+        let show_lots = is_district_lots_fixture(&fixture.0);
 
         // Town square
         let sq = district_config.town_square_radius;
@@ -371,7 +353,6 @@ fn generate_building(
             Mesh3d(meshes.add(convert_mesh(&bmesh.wall_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgb(0.8, 0.8, 0.8),
-                cull_mode: None,
                 ..default()
             })),
             Transform::default(),
@@ -383,8 +364,12 @@ fn generate_building(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.wall_top_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.18, 0.18, 0.18),
-                cull_mode: None,
+                base_color: Color::srgb(
+                    config.visual_style.wall_top_color[0],
+                    config.visual_style.wall_top_color[1],
+                    config.visual_style.wall_top_color[2],
+                ),
+                unlit: true,
                 ..default()
             })),
             Transform::default(),
@@ -397,7 +382,6 @@ fn generate_building(
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_wall_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgb(0.92, 0.88, 0.68),
-                cull_mode: None,
                 ..default()
             })),
             Transform::default(),
@@ -410,7 +394,6 @@ fn generate_building(
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_corner_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgb(0.96, 0.9, 0.62),
-                cull_mode: None,
                 ..default()
             })),
             Transform::default(),
@@ -423,7 +406,6 @@ fn generate_building(
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_t_junction_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgb(0.86, 0.78, 0.48),
-                cull_mode: None,
                 ..default()
             })),
             Transform::default(),
@@ -667,23 +649,112 @@ fn local_to_world(origin: Vec2, rotation: f32, local: Vec2) -> Vec2 {
     )
 }
 
-fn fixture_seed() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos() as u64)
-        .unwrap_or(42)
+fn is_district_fixture(fixture: &str) -> bool {
+    matches!(
+        fixture,
+        "district"
+            | "district-lots"
+            | "district-no-roof"
+            | "huge-trade-district"
+            | "huge-trade-district-lots"
+            | "huge-trade-district-no-roof"
+    )
 }
 
-fn random_range(seed: u64, stream: u64, min: f32, max: f32) -> f32 {
-    let mut value = seed ^ stream.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-    value ^= value >> 30;
-    value = value.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    value ^= value >> 27;
-    value = value.wrapping_mul(0x94D0_49BB_1331_11EB);
-    value ^= value >> 31;
+fn is_district_lots_fixture(fixture: &str) -> bool {
+    matches!(fixture, "district-lots" | "huge-trade-district-lots")
+}
 
-    let unit = ((value >> 40) as f32) / ((1_u64 << 24) as f32);
-    min + (max - min) * unit
+fn district_camera_for_fixture(fixture: &str) -> CameraConfig {
+    if fixture.starts_with("huge-trade-district") {
+        CameraConfig {
+            position: Vec3::new(86.0, 86.0, 86.0),
+            target: Vec3::new(0.0, 0.0, 0.0),
+            viewport_height: 145.0,
+        }
+    } else {
+        CameraConfig {
+            position: Vec3::new(42.0, 42.0, 42.0),
+            target: Vec3::new(0.0, 0.0, 0.0),
+            viewport_height: 70.0,
+        }
+    }
+}
+
+fn district_ground_size_for_fixture(fixture: &str) -> f32 {
+    if fixture.starts_with("huge-trade-district") {
+        210.0
+    } else {
+        100.0
+    }
+}
+
+fn district_config_for_fixture(fixture: &str) -> TradeDistrictConfig {
+    if fixture.starts_with("huge-trade-district") {
+        let mut config = TradeDistrictConfig {
+            seed: 42,
+            ring_count: 4,
+            ring_spacing: 20.0,
+            lot_count: 36,
+            radial_count: 6,
+            lot_width: 1.0,
+            lot_height: 0.42,
+            lot_depth: 0.08,
+            lot_width_randomness: 0.0,
+            lot_height_randomness: 0.14,
+            lot_depth_randomness: 0.05,
+            building_lot_inset: 0.08,
+            max_buildings_per_lot: 3,
+            building_gap: 0.9,
+            preserve_large_lot_area: 300.0,
+            landmark_lot_chance: 0.36,
+            standalone_lot_width_scale: 0.5,
+            standalone_lot_depth_scale: 0.7,
+            building_lot_split_chance: 0.9,
+            one_building_lot_weight: 0.22,
+            two_building_lot_weight: 0.43,
+            three_building_lot_weight: 0.35,
+            building_lot_split_jitter: 0.32,
+            ..Default::default()
+        };
+        if fixture == "huge-trade-district-no-roof" {
+            for desc in &mut config.building_descriptions {
+                desc.render_roof = false;
+            }
+        }
+        config
+    } else {
+        let mut config = TradeDistrictConfig {
+            seed: 42,
+            ring_spacing: 22.0,
+            lot_gap: 0.55,
+            lot_width: 1.0,
+            lot_height: 0.46,
+            lot_depth: 0.08,
+            lot_width_randomness: 0.0,
+            lot_height_randomness: 0.12,
+            lot_depth_randomness: 0.05,
+            building_lot_inset: 0.08,
+            max_buildings_per_lot: 3,
+            building_gap: 0.9,
+            preserve_large_lot_area: 260.0,
+            landmark_lot_chance: 0.42,
+            standalone_lot_width_scale: 0.52,
+            standalone_lot_depth_scale: 0.72,
+            building_lot_split_chance: 0.86,
+            one_building_lot_weight: 0.24,
+            two_building_lot_weight: 0.43,
+            three_building_lot_weight: 0.33,
+            building_lot_split_jitter: 0.32,
+            ..Default::default()
+        };
+        if fixture == "district-no-roof" {
+            for desc in &mut config.building_descriptions {
+                desc.render_roof = false;
+            }
+        }
+        config
+    }
 }
 
 fn spawn_entrance_approach(

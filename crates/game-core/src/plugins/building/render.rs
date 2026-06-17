@@ -65,7 +65,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.wall_top_mesh,
-        wall_top_material(),
+        wall_top_material(config),
         transform,
         name_prefix,
         "Wall Top Faces",
@@ -223,10 +223,10 @@ fn wall_material(config: &BuildingConfig) -> StandardMaterial {
     }
 }
 
-fn wall_top_material() -> StandardMaterial {
+fn wall_top_material(config: &BuildingConfig) -> StandardMaterial {
     StandardMaterial {
-        base_color: Color::srgb(0.18, 0.18, 0.18),
-        cull_mode: None,
+        base_color: color(config.visual_style.wall_top_color),
+        unlit: true,
         ..default()
     }
 }
@@ -234,7 +234,6 @@ fn wall_top_material() -> StandardMaterial {
 fn exterior_wall_material(config: &BuildingConfig) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.exterior_wall_color),
-        cull_mode: None,
         ..default()
     }
 }
@@ -242,7 +241,6 @@ fn exterior_wall_material(config: &BuildingConfig) -> StandardMaterial {
 fn exterior_corner_material(config: &BuildingConfig) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.corner_color),
-        cull_mode: None,
         ..default()
     }
 }
@@ -250,7 +248,6 @@ fn exterior_corner_material(config: &BuildingConfig) -> StandardMaterial {
 fn exterior_t_junction_material(config: &BuildingConfig) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.t_junction_color),
-        cull_mode: None,
         ..default()
     }
 }

@@ -107,6 +107,7 @@ impl RoomDefaults {
 #[derive(Debug, Clone)]
 pub struct BuildingVisualStyle {
     pub wall_color: [f32; 3],
+    pub wall_top_color: [f32; 3],
     pub exterior_wall_color: [f32; 3],
     pub corner_color: [f32; 3],
     pub t_junction_color: [f32; 3],
@@ -121,6 +122,7 @@ impl Default for BuildingVisualStyle {
     fn default() -> Self {
         Self {
             wall_color: [0.8, 0.8, 0.8],
+            wall_top_color: [0.34, 0.34, 0.34],
             exterior_wall_color: [0.92, 0.88, 0.68],
             corner_color: [0.96, 0.9, 0.62],
             t_junction_color: [0.86, 0.78, 0.48],
