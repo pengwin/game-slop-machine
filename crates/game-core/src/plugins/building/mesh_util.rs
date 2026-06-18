@@ -15,6 +15,9 @@ pub fn convert_mesh(data: &MeshData) -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, data.vertices.clone());
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals.clone());
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs.clone());
+    if !data.colors.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, data.colors.clone());
+    }
     mesh.insert_indices(Indices::U32(data.indices.clone()));
 
     mesh

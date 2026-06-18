@@ -42,6 +42,30 @@ pub fn append_quad(mesh: &mut MeshData, quad: Quad) {
     mesh.indices.push(base + 2);
 }
 
+pub fn append_colored_quad(mesh: &mut MeshData, quad: Quad, color: [f32; 4]) {
+    append_quad(mesh, quad);
+    mesh.colors.push(color);
+    mesh.colors.push(color);
+    mesh.colors.push(color);
+    mesh.colors.push(color);
+}
+
+pub fn append_colored_triangle(
+    mesh: &mut MeshData,
+    a: [f32; 3],
+    b: [f32; 3],
+    c: [f32; 3],
+    normal: [f32; 3],
+    color: [f32; 4],
+) {
+    let base = mesh.vertices.len() as u32;
+    mesh.vertices.extend([a, b, c]);
+    mesh.normals.extend([normal; 3]);
+    mesh.uvs.extend([[0.5, 0.5], [0.0, 1.0], [1.0, 1.0]]);
+    mesh.colors.extend([color; 3]);
+    mesh.indices.extend([base, base + 1, base + 2]);
+}
+
 pub fn sub3(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
