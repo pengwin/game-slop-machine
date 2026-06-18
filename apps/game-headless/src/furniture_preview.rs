@@ -46,7 +46,11 @@ pub fn spawn_furniture_preview(
             commands.spawn((
                 Mesh3d(meshes.add(convert_mesh(&item.mesh))),
                 MeshMaterial3d(materials.add(StandardMaterial {
-                    base_color: Color::srgb(item.color[0], item.color[1], item.color[2]),
+                    base_color: if item.mesh.colors.is_empty() {
+                        Color::srgb(item.color[0], item.color[1], item.color[2])
+                    } else {
+                        Color::WHITE
+                    },
                     perceptual_roughness: 0.85,
                     ..default()
                 })),
