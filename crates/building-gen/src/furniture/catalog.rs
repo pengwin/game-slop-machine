@@ -562,6 +562,8 @@ fn generate_barrel_mesh(diameter: f32, h: f32, _color: [f32; 3]) -> MeshData {
     let r = diameter / 2.0;
     let sides = 8;
     let mid_r = r * 1.08; // slight bulge in the middle
+    let cap_r = r * 0.92;
+    let rim_h = h * 0.08;
 
     for i in 0..sides {
         let angle0 = std::f32::consts::TAU * i as f32 / sides as f32;
@@ -576,6 +578,11 @@ fn generate_barrel_mesh(diameter: f32, h: f32, _color: [f32; 3]) -> MeshData {
         let mz0 = angle0.sin() * mid_r;
         let mx1 = angle1.cos() * mid_r;
         let mz1 = angle1.sin() * mid_r;
+
+        let tx0 = angle0.cos() * cap_r;
+        let tz0 = angle0.sin() * cap_r;
+        let tx1 = angle1.cos() * cap_r;
+        let tz1 = angle1.sin() * cap_r;
 
         let nx = ((angle0 + angle1) / 2.0).cos();
         let nz = ((angle0 + angle1) / 2.0).sin();
@@ -592,9 +599,49 @@ fn generate_barrel_mesh(diameter: f32, h: f32, _color: [f32; 3]) -> MeshData {
             bl: [mx0, h * 0.6, mz0], br: [mx1, h * 0.6, mz1],
             normal: [nx, 0.0, nz], uv_min: [0.0, 0.0], uv_max: [1.0, 1.0],
         });
+        // Top taper and raised rim.
+        append_quad(&mut mesh, Quad {
+            tl: [tx0, h, tz0], tr: [tx1, h, tz1],
+            bl: [x0, h - rim_h, z0], br: [x1, h - rim_h, z1],
+            normal: [nx, 0.2, nz], uv_min: [0.0, 0.0], uv_max: [1.0, 1.0],
+        });
+        // Bottom taper and raised rim.
+        append_quad(&mut mesh, Quad {
+            tl: [x0, rim_h, z0], tr: [x1, rim_h, z1],
+            bl: [tx0, 0.0, tz0], br: [tx1, 0.0, tz1],
+            normal: [nx, -0.2, nz], uv_min: [0.0, 0.0], uv_max: [1.0, 1.0],
+        });
+        append_triangle(
+            &mut mesh,
+            [0.0, h, 0.0],
+            [tx1, h, tz1],
+            [tx0, h, tz0],
+            [0.0, 1.0, 0.0],
+        );
+        append_triangle(
+            &mut mesh,
+            [0.0, 0.0, 0.0],
+            [tx0, 0.0, tz0],
+            [tx1, 0.0, tz1],
+            [0.0, -1.0, 0.0],
+        );
     }
 
     mesh
+}
+
+fn append_triangle(
+    mesh: &mut MeshData,
+    a: [f32; 3],
+    b: [f32; 3],
+    c: [f32; 3],
+    normal: [f32; 3],
+) {
+    let base = mesh.vertices.len() as u32;
+    mesh.vertices.extend([a, b, c]);
+    mesh.normals.extend([normal; 3]);
+    mesh.uvs.extend([[0.5, 0.5], [0.0, 1.0], [1.0, 1.0]]);
+    mesh.indices.extend([base, base + 1, base + 2]);
 }
 
 /// Crate: box with no bottom.

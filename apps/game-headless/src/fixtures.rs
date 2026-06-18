@@ -37,7 +37,7 @@ pub fn furniture_camera_for_fixture(fixture: &str) -> CameraConfig {
     let (vh, pos) = if fixture == "all-furniture" {
         (8.0, Vec3::new(6.0, 6.0, 6.0))
     } else {
-        (3.0, Vec3::new(2.0, 2.0, 2.0))
+        (4.0, Vec3::new(3.0, 3.0, 3.0))
     };
     CameraConfig {
         position: pos,

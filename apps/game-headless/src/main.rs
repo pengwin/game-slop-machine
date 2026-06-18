@@ -66,9 +66,13 @@ fn generate_building(
 
     if fixtures::is_furniture_fixture(&fixture.0) {
         commands.insert_resource(fixtures::furniture_camera_for_fixture(&fixture.0));
-        commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
-            ground_size: 10.0,
-        });
+        let ground_size = if fixture.0 == "all-furniture" {
+            14.0
+        } else {
+            7.0
+        };
+        commands
+            .insert_resource(game_core::plugins::scene::scene_config::SceneConfig { ground_size });
         furniture_preview::spawn_furniture_preview(
             &mut commands,
             &mut meshes,

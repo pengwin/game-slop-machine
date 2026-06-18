@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use building_gen::furniture::{self, FurnitureType};
-use game_core::plugins::building::mesh_util::{convert_mesh, make_ground_quad};
+use game_core::plugins::building::mesh_util::convert_mesh;
 
 pub fn spawn_furniture_preview(
     commands: &mut Commands,
@@ -34,19 +34,6 @@ pub fn spawn_furniture_preview(
         _ => vec![furniture::single_item(FurnitureType::Table)],
     };
 
-    // Ground plane
-    let ground_mesh = make_ground_quad(Vec3::ZERO, 6.0, 6.0);
-    commands.spawn((
-        Mesh3d(meshes.add(ground_mesh)),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.35, 0.45, 0.3),
-            perceptual_roughness: 0.95,
-            ..default()
-        })),
-        Transform::default(),
-        Name::new("Ground"),
-    ));
-
     // Spawn items in a row
     let spacing = 1.2;
     let total_width = (items.len() as f32 - 1.0) * spacing;
@@ -72,7 +59,10 @@ pub fn spawn_furniture_preview(
         }
 
         // Label
-        println!("  [{:?}] {:.2} x {:.2} x {:.2}", item.item_type, item.width, item.height, item.depth);
+        println!(
+            "  [{:?}] {:.2} x {:.2} x {:.2}",
+            item.item_type, item.width, item.height, item.depth
+        );
     }
 
     println!("Spawned {} furniture items", items.len());
