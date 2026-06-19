@@ -370,9 +370,25 @@ fn append_colored_rotated_box(mesh: &mut MeshData, center: [f32; 3], size: [f32;
     let sy = rot_y.sin();
     let cz = rot_z.cos();
     let sz = rot_z.sin();
-    
     let pivot_y = -size[1] / 2.0;
 
+    // First pass: find minimum Y after rotation
+    let mut min_y = f32::MAX;
+    for v in &bmesh.vertices {
+        let x = v[0];
+        let y = v[1] - pivot_y;
+        let z = v[2];
+
+        let x1 = x * cz - y * sz;
+        let y1 = x * sz + y * cz;
+        
+        let y2 = y1;
+        if y2 < min_y {
+            min_y = y2;
+        }
+    }
+
+    // Second pass: apply rotation and shift up so min_y == 0
     for v in &mut bmesh.vertices {
         let x = v[0];
         let y = v[1] - pivot_y;
@@ -383,7 +399,7 @@ fn append_colored_rotated_box(mesh: &mut MeshData, center: [f32; 3], size: [f32;
         let z1 = z;
 
         let x2 = x1 * cy + z1 * sy;
-        let y2 = y1;
+        let y2 = y1 - min_y; // Shift up to sit on shelf
         let z2 = -x1 * sy + z1 * cy;
 
         v[0] = x2 + center[0];
@@ -948,7 +964,13 @@ fn generate_shelf_mesh(w: f32, h: f32, d: f32, config: &ShelfConfig) -> MeshData
                     } else {
                         0.0
                     };
-                    let rot_y = (i as f32 * 0.15) - 0.1;
+                    
+                    // Don't twist leaning books to avoid pitch issues
+                    let rot_y = if rot_z != 0.0 {
+                        0.0
+                    } else {
+                        (i as f32 * 0.15) - 0.1
+                    };
                     
                     append_colored_rotated_box(
                         &mut mesh, 
