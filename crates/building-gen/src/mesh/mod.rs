@@ -10,6 +10,7 @@
 
 mod floor;
 mod foundation;
+pub mod colored_shapes;
 pub mod math_util;
 mod opening;
 mod primitives;
@@ -38,6 +39,15 @@ pub struct MeshData {
 impl MeshData {
     pub fn is_empty(&self) -> bool {
         self.indices.is_empty()
+    }
+
+    pub fn merge_from(&mut self, other: &MeshData) {
+        let base_idx = self.vertices.len() as u32;
+        self.vertices.extend_from_slice(&other.vertices);
+        self.normals.extend_from_slice(&other.normals);
+        self.uvs.extend_from_slice(&other.uvs);
+        self.colors.extend_from_slice(&other.colors);
+        self.indices.extend(other.indices.iter().map(|&idx| idx + base_idx));
     }
 }
 

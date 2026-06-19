@@ -8,7 +8,6 @@ pub mod chair;
 pub mod counter;
 pub mod crate_mesh;
 pub mod desk;
-pub mod mesh_utils;
 pub mod shelf;
 pub mod stove;
 pub mod table;

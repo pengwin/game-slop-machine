@@ -1,5 +1,5 @@
-use crate::mesh::math_util::{append_colored_quad, Quad};
-use crate::mesh::MeshData;
+use super::math_util::{append_colored_quad, Quad};
+use super::MeshData;
 
 pub fn append_colored_box(mesh: &mut MeshData, center: [f32; 3], size: [f32; 3], color: [f32; 4]) {
     let hw = size[0] / 2.0;
@@ -109,12 +109,7 @@ pub fn append_colored_rotated_box(mesh: &mut MeshData, center: [f32; 3], size: [
         n[2] = z2;
     }
     
-    let base_idx = mesh.vertices.len() as u32;
-    mesh.vertices.extend(bmesh.vertices);
-    mesh.normals.extend(bmesh.normals);
-    mesh.uvs.extend(bmesh.uvs);
-    mesh.colors.extend(bmesh.colors);
-    mesh.indices.extend(bmesh.indices.iter().map(|&idx| idx + base_idx));
+    mesh.merge_from(&bmesh);
 }
 
 pub fn append_colored_beveled_box(mesh: &mut MeshData, center: [f32; 3], size: [f32; 3], bevel: f32, color: [f32; 4]) {

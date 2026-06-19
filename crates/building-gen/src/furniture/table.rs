@@ -1,5 +1,5 @@
 use crate::mesh::MeshData;
-use super::mesh_utils::append_colored_box;
+use crate::mesh::colored_shapes::append_colored_box;
 use crate::mesh::math_util::{append_colored_quad, Quad};
 
 pub fn generate_table_mesh(w: f32, top_y: f32, d: f32, color: [f32; 3]) -> MeshData {

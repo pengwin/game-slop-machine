@@ -1,5 +1,5 @@
 use crate::mesh::MeshData;
-use super::mesh_utils::append_colored_box;
+use crate::mesh::colored_shapes::append_colored_box;
 
 pub fn generate_desk_mesh(w: f32, h: f32, d: f32, color: [f32; 3]) -> MeshData {
     let mut mesh = MeshData::default();
