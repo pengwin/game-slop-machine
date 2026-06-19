@@ -5,9 +5,12 @@ use crate::geometry::Vec3;
 use crate::layout::Room;
 use crate::tile::TileGrid;
 
-use super::bed::BedConfig;
 use super::barrel::BarrelConfig;
+use super::bed::BedConfig;
+use super::chair::ChairConfig;
+use super::counter::CounterConfig;
 use super::shelf::ShelfConfig;
+use super::table::TableConfig;
 
 pub fn furniture_for_room(
     room: &Room,
@@ -70,7 +73,7 @@ fn kitchen_items(
             height: h,
             depth: d,
             color: [0.55, 0.4, 0.25],
-            mesh: super::counter::generate_counter_mesh(w, h, d, [0.55, 0.4, 0.25]),
+            mesh: super::counter::generate_counter_mesh(w, h, d, &CounterConfig::default()),
         });
         occupied.mark(tx, ty);
     }
@@ -80,9 +83,13 @@ fn kitchen_items(
     if !center_positions.is_empty() {
         let (tx, ty) = center_positions[0];
         let (wx, wz) = placement::tile_to_world(tx, ty, grid);
-        let w = 0.7;
-        let h = 0.75;
-        let d = 0.5;
+        let table_config = TableConfig {
+            width: 0.7,
+            ..Default::default()
+        };
+        let w = table_config.width;
+        let h = table_config.height;
+        let d = table_config.depth;
         items.push(FurnitureItem {
             position: Vec3::new(wx, floor_y, wz),
             rotation: 0.0,
@@ -91,7 +98,7 @@ fn kitchen_items(
             height: h,
             depth: d,
             color: [0.6, 0.45, 0.25],
-            mesh: super::table::generate_table_mesh(w, h, d, [0.6, 0.45, 0.25]),
+            mesh: super::table::generate_table_mesh(w, h, d, &table_config),
         });
         occupied.mark(tx, ty);
 
@@ -119,15 +126,25 @@ fn kitchen_items(
                 } else {
                     -std::f32::consts::FRAC_PI_2
                 };
+                let chair_config = ChairConfig {
+                    width: 0.35,
+                    depth: 0.35,
+                    ..Default::default()
+                };
                 items.push(FurnitureItem {
                     position: Vec3::new(cwx, floor_y, cwz),
                     rotation: rot,
                     item_type: FurnitureType::Chair,
-                    width: 0.35,
-                    height: 0.45,
-                    depth: 0.35,
+                    width: chair_config.width,
+                    height: chair_config.height,
+                    depth: chair_config.depth,
                     color: [0.5, 0.35, 0.2],
-                    mesh: super::chair::generate_chair_mesh(0.35, 0.45, 0.35, [0.5, 0.35, 0.2]),
+                    mesh: super::chair::generate_chair_mesh(
+                        chair_config.width,
+                        chair_config.height,
+                        chair_config.depth,
+                        &chair_config,
+                    ),
                 });
                 occupied.mark(cx, cy);
                 chairs_placed += 1;
@@ -193,15 +210,25 @@ fn bedroom_items(
     if !center_positions.is_empty() {
         let (tx, ty) = center_positions[0];
         let (wx, wz) = placement::tile_to_world(tx, ty, grid);
+        let chair_config = ChairConfig {
+            width: 0.35,
+            depth: 0.35,
+            ..Default::default()
+        };
         items.push(FurnitureItem {
             position: Vec3::new(wx, floor_y, wz),
             rotation: 0.0,
             item_type: FurnitureType::Chair,
-            width: 0.35,
-            height: 0.45,
-            depth: 0.35,
+            width: chair_config.width,
+            height: chair_config.height,
+            depth: chair_config.depth,
             color: [0.5, 0.35, 0.2],
-            mesh: super::chair::generate_chair_mesh(0.35, 0.45, 0.35, [0.5, 0.35, 0.2]),
+            mesh: super::chair::generate_chair_mesh(
+                chair_config.width,
+                chair_config.height,
+                chair_config.depth,
+                &chair_config,
+            ),
         });
         occupied.mark(tx, ty);
     }
@@ -297,15 +324,24 @@ fn generic_items(
     if !center_positions.is_empty() {
         let (tx, ty) = center_positions[0];
         let (wx, wz) = placement::tile_to_world(tx, ty, grid);
+        let table_config = TableConfig {
+            width: 0.7,
+            ..Default::default()
+        };
         items.push(FurnitureItem {
             position: Vec3::new(wx, floor_y, wz),
             rotation: 0.0,
             item_type: FurnitureType::Table,
-            width: 0.7,
-            height: 0.75,
-            depth: 0.5,
+            width: table_config.width,
+            height: table_config.height,
+            depth: table_config.depth,
             color: [0.6, 0.45, 0.25],
-            mesh: super::table::generate_table_mesh(0.7, 0.75, 0.5, [0.6, 0.45, 0.25]),
+            mesh: super::table::generate_table_mesh(
+                table_config.width,
+                table_config.height,
+                table_config.depth,
+                &table_config,
+            ),
         });
         occupied.mark(tx, ty);
     }
@@ -318,44 +354,106 @@ pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
 
     let (w, h, d, color, mesh) = match item_type {
         FurnitureType::Table => {
-            let (w, h, d) = (0.8, 0.75, 0.5);
-            (w, h, d, [0.6, 0.45, 0.25], super::table::generate_table_mesh(w, h, d, [0.6, 0.45, 0.25]))
+            let table_config = TableConfig::default();
+            let (w, h, d) = (table_config.width, table_config.height, table_config.depth);
+            (
+                w,
+                h,
+                d,
+                [0.6, 0.45, 0.25],
+                super::table::generate_table_mesh(w, h, d, &table_config),
+            )
         }
         FurnitureType::Chair => {
-            let (w, h, d) = (0.4, 0.45, 0.4);
-            (w, h, d, [0.5, 0.35, 0.2], super::chair::generate_chair_mesh(w, h, d, [0.5, 0.35, 0.2]))
+            let chair_config = ChairConfig::default();
+            let (w, h, d) = (chair_config.width, chair_config.height, chair_config.depth);
+            (
+                w,
+                h,
+                d,
+                [0.5, 0.35, 0.2],
+                super::chair::generate_chair_mesh(w, h, d, &chair_config),
+            )
         }
         FurnitureType::Bed => {
             let (w, h, d) = (1.0, 0.45, 0.9);
-            (w, h, d, [0.9, 0.9, 0.85], super::bed::generate_bed_mesh(w, h, d, &BedConfig::default()))
+            (
+                w,
+                h,
+                d,
+                [0.9, 0.9, 0.85],
+                super::bed::generate_bed_mesh(w, h, d, &BedConfig::default()),
+            )
         }
         FurnitureType::Stove => {
             let (w, h, d) = (0.6, 0.85, 0.6);
-            (w, h, d, [0.25, 0.25, 0.25], super::stove::generate_stove_mesh(w, h, d, [0.25, 0.25, 0.25]))
+            (
+                w,
+                h,
+                d,
+                [0.25, 0.25, 0.25],
+                super::stove::generate_stove_mesh(w, h, d, [0.25, 0.25, 0.25]),
+            )
         }
         FurnitureType::Counter => {
             let (w, h, d) = (0.9, 0.9, 0.5);
-            (w, h, d, [0.55, 0.4, 0.25], super::counter::generate_counter_mesh(w, h, d, [0.55, 0.4, 0.25]))
+            (
+                w,
+                h,
+                d,
+                [0.55, 0.4, 0.25],
+                super::counter::generate_counter_mesh(w, h, d, &CounterConfig::default()),
+            )
         }
         FurnitureType::Desk => {
             let (w, h, d) = (0.7, 0.75, 0.45);
-            (w, h, d, [0.5, 0.35, 0.2], super::desk::generate_desk_mesh(w, h, d, [0.5, 0.35, 0.2]))
+            (
+                w,
+                h,
+                d,
+                [0.5, 0.35, 0.2],
+                super::desk::generate_desk_mesh(w, h, d, [0.5, 0.35, 0.2]),
+            )
         }
         FurnitureType::Barrel => {
             let (d, h) = (0.4, 0.6);
-            (d, h, d, [0.4, 0.28, 0.15], super::barrel::generate_barrel_mesh(d, h, &BarrelConfig::default()))
+            (
+                d,
+                h,
+                d,
+                [0.4, 0.28, 0.15],
+                super::barrel::generate_barrel_mesh(d, h, &BarrelConfig::default()),
+            )
         }
         FurnitureType::Crate => {
             let (w, h, d) = (0.5, 0.5, 0.5);
-            (w, h, d, [0.65, 0.55, 0.35], super::crate_mesh::generate_crate_mesh(w, h, d, [0.65, 0.55, 0.35]))
+            (
+                w,
+                h,
+                d,
+                [0.65, 0.55, 0.35],
+                super::crate_mesh::generate_crate_mesh(w, h, d, [0.65, 0.55, 0.35]),
+            )
         }
         FurnitureType::Bench => {
             let (w, h, d) = (0.8, 0.45, 0.35);
-            (w, h, d, [0.45, 0.32, 0.18], super::bench::generate_bench_mesh(w, h, d, [0.45, 0.32, 0.18]))
+            (
+                w,
+                h,
+                d,
+                [0.45, 0.32, 0.18],
+                super::bench::generate_bench_mesh(w, h, d, [0.45, 0.32, 0.18]),
+            )
         }
         FurnitureType::Shelf => {
             let (w, h, d) = (0.6, 1.2, 0.3);
-            (w, h, d, [0.5, 0.35, 0.2], super::shelf::generate_shelf_mesh(w, h, d, &ShelfConfig::default()))
+            (
+                w,
+                h,
+                d,
+                [0.5, 0.35, 0.2],
+                super::shelf::generate_shelf_mesh(w, h, d, &ShelfConfig::default()),
+            )
         }
     };
 
