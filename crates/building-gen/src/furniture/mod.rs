@@ -1,6 +1,18 @@
 mod catalog;
 pub mod placement;
 
+pub mod bed;
+pub mod barrel;
+pub mod bench;
+pub mod chair;
+pub mod counter;
+pub mod crate_mesh;
+pub mod desk;
+pub mod mesh_utils;
+pub mod shelf;
+pub mod stove;
+pub mod table;
+
 use crate::config::BuildingConfig;
 use crate::geometry::Vec3;
 use crate::layout::{Doorway, Room};
