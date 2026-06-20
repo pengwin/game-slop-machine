@@ -19,6 +19,7 @@ pub fn spawn_furniture_preview(
         "crate" => vec![furniture::single_item(FurnitureType::Crate)],
         "bench" => vec![furniture::single_item(FurnitureType::Bench)],
         "shelf" => vec![furniture::single_item(FurnitureType::Shelf)],
+        "stool" => vec![furniture::single_item(FurnitureType::Stool)],
         "all-furniture" => vec![
             furniture::single_item(FurnitureType::Table),
             furniture::single_item(FurnitureType::Chair),
@@ -30,6 +31,7 @@ pub fn spawn_furniture_preview(
             furniture::single_item(FurnitureType::Crate),
             furniture::single_item(FurnitureType::Bench),
             furniture::single_item(FurnitureType::Shelf),
+            furniture::single_item(FurnitureType::Stool),
         ],
         _ => vec![furniture::single_item(FurnitureType::Table)],
     };

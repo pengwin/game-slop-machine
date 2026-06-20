@@ -204,3 +204,58 @@ pub fn generate_box_mesh(w: f32, h: f32, d: f32, color: [f32; 3]) -> MeshData {
     }, c);
     mesh
 }
+
+pub fn append_colored_cylinder(mesh: &mut MeshData, center: [f32; 3], radius_x: f32, radius_z: f32, height: f32, sides: u32, color: [f32; 4]) {
+    use std::f32::consts::TAU;
+    let hh = height / 2.0;
+    
+    let top_c = [center[0], center[1] + hh, center[2]];
+    let bot_c = [center[0], center[1] - hh, center[2]];
+
+    for i in 0..sides {
+        let a0 = TAU * (i as f32) / (sides as f32);
+        let a1 = TAU * ((i + 1) as f32) / (sides as f32);
+
+        let x0 = a0.cos() * radius_x;
+        let z0 = a0.sin() * radius_z;
+        let x1 = a1.cos() * radius_x;
+        let z1 = a1.sin() * radius_z;
+
+        let a_mid = (a0 + a1) / 2.0;
+        let normal = [a_mid.cos(), 0.0, a_mid.sin()];
+
+        // Side
+        super::math_util::append_colored_quad(mesh, Quad {
+            tl: [center[0] + x0, center[1] + hh, center[2] + z0],
+            tr: [center[0] + x1, center[1] + hh, center[2] + z1],
+            bl: [center[0] + x0, center[1] - hh, center[2] + z0],
+            br: [center[0] + x1, center[1] - hh, center[2] + z1],
+            normal,
+            uv_min: [0.0, 0.0],
+            uv_max: [1.0, 1.0],
+        }, color);
+
+        // Top triangle (winding order: center -> point 1 -> point 0 for CCW normal UP)
+        // Wait, for UP normal [0.0, 1.0, 0.0], we want right hand rule: center -> x1 -> x0 is CCW if looking from above.
+        // Let's verify: a1 > a0, so x1 is "ahead" of x0 counter-clockwise.
+        super::math_util::append_colored_triangle(
+            mesh,
+            top_c,
+            [center[0] + x1, center[1] + hh, center[2] + z1],
+            [center[0] + x0, center[1] + hh, center[2] + z0],
+            [0.0, 1.0, 0.0],
+            color,
+        );
+
+        // Bottom triangle (winding order: center -> point 0 -> point 1 for CCW normal DOWN)
+        super::math_util::append_colored_triangle(
+            mesh,
+            bot_c,
+            [center[0] + x0, center[1] - hh, center[2] + z0],
+            [center[0] + x1, center[1] - hh, center[2] + z1],
+            [0.0, -1.0, 0.0],
+            color,
+        );
+    }
+}
+

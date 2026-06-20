@@ -455,6 +455,26 @@ pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
                 super::shelf::generate_shelf_mesh(w, h, d, &ShelfConfig::default()),
             )
         }
+        FurnitureType::Stool => {
+            let stool_config = super::chair::ChairConfig {
+                seat_shape: super::chair::ChairSeatShape::Round,
+                leg_count: 3,
+                back_style: super::chair::ChairBackStyle::None,
+                width: 0.35,
+                depth: 0.35,
+                height: 0.45,
+                seat_height: 0.40,
+                ..super::chair::ChairConfig::default()
+            };
+            let (w, h, d) = (stool_config.width, stool_config.height, stool_config.depth);
+            (
+                w,
+                h,
+                d,
+                [0.5, 0.35, 0.2],
+                super::chair::generate_chair_mesh(w, h, d, &stool_config),
+            )
+        }
     };
 
     let rotation = if matches!(item_type, FurnitureType::Stove) {

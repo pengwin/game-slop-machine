@@ -32,6 +32,7 @@ pub enum FurnitureType {
     Barrel,
     Crate,
     Bench,
+    Stool,
 }
 
 #[derive(Debug, Clone)]

@@ -29,6 +29,7 @@ pub fn is_furniture_fixture(fixture: &str) -> bool {
             | "crate"
             | "bench"
             | "shelf"
+            | "stool"
             | "all-furniture"
     )
 }
