@@ -35,7 +35,7 @@ CLI tool to visualize building generation in ASCII format.
 - Usage: `cargo run -p building-ascii -- [seed] [width] [height]`
 - Shows tile statistics, room layout, and ASCII map
 
-## Bevy 0.18.1 Conventions
+## Bevy 0.19 Conventions
 
 ### Entity Spawning
 - Use component tuples or bundles for spawning
@@ -98,7 +98,7 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
 - Headless screenshot: `cargo run -p game-headless -- [output.png]`
 - ASCII building: `cargo run -p building-ascii -- [seed] [width] [height]`
 
-## API Notes (0.18.1 Specific)
+## API Notes (0.19 Specific)
 - `despawn()` is recursive by default (no `despawn_recursive()`)
 - `ScalingMode` requires explicit import: `use bevy::camera::ScalingMode;`
 - `GlobalAmbientLight` is the resource (not `AmbientLight` which is per-camera component)

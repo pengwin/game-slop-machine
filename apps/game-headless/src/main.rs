@@ -131,7 +131,7 @@ fn setup_studio_low_poly_render(commands: &mut Commands) {
         DirectionalLight {
             color: Color::srgb(1.0, 0.95, 0.85),
             illuminance: 1_550.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         CascadeShadowConfigBuilder {
@@ -147,7 +147,7 @@ fn setup_studio_low_poly_render(commands: &mut Commands) {
         DirectionalLight {
             color: Color::srgb(0.95, 0.97, 1.0),
             illuminance: 520.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 2.3, 0.0)),

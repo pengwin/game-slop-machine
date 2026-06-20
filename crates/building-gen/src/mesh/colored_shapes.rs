@@ -2,11 +2,6 @@ use super::MeshData;
 use super::math_util::{Quad, append_colored_quad};
 
 pub fn append_colored_box(mesh: &mut MeshData, center: [f32; 3], size: [f32; 3], color: [f32; 4]) {
-    if let Some(bevel) = low_poly_box_bevel(size) {
-        append_colored_beveled_box(mesh, center, size, bevel, color);
-        return;
-    }
-
     append_colored_square_box(mesh, center, size, color);
 }
 
@@ -109,14 +104,6 @@ fn append_colored_square_box(
     );
 }
 
-fn low_poly_box_bevel(size: [f32; 3]) -> Option<f32> {
-    let min_dim = size[0].min(size[1]).min(size[2]);
-    if min_dim < 0.045 {
-        return None;
-    }
-
-    Some((min_dim * 0.18).clamp(0.012, 0.045))
-}
 
 pub fn append_colored_rotated_box(
     mesh: &mut MeshData,

@@ -5,7 +5,7 @@ pub fn spawn_light(mut commands: Commands) {
         Name::new("Directional Light"),
         DirectionalLight {
             illuminance: 3_200.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             soft_shadow_size: Some(24.0),
             ..default()
         },
@@ -21,7 +21,7 @@ pub fn spawn_light(mut commands: Commands) {
         Name::new("Soft Fill Light"),
         DirectionalLight {
             illuminance: 900.0,
-            shadows_enabled: false,
+            shadow_maps_enabled: false,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(
