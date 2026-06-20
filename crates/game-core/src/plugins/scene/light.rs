@@ -7,6 +7,7 @@ pub fn spawn_light(mut commands: Commands) {
             illuminance: 3_200.0,
             shadow_maps_enabled: true,
             soft_shadow_size: Some(24.0),
+            contact_shadows_enabled: true,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(

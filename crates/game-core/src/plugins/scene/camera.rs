@@ -1,10 +1,12 @@
 use bevy::anti_alias::taa::TemporalAntiAliasing;
 use bevy::camera::ScalingMode;
+use bevy::post_process::dof::{DepthOfFieldMode, DepthOfField};
 use bevy::core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass};
+use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::ecs::message::MessageReader;
 use bevy::input::mouse::MouseWheel;
 use bevy::light::ShadowFilteringMethod;
-use bevy::pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel};
+use bevy::pbr::ContactShadows;
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
 
@@ -27,13 +29,23 @@ pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
         ShadowFilteringMethod::Temporal,
         TemporalJitter::default(),
         TemporalAntiAliasing::default(),
-        DepthPrepass,
-        NormalPrepass,
-        MotionVectorPrepass,
-        ScreenSpaceAmbientOcclusion {
-            quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
-            constant_object_thickness: 0.16,
+        ContactShadows {
+            linear_steps: 16,
+            thickness: 0.1,
+            length: 0.3,
         },
+        (
+            DepthPrepass,
+            NormalPrepass,
+            MotionVectorPrepass,
+        ),
+        DepthOfField {
+            mode: DepthOfFieldMode::Bokeh,
+            focal_distance: 15.0,
+            aperture_f_stops: 1.2,
+            ..default()
+        },
+        Tonemapping::AcesFitted,
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::FixedVertical {
                 viewport_height: config.viewport_height,

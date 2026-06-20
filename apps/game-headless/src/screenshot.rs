@@ -1,8 +1,14 @@
 use bevy::{
+    anti_alias::taa::TemporalAntiAliasing,
     camera::RenderTarget,
+    post_process::dof::{DepthOfFieldMode, DepthOfField},
+    core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass},
+    core_pipeline::tonemapping::Tonemapping,
     light::ShadowFilteringMethod,
+    pbr::ContactShadows,
     prelude::*,
     render::{
+        camera::TemporalJitter,
         render_resource::TextureFormat,
         view::screenshot::{Screenshot, save_to_disk},
     },
@@ -42,8 +48,27 @@ pub fn setup_screenshot(
 
     let mut camera = commands.spawn((
         Camera3d::default(),
-        Msaa::Sample4,
+        Msaa::Off,
+        TemporalJitter::default(),
+        TemporalAntiAliasing::default(),
         ShadowFilteringMethod::Gaussian,
+        (
+            DepthPrepass,
+            NormalPrepass,
+            MotionVectorPrepass,
+        ),
+        ContactShadows {
+            linear_steps: 16,
+            thickness: 0.1,
+            length: 0.3,
+        },
+        DepthOfField {
+            mode: DepthOfFieldMode::Bokeh,
+            focal_distance: 15.0,
+            aperture_f_stops: 1.2,
+            ..default()
+        },
+        Tonemapping::AcesFitted,
         Camera {
             order: 1,
             ..default()

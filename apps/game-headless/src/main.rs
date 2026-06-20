@@ -132,6 +132,7 @@ fn setup_studio_low_poly_render(commands: &mut Commands) {
             color: Color::srgb(1.0, 0.95, 0.85),
             illuminance: 1_550.0,
             shadow_maps_enabled: true,
+            contact_shadows_enabled: true,
             ..default()
         },
         CascadeShadowConfigBuilder {
