@@ -42,9 +42,9 @@ fn kitchen_items(
     if !wall_positions.is_empty() {
         let (tx, ty, rot) = wall_positions[0];
         let (wx, wz) = placement::tile_to_world(tx, ty, grid);
-        let w = 0.6;
-        let h = 0.85;
-        let d = 0.6;
+        let w = 1.4;
+        let h = 2.5;
+        let d = 0.8;
         items.push(FurnitureItem {
             position: Vec3::new(wx, floor_y, wz),
             rotation: rot,
@@ -53,7 +53,7 @@ fn kitchen_items(
             height: h,
             depth: d,
             color: [0.25, 0.25, 0.25],
-            mesh: super::stove::generate_stove_mesh(w, h, d, [0.25, 0.25, 0.25]),
+            mesh: super::stove::generate_stove_mesh(w, h, d, &super::stove::StoveConfig::default()),
         });
         occupied.mark(tx, ty);
     }
@@ -386,13 +386,13 @@ pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
             )
         }
         FurnitureType::Stove => {
-            let (w, h, d) = (0.6, 0.85, 0.6);
+            let (w, h, d) = (1.4, 2.5, 0.8);
             (
                 w,
                 h,
                 d,
                 [0.25, 0.25, 0.25],
-                super::stove::generate_stove_mesh(w, h, d, [0.25, 0.25, 0.25]),
+                super::stove::generate_stove_mesh(w, h, d, &super::stove::StoveConfig::default()),
             )
         }
         FurnitureType::Counter => {
@@ -457,9 +457,15 @@ pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
         }
     };
 
+    let rotation = if matches!(item_type, FurnitureType::Stove) {
+        std::f32::consts::PI
+    } else {
+        0.0
+    };
+
     FurnitureItem {
         position: Vec3::ZERO,
-        rotation: 0.0,
+        rotation,
         item_type,
         width: w,
         height: h,

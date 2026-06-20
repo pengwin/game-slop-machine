@@ -56,6 +56,7 @@ pub fn spawn_furniture_preview(
                 })),
                 Transform {
                     translation: Vec3::new(x, 0.0, 0.0),
+                    rotation: Quat::from_rotation_y(item.rotation),
                     ..default()
                 },
                 Name::new(format!("{:?}", item.item_type)),
