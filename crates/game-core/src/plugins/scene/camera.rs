@@ -1,8 +1,12 @@
+use bevy::anti_alias::taa::TemporalAntiAliasing;
 use bevy::camera::ScalingMode;
+use bevy::core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass};
 use bevy::ecs::message::MessageReader;
 use bevy::input::mouse::MouseWheel;
 use bevy::light::ShadowFilteringMethod;
+use bevy::pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel};
 use bevy::prelude::*;
+use bevy::render::camera::TemporalJitter;
 
 use super::camera_config::CameraConfig;
 
@@ -19,7 +23,17 @@ pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
         MainCamera,
         Name::new("Main Camera"),
         Camera3d::default(),
-        ShadowFilteringMethod::Gaussian,
+        Msaa::Off,
+        ShadowFilteringMethod::Temporal,
+        TemporalJitter::default(),
+        TemporalAntiAliasing::default(),
+        DepthPrepass,
+        NormalPrepass,
+        MotionVectorPrepass,
+        ScreenSpaceAmbientOcclusion {
+            quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
+            constant_object_thickness: 0.16,
+        },
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::FixedVertical {
                 viewport_height: config.viewport_height,

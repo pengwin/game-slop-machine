@@ -8,6 +8,7 @@ use bevy::{
     },
 };
 
+use crate::HeadlessFixture;
 use game_core::plugins::scene::camera_config::CameraConfig;
 
 #[derive(Resource)]
@@ -22,9 +23,11 @@ pub struct RenderTargetHandle(Handle<Image>);
 
 pub fn setup_screenshot(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
     config: Res<ScreenshotConfig>,
     camera_config: Res<CameraConfig>,
+    fixture: Res<HeadlessFixture>,
 ) {
     let mut image = Image::new_target_texture(
         config.width,
@@ -37,8 +40,9 @@ pub fn setup_screenshot(
 
     commands.insert_resource(RenderTargetHandle(handle.clone()));
 
-    commands.spawn((
+    let mut camera = commands.spawn((
         Camera3d::default(),
+        Msaa::Sample4,
         ShadowFilteringMethod::Gaussian,
         Camera {
             order: 1,
@@ -54,6 +58,15 @@ pub fn setup_screenshot(
         Transform::from_translation(camera_config.position)
             .looking_at(camera_config.target, Vec3::Y),
     ));
+
+    if fixture.0 == "picture-room" {
+        camera.insert(EnvironmentMapLight {
+            diffuse_map: asset_server.load("pisa_diffuse_rgb9e5_zstd.ktx2"),
+            specular_map: asset_server.load("pisa_specular_rgb9e5_zstd.ktx2"),
+            intensity: 1_520.0,
+            ..default()
+        });
+    }
 }
 
 pub fn capture_and_exit(
@@ -66,7 +79,7 @@ pub fn capture_and_exit(
 ) {
     *frame_count += 1;
 
-    if *frame_count >= 5 && !*done {
+    if *frame_count >= 30 && !*done {
         let path = config.path.clone();
         println!("Capturing screenshot to: {}", path);
         commands
@@ -75,7 +88,7 @@ pub fn capture_and_exit(
         *done = true;
     }
 
-    if *frame_count >= 15 {
+    if *frame_count >= 45 {
         println!("Screenshot capture complete");
         exit.write(AppExit::Success);
     }

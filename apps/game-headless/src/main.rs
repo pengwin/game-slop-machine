@@ -4,7 +4,14 @@ mod fixtures;
 mod furniture_preview;
 mod screenshot;
 
-use bevy::{app::ScheduleRunnerPlugin, prelude::*, window::ExitCondition, winit::WinitPlugin};
+use bevy::{
+    app::ScheduleRunnerPlugin,
+    asset::AssetPlugin,
+    light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap},
+    prelude::*,
+    window::ExitCondition,
+    winit::WinitPlugin,
+};
 use game_core::plugins::GamePlugin;
 use std::time::Duration;
 
@@ -22,6 +29,10 @@ fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins
+                .set(AssetPlugin {
+                    file_path: "../../assets".to_string(),
+                    ..default()
+                })
                 .set(WindowPlugin {
                     primary_window: None,
                     exit_condition: ExitCondition::DontExit,
@@ -41,12 +52,19 @@ fn main() {
             Startup,
             (generate_building, screenshot::setup_screenshot).chain(),
         )
-        .add_systems(Update, screenshot::capture_and_exit)
+        .add_systems(
+            Update,
+            (
+                prune_picture_room_default_lights,
+                screenshot::capture_and_exit,
+            )
+                .chain(),
+        )
         .run();
 }
 
 #[derive(Resource)]
-struct HeadlessFixture(String);
+pub(crate) struct HeadlessFixture(pub(crate) String);
 
 fn generate_building(
     mut commands: Commands,
@@ -84,28 +102,42 @@ fn generate_building(
     }
 
     if fixture.0 == "picture-room" {
+        commands.insert_resource(ClearColor(Color::srgb(0.86, 0.86, 0.84)));
+        commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
         commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
-            ground_size: 18.0,
-            ground_color: Color::srgb(0.74, 0.74, 0.72),
+            ground_size: 20.0,
+            ground_color: Color::srgb(0.82, 0.82, 0.79),
         });
         commands.insert_resource(GlobalAmbientLight {
-            color: Color::WHITE,
-            brightness: 1.4,
+            color: Color::srgb(1.0, 0.96, 0.90),
+            brightness: 1.62,
             ..default()
         });
         commands.spawn((
-            Name::new("Picture Room Fill Light"),
+            Name::new("Picture Room Studio Key Light"),
             DirectionalLight {
-                illuminance: 4_000.0,
+                color: Color::srgb(1.0, 0.95, 0.85),
+                illuminance: 1_550.0,
+                shadows_enabled: true,
+                ..default()
+            },
+            CascadeShadowConfigBuilder {
+                num_cascades: 3,
+                maximum_distance: 24.0,
+                ..default()
+            }
+            .build(),
+            Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -1.50, -0.22, 0.0)),
+        ));
+        commands.spawn((
+            Name::new("Picture Room Cool Fill Light"),
+            DirectionalLight {
+                color: Color::srgb(0.95, 0.97, 1.0),
+                illuminance: 520.0,
                 shadows_enabled: false,
                 ..default()
             },
-            Transform::from_rotation(Quat::from_euler(
-                EulerRot::XYZ,
-                -std::f32::consts::FRAC_PI_4,
-                -std::f32::consts::FRAC_PI_4,
-                0.0,
-            )),
+            Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 2.3, 0.0)),
         ));
     }
 
@@ -117,4 +149,29 @@ fn generate_building(
         &config,
         &fixture.0,
     );
+}
+
+fn prune_picture_room_default_lights(
+    mut commands: Commands,
+    fixture: Res<HeadlessFixture>,
+    lights: Query<(Entity, Option<&Name>), With<DirectionalLight>>,
+    mut done: Local<bool>,
+) {
+    if *done || fixture.0 != "picture-room" {
+        return;
+    }
+
+    for (entity, name) in &lights {
+        let keep = name.is_some_and(|name| {
+            matches!(
+                name.as_str(),
+                "Picture Room Studio Key Light" | "Picture Room Cool Fill Light"
+            )
+        });
+        if !keep {
+            commands.entity(entity).despawn();
+        }
+    }
+
+    *done = true;
 }

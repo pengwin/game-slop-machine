@@ -1,7 +1,10 @@
+use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::Vec2;
+use building_gen::mesh::MeshData;
 use building_gen::mesh::generate_building_mesh;
+use building_gen::scene::{SceneObject, SceneObjectKind};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
 use game_core::plugins::building::mesh_util::convert_mesh;
@@ -62,7 +65,6 @@ pub fn spawn_building_preview(
 
     let roof = building_gen::roof::generate_roof(config.footprint, config);
     let bmesh = generate_building_mesh(&grid, config, &roof);
-    let fixture_unlit = fixture == "picture-room";
 
     println!("Mesh stats:");
     println!(
@@ -129,15 +131,9 @@ pub fn spawn_building_preview(
     if !bmesh.foundation_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.foundation_color[0],
-                    config.visual_style.foundation_color[1],
-                    config.visual_style.foundation_color[2],
-                ),
-                perceptual_roughness: 0.95,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.foundation_color,
+            )))),
             Transform::default(),
             Name::new("Foundation"),
         ));
@@ -146,15 +142,10 @@ pub fn spawn_building_preview(
     if !bmesh.wall_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.wall_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.wall_color[0],
-                    config.visual_style.wall_color[1],
-                    config.visual_style.wall_color[2],
-                ),
-                unlit: fixture_unlit,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.wall_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Walls"),
         ));
@@ -163,32 +154,33 @@ pub fn spawn_building_preview(
     if !bmesh.wall_top_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.wall_top_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.wall_top_color[0],
-                    config.visual_style.wall_top_color[1],
-                    config.visual_style.wall_top_color[2],
-                ),
-                unlit: true,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.wall_top_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Wall Top Faces"),
+        ));
+    }
+
+    if fixture == "picture-room" {
+        let bevel_mesh = picture_room_wall_bevel_mesh(config);
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&bevel_mesh))),
+            MeshMaterial3d(materials.add(low_poly_material(Color::srgb(0.84, 0.74, 0.54)))),
+            NotShadowCaster,
+            Transform::default(),
+            Name::new("Picture Room Wall Bevels"),
         ));
     }
 
     if !bmesh.exterior_wall_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_wall_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.exterior_wall_color[0],
-                    config.visual_style.exterior_wall_color[1],
-                    config.visual_style.exterior_wall_color[2],
-                ),
-                unlit: fixture_unlit,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.exterior_wall_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Exterior Wall Faces"),
         ));
@@ -197,15 +189,10 @@ pub fn spawn_building_preview(
     if !bmesh.exterior_corner_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_corner_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.corner_color[0],
-                    config.visual_style.corner_color[1],
-                    config.visual_style.corner_color[2],
-                ),
-                unlit: fixture_unlit,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.corner_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Exterior Corner Faces"),
         ));
@@ -214,15 +201,10 @@ pub fn spawn_building_preview(
     if !bmesh.exterior_t_junction_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_t_junction_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.t_junction_color[0],
-                    config.visual_style.t_junction_color[1],
-                    config.visual_style.t_junction_color[2],
-                ),
-                unlit: fixture_unlit,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.t_junction_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Exterior T-Junction Faces"),
         ));
@@ -231,24 +213,36 @@ pub fn spawn_building_preview(
     if !bmesh.floor_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.floor_mesh))),
-            MeshMaterial3d(materials.add(Color::srgb(
-                config.visual_style.floor_color[0],
-                config.visual_style.floor_color[1],
-                config.visual_style.floor_color[2],
-            ))),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.floor_color,
+            )))),
             Transform::default(),
             Name::new("Floor"),
+        ));
+    }
+
+    if fixture == "picture-room" {
+        let contact_shadow = picture_room_contact_shadow_mesh(config);
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&contact_shadow))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgba(0.08, 0.07, 0.05, 0.12),
+                alpha_mode: AlphaMode::Blend,
+                unlit: true,
+                cull_mode: None,
+                ..default()
+            })),
+            Transform::default(),
+            Name::new("Picture Room Contact Shadows"),
         ));
     }
 
     if config.render_roof && !bmesh.roof_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.roof_mesh))),
-            MeshMaterial3d(materials.add(Color::srgb(
-                config.visual_style.roof_color[0],
-                config.visual_style.roof_color[1],
-                config.visual_style.roof_color[2],
-            ))),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.roof_color,
+            )))),
             Transform::default(),
             Name::new("Roof"),
         ));
@@ -257,15 +251,9 @@ pub fn spawn_building_preview(
     if config.render_roof && !bmesh.gable_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.gable_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.exterior_wall_color[0],
-                    config.visual_style.exterior_wall_color[1],
-                    config.visual_style.exterior_wall_color[2],
-                ),
-                cull_mode: None,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.exterior_wall_color,
+            )))),
             Transform::default(),
             Name::new("Gables"),
         ));
@@ -274,16 +262,10 @@ pub fn spawn_building_preview(
     if !bmesh.door_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.door_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.door_color[0],
-                    config.visual_style.door_color[1],
-                    config.visual_style.door_color[2],
-                ),
-                unlit: fixture_unlit,
-                cull_mode: None,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_cull_material(style_color(
+                config.visual_style.door_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Doors"),
         ));
@@ -292,16 +274,10 @@ pub fn spawn_building_preview(
     if !bmesh.opening_trim_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.opening_trim_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(
-                    config.visual_style.trim_color[0],
-                    config.visual_style.trim_color[1],
-                    config.visual_style.trim_color[2],
-                ),
-                unlit: fixture_unlit,
-                cull_mode: None,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(low_poly_cull_material(style_color(
+                config.visual_style.trim_color,
+            )))),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Opening Trim"),
         ));
@@ -314,8 +290,12 @@ pub fn spawn_building_preview(
                 base_color: Color::srgba(0.45, 0.7, 1.0, 0.45),
                 alpha_mode: AlphaMode::Blend,
                 cull_mode: None,
+                metallic: 0.0,
+                perceptual_roughness: 0.9,
+                reflectance: 0.08,
                 ..default()
             })),
+            NotShadowCaster,
             Transform::default(),
             Name::new("Windows"),
         ));
@@ -327,13 +307,19 @@ pub fn spawn_building_preview(
         if let Some(l) = layout {
             let items = building_gen::generate_scene_objects(&l, config);
             println!("Spawning {} scene objects", items.len());
+            if fixture == "picture-room" {
+                spawn_picture_room_furniture_contact_shadows(commands, meshes, materials, &items);
+            }
             for item in items {
                 commands.spawn((
                     Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: Color::srgb(item.color[0], item.color[1], item.color[2]),
-                        ..default()
-                    })),
+                    MeshMaterial3d(materials.add(low_poly_material(
+                        if item.mesh.colors.is_empty() {
+                            Color::srgb(item.color[0], item.color[1], item.color[2])
+                        } else {
+                            Color::WHITE
+                        },
+                    ))),
                     Transform::from_translation(Vec3::new(
                         item.position.x,
                         item.position.y,
@@ -343,8 +329,214 @@ pub fn spawn_building_preview(
                     Name::new(format!("{:?}", item.item_type)),
                 ));
             }
+            if fixture == "picture-room" {
+                spawn_picture_room_staged_props(commands, meshes, materials, config);
+            }
         }
     }
+}
+
+fn style_color(rgb: [f32; 3]) -> Color {
+    Color::srgb(rgb[0], rgb[1], rgb[2])
+}
+
+fn low_poly_material(color: Color) -> StandardMaterial {
+    StandardMaterial {
+        base_color: color,
+        metallic: 0.0,
+        perceptual_roughness: 0.9,
+        reflectance: 0.08,
+        ..default()
+    }
+}
+
+fn low_poly_cull_material(color: Color) -> StandardMaterial {
+    StandardMaterial {
+        cull_mode: None,
+        ..low_poly_material(color)
+    }
+}
+
+fn picture_room_wall_bevel_mesh(config: &BuildingConfig) -> MeshData {
+    let mut mesh = MeshData::default();
+    let wall = config.tile_size;
+    let bevel = 0.14;
+    let top_y = config.foundation_height.max(0.0) + config.wall_height;
+    let low_y = top_y - bevel * 0.45;
+
+    let min_x = config.footprint.min.x + wall;
+    let max_x = config.footprint.max.x - wall;
+    let min_z = config.footprint.min.y + wall;
+    let max_z = config.footprint.max.y - wall;
+
+    append_sloped_quad(
+        &mut mesh,
+        [min_x, top_y, min_z],
+        [max_x, top_y, min_z],
+        [min_x, low_y, min_z + bevel],
+        [max_x, low_y, min_z + bevel],
+        [0.0, 0.42, 0.91],
+    );
+    append_sloped_quad(
+        &mut mesh,
+        [max_x, top_y, max_z],
+        [min_x, top_y, max_z],
+        [max_x, low_y, max_z - bevel],
+        [min_x, low_y, max_z - bevel],
+        [0.0, 0.42, -0.91],
+    );
+    append_sloped_quad(
+        &mut mesh,
+        [min_x, top_y, max_z],
+        [min_x, top_y, min_z],
+        [min_x + bevel, low_y, max_z],
+        [min_x + bevel, low_y, min_z],
+        [0.91, 0.42, 0.0],
+    );
+    append_sloped_quad(
+        &mut mesh,
+        [max_x, top_y, min_z],
+        [max_x, top_y, max_z],
+        [max_x - bevel, low_y, min_z],
+        [max_x - bevel, low_y, max_z],
+        [-0.91, 0.42, 0.0],
+    );
+
+    mesh
+}
+
+fn append_sloped_quad(
+    mesh: &mut MeshData,
+    top_a: [f32; 3],
+    top_b: [f32; 3],
+    low_a: [f32; 3],
+    low_b: [f32; 3],
+    normal: [f32; 3],
+) {
+    let base = mesh.vertices.len() as u32;
+    mesh.vertices.extend([top_a, top_b, low_b, low_a]);
+    mesh.normals.extend([normal; 4]);
+    mesh.uvs
+        .extend([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+    mesh.indices
+        .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+}
+
+fn spawn_picture_room_furniture_contact_shadows(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    items: &[SceneObject],
+) {
+    let mut mesh = MeshData::default();
+    for item in items {
+        let half_w = item.width.max(0.35) * 0.20;
+        let half_d = item.depth.max(0.35) * 0.20;
+        append_floor_rect(
+            &mut mesh,
+            item.position.x - half_w,
+            item.position.z - half_d,
+            item.position.x + half_w,
+            item.position.z + half_d,
+            0.024,
+        );
+    }
+
+    if mesh.is_empty() {
+        return;
+    }
+
+    commands.spawn((
+        Mesh3d(meshes.add(convert_mesh(&mesh))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(0.06, 0.05, 0.04, 0.07),
+            alpha_mode: AlphaMode::Blend,
+            unlit: true,
+            cull_mode: None,
+            ..default()
+        })),
+        Transform::default(),
+        Name::new("Picture Room Furniture Contact Shadows"),
+    ));
+}
+
+fn spawn_picture_room_staged_props(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    config: &BuildingConfig,
+) {
+    let floor_y = config.foundation_height.max(0.0);
+    let props = [
+        (
+            SceneObjectKind::Desk,
+            Vec3::new(2.45, floor_y, 1.55),
+            0.0,
+            0.72,
+            "Picture Room Bedside Table",
+        ),
+        (
+            SceneObjectKind::Barrel,
+            Vec3::new(6.55, floor_y, 2.55),
+            std::f32::consts::FRAC_PI_2,
+            1.18,
+            "Picture Room Barrel",
+        ),
+        (
+            SceneObjectKind::Crate,
+            Vec3::new(6.12, floor_y, 2.38),
+            0.24,
+            0.82,
+            "Picture Room Crate",
+        ),
+    ];
+    let mut shadow_mesh = MeshData::default();
+
+    for (item_type, position, rotation, scale, name) in props {
+        let item = building_gen::furniture::single_item(item_type);
+        let half_w = item.width.max(0.35) * scale * 0.22;
+        let half_d = item.depth.max(0.35) * scale * 0.22;
+        append_floor_rect(
+            &mut shadow_mesh,
+            position.x - half_w,
+            position.z - half_d,
+            position.x + half_w,
+            position.z + half_d,
+            floor_y + 0.027,
+        );
+
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&item.mesh))),
+            MeshMaterial3d(
+                materials.add(low_poly_material(if item.mesh.colors.is_empty() {
+                    Color::srgb(item.color[0], item.color[1], item.color[2])
+                } else {
+                    Color::WHITE
+                })),
+            ),
+            Transform::from_translation(position)
+                .with_rotation(Quat::from_rotation_y(rotation))
+                .with_scale(Vec3::splat(scale)),
+            Name::new(name),
+        ));
+    }
+
+    if shadow_mesh.is_empty() {
+        return;
+    }
+
+    commands.spawn((
+        Mesh3d(meshes.add(convert_mesh(&shadow_mesh))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(0.06, 0.05, 0.04, 0.065),
+            alpha_mode: AlphaMode::Blend,
+            unlit: true,
+            cull_mode: None,
+            ..default()
+        })),
+        Transform::default(),
+        Name::new("Picture Room Staged Prop Contact Shadows"),
+    ));
 }
 
 fn build_two_room_grid(config: &BuildingConfig) -> TileGrid {
@@ -377,6 +569,39 @@ fn build_two_room_grid(config: &BuildingConfig) -> TileGrid {
     );
 
     grid
+}
+
+fn picture_room_contact_shadow_mesh(config: &BuildingConfig) -> MeshData {
+    let mut mesh = MeshData::default();
+    let inset = config.tile_size;
+    let strip = 0.14;
+    let y = 0.012;
+    let min_x = config.footprint.min.x + inset;
+    let max_x = config.footprint.max.x - inset;
+    let min_z = config.footprint.min.y + inset;
+    let max_z = config.footprint.max.y - inset;
+
+    append_floor_rect(&mut mesh, min_x, min_z, max_x, min_z + strip, y);
+    append_floor_rect(&mut mesh, min_x, max_z - strip, max_x, max_z, y);
+    append_floor_rect(&mut mesh, min_x, min_z, min_x + strip, max_z, y);
+    append_floor_rect(&mut mesh, max_x - strip, min_z, max_x, max_z, y);
+
+    mesh
+}
+
+fn append_floor_rect(mesh: &mut MeshData, min_x: f32, min_z: f32, max_x: f32, max_z: f32, y: f32) {
+    let base = mesh.vertices.len() as u32;
+    mesh.vertices.extend([
+        [min_x, y, min_z],
+        [max_x, y, min_z],
+        [max_x, y, max_z],
+        [min_x, y, max_z],
+    ]);
+    mesh.normals.extend([[0.0, 1.0, 0.0]; 4]);
+    mesh.uvs
+        .extend([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+    mesh.indices
+        .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
 }
 
 fn build_perimeter_opening_grid(config: &BuildingConfig, opening: WallOpening) -> TileGrid {

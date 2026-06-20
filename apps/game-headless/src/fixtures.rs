@@ -78,9 +78,9 @@ pub fn district_ground_size_for_fixture(fixture: &str) -> f32 {
 pub fn building_camera_for_fixture(fixture: &str) -> Option<CameraConfig> {
     if fixture == "picture-room" {
         Some(CameraConfig {
-            position: Vec3::new(8.8, 10.5, -3.2),
-            target: Vec3::new(4.0, 0.4, 3.0),
-            viewport_height: 9.2,
+            position: Vec3::new(7.8, 10.2, -4.4),
+            target: Vec3::new(4.0, 0.50, 3.0),
+            viewport_height: 8.7,
         })
     } else {
         None
@@ -203,15 +203,15 @@ pub fn config_for_fixture(fixture: &str) -> BuildingConfig {
             window_height: 1.0,
             window_sill_height: 0.65,
             visual_style: building_gen::config::BuildingVisualStyle {
-                wall_color: [0.82, 0.74, 0.58],
-                wall_top_color: [0.88, 0.80, 0.64],
-                exterior_wall_color: [0.86, 0.76, 0.56],
-                corner_color: [0.90, 0.80, 0.60],
-                t_junction_color: [0.86, 0.76, 0.56],
-                floor_color: [0.58, 0.54, 0.44],
-                door_color: [0.26, 0.18, 0.12],
-                trim_color: [0.43, 0.31, 0.20],
-                foundation_color: [0.46, 0.46, 0.42],
+                wall_color: [0.84, 0.75, 0.57],
+                wall_top_color: [0.91, 0.81, 0.62],
+                exterior_wall_color: [0.86, 0.76, 0.57],
+                corner_color: [0.91, 0.81, 0.61],
+                t_junction_color: [0.86, 0.76, 0.57],
+                floor_color: [0.63, 0.60, 0.51],
+                door_color: [0.34, 0.21, 0.13],
+                trim_color: [0.48, 0.32, 0.19],
+                foundation_color: [0.50, 0.50, 0.46],
                 ..Default::default()
             },
             ..Default::default()

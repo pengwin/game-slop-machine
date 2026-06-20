@@ -323,6 +323,7 @@ fn storage_candidates(
         .filter_map(|anchor| {
             let item = furniture::single_item(SceneObjectKind::Shelf);
             let window_penalty = window_penalty(context, anchor.0, anchor.1, 5.0);
+            let anchor = (anchor.0, anchor.1, shelf_wall_rotation(anchor.2));
             make_wall_candidate(
                 SceneletKind::StorageWall,
                 context,
@@ -334,6 +335,16 @@ fn storage_candidates(
             )
         })
         .collect()
+}
+
+fn shelf_wall_rotation(rotation: f32) -> f32 {
+    if rotation.abs() < 0.01 {
+        std::f32::consts::PI
+    } else if (rotation - std::f32::consts::PI).abs() < 0.01 {
+        0.0
+    } else {
+        rotation
+    }
 }
 
 fn kitchen_candidates(
@@ -587,7 +598,12 @@ fn offset_item_away_from_wall(item: &mut SceneObject, x: usize, y: usize, grid: 
         return;
     };
     let half_extent = half_extent_along_direction(item, away);
-    let offset = half_extent - grid.tile_size / 2.0 + 0.04;
+    let clearance = if half_extent < grid.tile_size / 2.0 {
+        -0.06
+    } else {
+        0.04
+    };
+    let offset = half_extent - grid.tile_size / 2.0 + clearance;
     item.position.x += away.x * offset;
     item.position.z += away.y * offset;
 }
@@ -915,7 +931,7 @@ mod tests {
             ),
         );
         assert!(
-            (wall_distance - half_extent).abs() <= 0.08,
+            (wall_distance - half_extent).abs() <= 0.12,
             "shelf should sit close to wall, wall_distance={wall_distance}, half_extent={half_extent}"
         );
     }

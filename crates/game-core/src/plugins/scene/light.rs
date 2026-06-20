@@ -4,21 +4,37 @@ pub fn spawn_light(mut commands: Commands) {
     commands.spawn((
         Name::new("Directional Light"),
         DirectionalLight {
-            illuminance: 6_500.0,
+            illuminance: 3_200.0,
             shadows_enabled: true,
+            soft_shadow_size: Some(24.0),
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(
             EulerRot::XYZ,
-            -std::f32::consts::FRAC_PI_3,
-            std::f32::consts::FRAC_PI_6,
+            -std::f32::consts::FRAC_PI_4,
+            std::f32::consts::FRAC_PI_4,
+            0.0,
+        )),
+    ));
+
+    commands.spawn((
+        Name::new("Soft Fill Light"),
+        DirectionalLight {
+            illuminance: 900.0,
+            shadows_enabled: false,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::XYZ,
+            -std::f32::consts::FRAC_PI_4,
+            -std::f32::consts::FRAC_PI_4,
             0.0,
         )),
     ));
 
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
-        brightness: 0.45,
+        brightness: 0.75,
         ..default()
     });
 }
