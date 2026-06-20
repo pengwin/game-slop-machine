@@ -8,7 +8,7 @@ use bevy::{
     },
 };
 
-use crate::HeadlessFixture;
+use crate::{HeadlessFixture, fixtures};
 use game_core::plugins::scene::camera_config::CameraConfig;
 
 #[derive(Resource)]
@@ -59,7 +59,7 @@ pub fn setup_screenshot(
             .looking_at(camera_config.target, Vec3::Y),
     ));
 
-    if fixture.0 == "picture-room" {
+    if fixtures::uses_studio_low_poly_render(&fixture.0) {
         camera.insert(EnvironmentMapLight {
             diffuse_map: asset_server.load("pisa_diffuse_rgb9e5_zstd.ktx2"),
             specular_map: asset_server.load("pisa_specular_rgb9e5_zstd.ktx2"),

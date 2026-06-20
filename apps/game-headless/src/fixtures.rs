@@ -34,6 +34,14 @@ pub fn is_furniture_fixture(fixture: &str) -> bool {
     )
 }
 
+pub fn uses_studio_low_poly_render(fixture: &str) -> bool {
+    !is_district_fixture(fixture)
+}
+
+pub fn studio_ground_color() -> Color {
+    Color::srgb(0.82, 0.82, 0.79)
+}
+
 pub fn furniture_camera_for_fixture(fixture: &str) -> CameraConfig {
     let (vh, pos) = if fixture == "all-furniture" {
         (8.0, Vec3::new(6.0, 6.0, 6.0))

@@ -54,11 +54,7 @@ fn main() {
         )
         .add_systems(
             Update,
-            (
-                prune_picture_room_default_lights,
-                screenshot::capture_and_exit,
-            )
-                .chain(),
+            (prune_studio_default_lights, screenshot::capture_and_exit).chain(),
         )
         .run();
 }
@@ -77,6 +73,10 @@ fn generate_building(
         return;
     }
 
+    if fixtures::uses_studio_low_poly_render(&fixture.0) {
+        setup_studio_low_poly_render(&mut commands);
+    }
+
     if fixtures::is_furniture_fixture(&fixture.0) {
         commands.insert_resource(fixtures::furniture_camera_for_fixture(&fixture.0));
         let ground_size = if fixture.0 == "all-furniture" {
@@ -86,7 +86,7 @@ fn generate_building(
         };
         commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
             ground_size,
-            ..default()
+            ground_color: fixtures::studio_ground_color(),
         });
         furniture_preview::spawn_furniture_preview(
             &mut commands,
@@ -101,44 +101,11 @@ fn generate_building(
         commands.insert_resource(cam);
     }
 
-    if fixture.0 == "picture-room" {
-        commands.insert_resource(ClearColor(Color::srgb(0.86, 0.86, 0.84)));
-        commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
+    if fixtures::uses_studio_low_poly_render(&fixture.0) {
         commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
             ground_size: 20.0,
-            ground_color: Color::srgb(0.82, 0.82, 0.79),
+            ground_color: fixtures::studio_ground_color(),
         });
-        commands.insert_resource(GlobalAmbientLight {
-            color: Color::srgb(1.0, 0.96, 0.90),
-            brightness: 1.62,
-            ..default()
-        });
-        commands.spawn((
-            Name::new("Picture Room Studio Key Light"),
-            DirectionalLight {
-                color: Color::srgb(1.0, 0.95, 0.85),
-                illuminance: 1_550.0,
-                shadows_enabled: true,
-                ..default()
-            },
-            CascadeShadowConfigBuilder {
-                num_cascades: 3,
-                maximum_distance: 24.0,
-                ..default()
-            }
-            .build(),
-            Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -1.50, -0.22, 0.0)),
-        ));
-        commands.spawn((
-            Name::new("Picture Room Cool Fill Light"),
-            DirectionalLight {
-                color: Color::srgb(0.95, 0.97, 1.0),
-                illuminance: 520.0,
-                shadows_enabled: false,
-                ..default()
-            },
-            Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 2.3, 0.0)),
-        ));
     }
 
     let config = fixtures::config_for_fixture(&fixture.0);
@@ -151,13 +118,49 @@ fn generate_building(
     );
 }
 
-fn prune_picture_room_default_lights(
+fn setup_studio_low_poly_render(commands: &mut Commands) {
+    commands.insert_resource(ClearColor(Color::srgb(0.86, 0.86, 0.84)));
+    commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
+    commands.insert_resource(GlobalAmbientLight {
+        color: Color::srgb(1.0, 0.96, 0.90),
+        brightness: 1.62,
+        ..default()
+    });
+    commands.spawn((
+        Name::new("Studio Low Poly Key Light"),
+        DirectionalLight {
+            color: Color::srgb(1.0, 0.95, 0.85),
+            illuminance: 1_550.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        CascadeShadowConfigBuilder {
+            num_cascades: 3,
+            maximum_distance: 24.0,
+            ..default()
+        }
+        .build(),
+        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -1.50, -0.22, 0.0)),
+    ));
+    commands.spawn((
+        Name::new("Studio Low Poly Fill Light"),
+        DirectionalLight {
+            color: Color::srgb(0.95, 0.97, 1.0),
+            illuminance: 520.0,
+            shadows_enabled: false,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 2.3, 0.0)),
+    ));
+}
+
+fn prune_studio_default_lights(
     mut commands: Commands,
     fixture: Res<HeadlessFixture>,
     lights: Query<(Entity, Option<&Name>), With<DirectionalLight>>,
     mut done: Local<bool>,
 ) {
-    if *done || fixture.0 != "picture-room" {
+    if *done || !fixtures::uses_studio_low_poly_render(&fixture.0) {
         return;
     }
 
@@ -165,7 +168,7 @@ fn prune_picture_room_default_lights(
         let keep = name.is_some_and(|name| {
             matches!(
                 name.as_str(),
-                "Picture Room Studio Key Light" | "Picture Room Cool Fill Light"
+                "Studio Low Poly Key Light" | "Studio Low Poly Fill Light"
             )
         });
         if !keep {

@@ -163,14 +163,16 @@ pub fn spawn_building_preview(
         ));
     }
 
-    if fixture == "picture-room" {
-        let bevel_mesh = picture_room_wall_bevel_mesh(config);
+    if !config.render_roof {
+        let bevel_mesh = building_wall_bevel_mesh(config);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bevel_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(Color::srgb(0.84, 0.74, 0.54)))),
+            MeshMaterial3d(materials.add(low_poly_material(style_color(
+                config.visual_style.wall_top_color,
+            )))),
             NotShadowCaster,
             Transform::default(),
-            Name::new("Picture Room Wall Bevels"),
+            Name::new("Building Wall Bevels"),
         ));
     }
 
@@ -221,8 +223,8 @@ pub fn spawn_building_preview(
         ));
     }
 
-    if fixture == "picture-room" {
-        let contact_shadow = picture_room_contact_shadow_mesh(config);
+    if !config.render_roof {
+        let contact_shadow = building_contact_shadow_mesh(config);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&contact_shadow))),
             MeshMaterial3d(materials.add(StandardMaterial {
@@ -233,7 +235,7 @@ pub fn spawn_building_preview(
                 ..default()
             })),
             Transform::default(),
-            Name::new("Picture Room Contact Shadows"),
+            Name::new("Building Contact Shadows"),
         ));
     }
 
@@ -307,9 +309,7 @@ pub fn spawn_building_preview(
         if let Some(l) = layout {
             let items = building_gen::generate_scene_objects(&l, config);
             println!("Spawning {} scene objects", items.len());
-            if fixture == "picture-room" {
-                spawn_picture_room_furniture_contact_shadows(commands, meshes, materials, &items);
-            }
+            spawn_furniture_contact_shadows(commands, meshes, materials, &items);
             for item in items {
                 commands.spawn((
                     Mesh3d(meshes.add(convert_mesh(&item.mesh))),
@@ -357,7 +357,7 @@ fn low_poly_cull_material(color: Color) -> StandardMaterial {
     }
 }
 
-fn picture_room_wall_bevel_mesh(config: &BuildingConfig) -> MeshData {
+fn building_wall_bevel_mesh(config: &BuildingConfig) -> MeshData {
     let mut mesh = MeshData::default();
     let wall = config.tile_size;
     let bevel = 0.14;
@@ -422,7 +422,7 @@ fn append_sloped_quad(
         .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
 }
 
-fn spawn_picture_room_furniture_contact_shadows(
+fn spawn_furniture_contact_shadows(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
@@ -456,7 +456,7 @@ fn spawn_picture_room_furniture_contact_shadows(
             ..default()
         })),
         Transform::default(),
-        Name::new("Picture Room Furniture Contact Shadows"),
+        Name::new("Furniture Contact Shadows"),
     ));
 }
 
@@ -571,7 +571,7 @@ fn build_two_room_grid(config: &BuildingConfig) -> TileGrid {
     grid
 }
 
-fn picture_room_contact_shadow_mesh(config: &BuildingConfig) -> MeshData {
+fn building_contact_shadow_mesh(config: &BuildingConfig) -> MeshData {
     let mut mesh = MeshData::default();
     let inset = config.tile_size;
     let strip = 0.14;
