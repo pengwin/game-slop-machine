@@ -186,13 +186,15 @@ mod tests {
         let lots = split_lots_for_buildings(&[lot.clone()], &config);
 
         assert_eq!(lots.len(), 3);
-        assert!(lots
-            .windows(2)
-            .all(|pair| pair[0].position.distance_to(pair[1].position) > config.building_gap));
+        assert!(
+            lots.windows(2)
+                .all(|pair| pair[0].position.distance_to(pair[1].position) > config.building_gap)
+        );
         assert!(lots.iter().all(|lot| lot.width >= 3.0));
-        assert!(lots
-            .iter()
-            .all(|lot| lot.entrance_dir == Vec2::new(0.0, 1.0)));
+        assert!(
+            lots.iter()
+                .all(|lot| lot.entrance_dir == Vec2::new(0.0, 1.0))
+        );
     }
 
     #[test]
@@ -397,9 +399,8 @@ mod tests {
         let close_lot =
             blocks::try_place_lot_in_block(block, &close_config, &mut close_rng, Vec2::ZERO)
                 .expect("close lot should fit");
-        let far_lot =
-            blocks::try_place_lot_in_block(block, &far_config, &mut far_rng, Vec2::ZERO)
-                .expect("far lot should fit");
+        let far_lot = blocks::try_place_lot_in_block(block, &far_config, &mut far_rng, Vec2::ZERO)
+            .expect("far lot should fit");
 
         assert!(
             close_lot.entrance.length() < far_lot.entrance.length(),

@@ -13,18 +13,25 @@ pub fn spawn_building_preview(
     config: &BuildingConfig,
     fixture: &str,
 ) {
-    let grid = match fixture {
-        "procedural" | "with-roof" | "corridor" => {
-            building_gen::generate_layout(config).tile_grid
+    let (grid, layout) = match fixture {
+        "procedural" | "with-roof" | "corridor" | "picture-room" => {
+            let l = building_gen::generate_layout(config);
+            (l.tile_grid.clone(), Some(l))
         }
-        "four-doors" => build_perimeter_opening_grid(config, WallOpening::Door { render_panel: true }),
-        "four-windows" => build_perimeter_opening_grid(
-            config,
-            WallOpening::Window {
-                render_glass: config.exterior_window_render_glass,
-            },
+        "four-doors" => (
+            build_perimeter_opening_grid(config, WallOpening::Door { render_panel: true }),
+            None,
         ),
-        _ => build_two_room_grid(config),
+        "four-windows" => (
+            build_perimeter_opening_grid(
+                config,
+                WallOpening::Window {
+                    render_glass: config.exterior_window_render_glass,
+                },
+            ),
+            None,
+        ),
+        _ => (build_two_room_grid(config), None),
     };
 
     // Debug: print opening tiles
@@ -55,6 +62,7 @@ pub fn spawn_building_preview(
 
     let roof = building_gen::roof::generate_roof(config.footprint, config);
     let bmesh = generate_building_mesh(&grid, config, &roof);
+    let fixture_unlit = fixture == "picture-room";
 
     println!("Mesh stats:");
     println!(
@@ -122,7 +130,11 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.42, 0.42, 0.38),
+                base_color: Color::srgb(
+                    config.visual_style.foundation_color[0],
+                    config.visual_style.foundation_color[1],
+                    config.visual_style.foundation_color[2],
+                ),
                 perceptual_roughness: 0.95,
                 ..default()
             })),
@@ -135,7 +147,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.wall_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.8, 0.8, 0.8),
+                base_color: Color::srgb(
+                    config.visual_style.wall_color[0],
+                    config.visual_style.wall_color[1],
+                    config.visual_style.wall_color[2],
+                ),
+                unlit: fixture_unlit,
                 ..default()
             })),
             Transform::default(),
@@ -164,7 +181,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_wall_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.92, 0.88, 0.68),
+                base_color: Color::srgb(
+                    config.visual_style.exterior_wall_color[0],
+                    config.visual_style.exterior_wall_color[1],
+                    config.visual_style.exterior_wall_color[2],
+                ),
+                unlit: fixture_unlit,
                 ..default()
             })),
             Transform::default(),
@@ -176,7 +198,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_corner_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.96, 0.9, 0.62),
+                base_color: Color::srgb(
+                    config.visual_style.corner_color[0],
+                    config.visual_style.corner_color[1],
+                    config.visual_style.corner_color[2],
+                ),
+                unlit: fixture_unlit,
                 ..default()
             })),
             Transform::default(),
@@ -188,7 +215,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_t_junction_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.86, 0.78, 0.48),
+                base_color: Color::srgb(
+                    config.visual_style.t_junction_color[0],
+                    config.visual_style.t_junction_color[1],
+                    config.visual_style.t_junction_color[2],
+                ),
+                unlit: fixture_unlit,
                 ..default()
             })),
             Transform::default(),
@@ -199,7 +231,11 @@ pub fn spawn_building_preview(
     if !bmesh.floor_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.floor_mesh))),
-            MeshMaterial3d(materials.add(Color::srgb(0.6, 0.6, 0.6))),
+            MeshMaterial3d(materials.add(Color::srgb(
+                config.visual_style.floor_color[0],
+                config.visual_style.floor_color[1],
+                config.visual_style.floor_color[2],
+            ))),
             Transform::default(),
             Name::new("Floor"),
         ));
@@ -208,7 +244,11 @@ pub fn spawn_building_preview(
     if config.render_roof && !bmesh.roof_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.roof_mesh))),
-            MeshMaterial3d(materials.add(Color::srgb(0.55, 0.35, 0.2))),
+            MeshMaterial3d(materials.add(Color::srgb(
+                config.visual_style.roof_color[0],
+                config.visual_style.roof_color[1],
+                config.visual_style.roof_color[2],
+            ))),
             Transform::default(),
             Name::new("Roof"),
         ));
@@ -218,7 +258,11 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.gable_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.92, 0.88, 0.68),
+                base_color: Color::srgb(
+                    config.visual_style.exterior_wall_color[0],
+                    config.visual_style.exterior_wall_color[1],
+                    config.visual_style.exterior_wall_color[2],
+                ),
                 cull_mode: None,
                 ..default()
             })),
@@ -231,7 +275,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.door_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.4, 0.2, 0.0),
+                base_color: Color::srgb(
+                    config.visual_style.door_color[0],
+                    config.visual_style.door_color[1],
+                    config.visual_style.door_color[2],
+                ),
+                unlit: fixture_unlit,
                 cull_mode: None,
                 ..default()
             })),
@@ -244,7 +293,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.opening_trim_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.18, 0.16, 0.13),
+                base_color: Color::srgb(
+                    config.visual_style.trim_color[0],
+                    config.visual_style.trim_color[1],
+                    config.visual_style.trim_color[2],
+                ),
+                unlit: fixture_unlit,
                 cull_mode: None,
                 ..default()
             })),
@@ -268,6 +322,29 @@ pub fn spawn_building_preview(
     }
 
     println!("{} test building generated", fixture);
+
+    if config.furniture {
+        if let Some(l) = layout {
+            let items = building_gen::generate_scene_objects(&l, config);
+            println!("Spawning {} scene objects", items.len());
+            for item in items {
+                commands.spawn((
+                    Mesh3d(meshes.add(convert_mesh(&item.mesh))),
+                    MeshMaterial3d(materials.add(StandardMaterial {
+                        base_color: Color::srgb(item.color[0], item.color[1], item.color[2]),
+                        ..default()
+                    })),
+                    Transform::from_translation(Vec3::new(
+                        item.position.x,
+                        item.position.y,
+                        item.position.z,
+                    ))
+                    .with_rotation(Quat::from_rotation_y(item.rotation)),
+                    Name::new(format!("{:?}", item.item_type)),
+                ));
+            }
+        }
+    }
 }
 
 fn build_two_room_grid(config: &BuildingConfig) -> TileGrid {

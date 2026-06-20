@@ -148,6 +148,10 @@ impl Default for BuildingVisualStyle {
 
 #[derive(Debug, Clone)]
 pub struct BuildingConfig {
+    /// Seed for deterministic procedural generation.
+    pub seed: u64,
+    /// Whether the procedural generation should guarantee a stove for heating (northern houses).
+    pub has_stove: bool,
     /// Building footprint rectangle in world space (min corner, max corner).
     pub footprint: Rect,
     /// World-space point on the exterior wall where the main entrance should be placed.
@@ -223,6 +227,8 @@ pub struct BuildingConfig {
 impl Default for BuildingConfig {
     fn default() -> Self {
         Self {
+            seed: 42,
+            has_stove: false,
             footprint: Rect::new(0.0, 0.0, 10.0, 8.0),
             entrance: Vec2::new(5.0, 0.0),
             entrance_dir: Vec2::new(0.0, 1.0),

@@ -55,12 +55,7 @@ fn generate_building(
     fixture: Res<HeadlessFixture>,
 ) {
     if fixtures::is_district_fixture(&fixture.0) {
-        district_render::spawn_district(
-            &mut commands,
-            &mut meshes,
-            &mut materials,
-            &fixture.0,
-        );
+        district_render::spawn_district(&mut commands, &mut meshes, &mut materials, &fixture.0);
         return;
     }
 
@@ -71,8 +66,10 @@ fn generate_building(
         } else {
             7.0
         };
-        commands
-            .insert_resource(game_core::plugins::scene::scene_config::SceneConfig { ground_size });
+        commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
+            ground_size,
+            ..default()
+        });
         furniture_preview::spawn_furniture_preview(
             &mut commands,
             &mut meshes,
@@ -80,6 +77,36 @@ fn generate_building(
             &fixture.0,
         );
         return;
+    }
+
+    if let Some(cam) = fixtures::building_camera_for_fixture(&fixture.0) {
+        commands.insert_resource(cam);
+    }
+
+    if fixture.0 == "picture-room" {
+        commands.insert_resource(game_core::plugins::scene::scene_config::SceneConfig {
+            ground_size: 18.0,
+            ground_color: Color::srgb(0.74, 0.74, 0.72),
+        });
+        commands.insert_resource(GlobalAmbientLight {
+            color: Color::WHITE,
+            brightness: 1.4,
+            ..default()
+        });
+        commands.spawn((
+            Name::new("Picture Room Fill Light"),
+            DirectionalLight {
+                illuminance: 4_000.0,
+                shadows_enabled: false,
+                ..default()
+            },
+            Transform::from_rotation(Quat::from_euler(
+                EulerRot::XYZ,
+                -std::f32::consts::FRAC_PI_4,
+                -std::f32::consts::FRAC_PI_4,
+                0.0,
+            )),
+        ));
     }
 
     let config = fixtures::config_for_fixture(&fixture.0);

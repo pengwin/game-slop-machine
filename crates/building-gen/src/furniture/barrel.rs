@@ -1,5 +1,5 @@
-use crate::mesh::math_util::{append_colored_quad, append_colored_triangle, Quad};
 use crate::mesh::MeshData;
+use crate::mesh::math_util::{Quad, append_colored_quad, append_colored_triangle};
 
 #[derive(Debug, Clone)]
 pub struct BarrelConfig {
@@ -47,32 +47,56 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
     };
 
     let mut profile = Vec::new();
-    
+
     // Bottom recess and outer rim
     profile.push((recess_depth, recess_r, wood_color));
     profile.push((0.0, recess_r, wood_color));
     profile.push((0.0, cap_r, wood_color));
     profile.push((rim_h, r, wood_color));
-    
+
     // Ring 1
     let y_r1 = h * 0.25;
     profile.push((y_r1 - ring_h / 2.0, get_r(y_r1 - ring_h / 2.0), wood_color));
-    profile.push((y_r1 - ring_h / 2.0, get_r(y_r1) + ring_extrusion, metal_color));
-    profile.push((y_r1 + ring_h / 2.0, get_r(y_r1) + ring_extrusion, metal_color));
+    profile.push((
+        y_r1 - ring_h / 2.0,
+        get_r(y_r1) + ring_extrusion,
+        metal_color,
+    ));
+    profile.push((
+        y_r1 + ring_h / 2.0,
+        get_r(y_r1) + ring_extrusion,
+        metal_color,
+    ));
     profile.push((y_r1 + ring_h / 2.0, get_r(y_r1 + ring_h / 2.0), wood_color));
-    
+
     // Ring 2
     let y_r2 = h * 0.5;
     profile.push((y_r2 - ring_h / 2.0, get_r(y_r2 - ring_h / 2.0), wood_color));
-    profile.push((y_r2 - ring_h / 2.0, get_r(y_r2) + ring_extrusion, metal_color));
-    profile.push((y_r2 + ring_h / 2.0, get_r(y_r2) + ring_extrusion, metal_color));
+    profile.push((
+        y_r2 - ring_h / 2.0,
+        get_r(y_r2) + ring_extrusion,
+        metal_color,
+    ));
+    profile.push((
+        y_r2 + ring_h / 2.0,
+        get_r(y_r2) + ring_extrusion,
+        metal_color,
+    ));
     profile.push((y_r2 + ring_h / 2.0, get_r(y_r2 + ring_h / 2.0), wood_color));
 
     // Ring 3
     let y_r3 = h * 0.75;
     profile.push((y_r3 - ring_h / 2.0, get_r(y_r3 - ring_h / 2.0), wood_color));
-    profile.push((y_r3 - ring_h / 2.0, get_r(y_r3) + ring_extrusion, metal_color));
-    profile.push((y_r3 + ring_h / 2.0, get_r(y_r3) + ring_extrusion, metal_color));
+    profile.push((
+        y_r3 - ring_h / 2.0,
+        get_r(y_r3) + ring_extrusion,
+        metal_color,
+    ));
+    profile.push((
+        y_r3 + ring_h / 2.0,
+        get_r(y_r3) + ring_extrusion,
+        metal_color,
+    ));
     profile.push((y_r3 + ring_h / 2.0, get_r(y_r3 + ring_h / 2.0), wood_color));
 
     // Top rim and recess
@@ -91,14 +115,14 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
         for p in profile.windows(2) {
             let (y0, r0, _) = p[0];
             let (y1, r1, color1) = p[1];
-            
+
             if (y1 - y0).abs() < 1e-5 && (r1 - r0).abs() < 1e-5 {
                 continue;
             }
-            
+
             let dy = y1 - y0;
             let dr = r1 - r0;
-            
+
             let mut n_r = dy;
             let mut n_y = -dr;
             let len = (n_r * n_r + n_y * n_y).sqrt();
@@ -109,7 +133,7 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
                 n_r = 1.0;
                 n_y = 0.0;
             }
-            
+
             let norm = [nx * n_r, n_y, nz * n_r];
 
             let x0_bottom = angle0.cos() * r0;
@@ -122,18 +146,26 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
             let x1_top = angle1.cos() * r1;
             let z1_top = angle1.sin() * r1;
 
-            append_colored_quad(&mut mesh, Quad {
-                tl: [x0_top, y1, z0_top], tr: [x1_top, y1, z1_top],
-                bl: [x0_bottom, y0, z0_bottom], br: [x1_bottom, y0, z1_bottom],
-                normal: norm, uv_min: [0.0, 0.0], uv_max: [1.0, 1.0],
-            }, color1);
+            append_colored_quad(
+                &mut mesh,
+                Quad {
+                    tl: [x0_top, y1, z0_top],
+                    tr: [x1_top, y1, z1_top],
+                    bl: [x0_bottom, y0, z0_bottom],
+                    br: [x1_bottom, y0, z1_bottom],
+                    normal: norm,
+                    uv_min: [0.0, 0.0],
+                    uv_max: [1.0, 1.0],
+                },
+                color1,
+            );
         }
 
         let tx0 = angle0.cos() * recess_r;
         let tz0 = angle0.sin() * recess_r;
         let tx1 = angle1.cos() * recess_r;
         let tz1 = angle1.sin() * recess_r;
-        
+
         append_colored_triangle(
             &mut mesh,
             [0.0, h - recess_depth, 0.0],

@@ -1,7 +1,7 @@
-pub mod scene;
 pub mod building;
 pub mod district;
-pub mod seed;
 mod game;
+pub mod scene;
+pub mod seed;
 
 pub use game::game_plugin as GamePlugin;

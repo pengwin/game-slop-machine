@@ -17,6 +17,7 @@ pub fn spawn_district(
     commands.insert_resource(fixtures::district_camera_for_fixture(fixture));
     commands.insert_resource(SceneConfig {
         ground_size: fixtures::district_ground_size_for_fixture(fixture),
+        ..default()
     });
 
     let district_config = fixtures::district_config_for_fixture(fixture);

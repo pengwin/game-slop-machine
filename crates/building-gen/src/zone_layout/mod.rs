@@ -8,8 +8,8 @@ use crate::config::{BuildingConfig, RoomSpec};
 use crate::geometry::Vec2;
 use crate::layout::Room;
 
-pub use corridor::CorridorInfo;
 pub use axes::DepthAxis;
+pub use corridor::CorridorInfo;
 
 pub fn generate_rooms(config: &BuildingConfig) -> (Vec<Room>, Option<CorridorInfo>) {
     let specs = ordered_room_specs(config);

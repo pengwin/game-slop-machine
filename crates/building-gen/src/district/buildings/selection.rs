@@ -37,7 +37,9 @@ pub fn select_building_description_for_lot<'a>(
         .iter()
         .map(|(score, _)| 1.0 / (0.15 + score - best_score))
         .sum();
-    let mut pick = deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, seed) * total_weight;
+    let mut pick =
+        deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, seed)
+            * total_weight;
 
     for (score, description) in candidates {
         pick -= 1.0 / (0.15 + score - best_score);

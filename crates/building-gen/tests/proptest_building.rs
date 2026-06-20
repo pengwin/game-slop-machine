@@ -1,10 +1,10 @@
-use proptest::prelude::*;
 use building_gen::config::{BuildingConfig, RoomSpec};
 use building_gen::geometry::Rect;
+use proptest::prelude::*;
 
 fn valid_config() -> impl Strategy<Value = BuildingConfig> {
-    (5.0f32..20.0, 5.0f32..20.0, 1usize..=4, 0.3f32..0.8)
-        .prop_map(|(width, height, room_count, tile_size)| {
+    (5.0f32..20.0, 5.0f32..20.0, 1usize..=4, 0.3f32..0.8).prop_map(
+        |(width, height, room_count, tile_size)| {
             let tile_size = tile_size.max(0.3);
             let room_specs: Vec<RoomSpec> = (0..room_count)
                 .map(|i| RoomSpec::new(&format!("room_{}", i), 0))
@@ -18,7 +18,8 @@ fn valid_config() -> impl Strategy<Value = BuildingConfig> {
                 interior_wall_thickness: tile_size * 0.4,
                 ..Default::default()
             }
-        })
+        },
+    )
 }
 
 proptest! {

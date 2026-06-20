@@ -1,5 +1,5 @@
-use crate::furniture::FurnitureItem;
 use crate::geometry::{LineSegment2D, Rect, Vec2, Vec3};
+use crate::scene::SceneObject;
 use crate::tile::TileGrid;
 use crate::zone_layout::CorridorInfo;
 
@@ -84,7 +84,7 @@ pub struct BuildingLayout {
     pub roof: RoofGeometry,
     pub bounds: Rect,
     pub corridor: Option<CorridorInfo>,
-    pub furniture: Vec<FurnitureItem>,
+    pub furniture: Vec<SceneObject>,
 }
 
 impl BuildingLayout {

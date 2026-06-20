@@ -8,9 +8,9 @@
 //! - A scale transform (width, height, depth)
 //! - A color/material hint
 
+pub mod colored_shapes;
 mod floor;
 mod foundation;
-pub mod colored_shapes;
 pub mod math_util;
 mod opening;
 mod primitives;
@@ -47,7 +47,8 @@ impl MeshData {
         self.normals.extend_from_slice(&other.normals);
         self.uvs.extend_from_slice(&other.uvs);
         self.colors.extend_from_slice(&other.colors);
-        self.indices.extend(other.indices.iter().map(|&idx| idx + base_idx));
+        self.indices
+            .extend(other.indices.iter().map(|&idx| idx + base_idx));
     }
 }
 

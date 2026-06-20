@@ -1,5 +1,5 @@
 use super::bounds::{building_base_y, building_top_y, tile_xz_bounds, wall_bounds_for_tile};
-use super::classify::{exterior_face_class, opening_cutout, ExteriorFaceClass, WallCutout};
+use super::classify::{ExteriorFaceClass, WallCutout, exterior_face_class, opening_cutout};
 use crate::config::BuildingConfig;
 use crate::tile::{CornerDir, TJunctionDir, TileGrid, WallAxis, WallKind, WallShape, WallTile};
 

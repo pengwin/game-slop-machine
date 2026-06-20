@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::layout::BuildingLayout;
-use building_gen::mesh::{generate_building_mesh, BuildingMesh, MeshData};
+use building_gen::mesh::{BuildingMesh, MeshData, generate_building_mesh};
 
 use super::mesh_util::convert_mesh;
 
@@ -38,22 +38,130 @@ pub fn spawn_building_mesh(
     let mut entities = Vec::new();
     let name = |part: &str| format!("{} {}", name_prefix, part);
 
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.foundation_mesh, foundation_material(config), transform, &name("Foundation"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.wall_mesh, wall_material(config), transform, &name("Walls"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.wall_top_mesh, wall_top_material(config), transform, &name("Wall Top Faces"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.exterior_wall_mesh, exterior_wall_material(config), transform, &name("Exterior Wall Faces"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.exterior_corner_mesh, exterior_corner_material(config), transform, &name("Exterior Corner Faces"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.exterior_t_junction_mesh, exterior_t_junction_material(config), transform, &name("Exterior T-Junction Faces"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.floor_mesh, floor_material(config), transform, &name("Floor"));
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.foundation_mesh,
+        foundation_material(config),
+        transform,
+        &name("Foundation"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.wall_mesh,
+        wall_material(config),
+        transform,
+        &name("Walls"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.wall_top_mesh,
+        wall_top_material(config),
+        transform,
+        &name("Wall Top Faces"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.exterior_wall_mesh,
+        exterior_wall_material(config),
+        transform,
+        &name("Exterior Wall Faces"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.exterior_corner_mesh,
+        exterior_corner_material(config),
+        transform,
+        &name("Exterior Corner Faces"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.exterior_t_junction_mesh,
+        exterior_t_junction_material(config),
+        transform,
+        &name("Exterior T-Junction Faces"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.floor_mesh,
+        floor_material(config),
+        transform,
+        &name("Floor"),
+    );
 
     if config.render_roof {
-        spawn_part(commands, meshes, materials, &mut entities, &bmesh.roof_mesh, roof_material(config), transform, &name("Roof"));
-        spawn_part(commands, meshes, materials, &mut entities, &bmesh.gable_mesh, exterior_wall_material(config), transform, &name("Gables"));
+        spawn_part(
+            commands,
+            meshes,
+            materials,
+            &mut entities,
+            &bmesh.roof_mesh,
+            roof_material(config),
+            transform,
+            &name("Roof"),
+        );
+        spawn_part(
+            commands,
+            meshes,
+            materials,
+            &mut entities,
+            &bmesh.gable_mesh,
+            exterior_wall_material(config),
+            transform,
+            &name("Gables"),
+        );
     }
 
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.door_mesh, door_material(config), transform, &name("Doors"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.opening_trim_mesh, opening_trim_material(config), transform, &name("Opening Trim"));
-    spawn_part(commands, meshes, materials, &mut entities, &bmesh.window_mesh, window_material(), transform, &name("Windows"));
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.door_mesh,
+        door_material(config),
+        transform,
+        &name("Doors"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.opening_trim_mesh,
+        opening_trim_material(config),
+        transform,
+        &name("Opening Trim"),
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.window_mesh,
+        window_material(),
+        transform,
+        &name("Windows"),
+    );
 
     entities
 }
@@ -172,12 +280,12 @@ fn window_material() -> StandardMaterial {
     }
 }
 
-/// Spawns furniture items as Bevy entities.
+/// Spawns generated scene objects as Bevy entities.
 pub fn spawn_furniture(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    items: &[building_gen::furniture::FurnitureItem],
+    items: &[building_gen::scene::SceneObject],
     transform: Transform,
     name_prefix: &str,
 ) -> Vec<Entity> {

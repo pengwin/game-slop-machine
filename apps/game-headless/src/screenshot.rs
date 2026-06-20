@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::TextureFormat,
-        view::screenshot::{save_to_disk, Screenshot},
+        view::screenshot::{Screenshot, save_to_disk},
     },
 };
 

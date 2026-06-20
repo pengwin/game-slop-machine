@@ -28,7 +28,7 @@ impl Default for StoveConfig {
 
 pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> MeshData {
     let mut mesh = MeshData::default();
-    
+
     let base_color = config.base_color;
     let wood_color = config.wood_color;
     let mantel_color = config.mantel_color;
@@ -84,7 +84,7 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
         let wood_y = base_h + 0.05;
         let wood_w = 0.1;
         let wood_len = 0.45;
-        
+
         // Log 1 left
         append_colored_box(
             &mut mesh,
@@ -135,8 +135,8 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
             let cur_w = main_w * (0.85 - t * 0.4);
             let cur_d = main_d * (0.85 - t * 0.4);
             let cur_y = base_h + main_h + mantel_h + step_h * (i as f32) + step_h / 2.0;
-            let cur_z = back_z - cur_d / 2.0; 
-            
+            let cur_z = back_z - cur_d / 2.0;
+
             if i == steps - 1 {
                 let wall_th = config.chimney_wall_thickness;
                 // Left
@@ -167,7 +167,7 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
                     [cur_w - 2.0 * wall_th, step_h, wall_th],
                     base_color,
                 );
-                
+
                 // Dark hole interior
                 append_colored_box(
                     &mut mesh,

@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-use super::scene::ScenePlugin;
 use super::building::BuildingPlugin;
 use super::district::DistrictPlugin;
+use super::scene::ScenePlugin;
 use super::seed::{GenerationSeed, cycle_seed_on_command};
+use bevy::prelude::*;
 
 pub fn game_plugin(app: &mut App) {
     app.add_plugins(ScenePlugin);

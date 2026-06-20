@@ -1,4 +1,6 @@
-use crate::tile::{CardinalDir, CornerDir, TJunctionDir, WallKind, WallOpening, WallShape, WallTile};
+use crate::tile::{
+    CardinalDir, CornerDir, TJunctionDir, WallKind, WallOpening, WallShape, WallTile,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExteriorFaceClass {

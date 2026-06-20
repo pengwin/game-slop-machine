@@ -54,6 +54,8 @@ pub mod mesh;
 pub mod opening;
 pub mod random;
 pub mod roof;
+pub mod scene;
+pub mod scenelet;
 pub mod tile;
 pub mod tile_converter;
 pub mod zone_layout;
@@ -88,12 +90,7 @@ pub fn generate_layout(config: &BuildingConfig) -> BuildingLayout {
     let walls = tile_converter::detect_walls(&grid);
 
     // Step 4: Place openings (doors between rooms, windows per room spec)
-    let doorways = opening::place_doorways(
-        &mut grid,
-        &rooms,
-        config,
-        corridor.as_ref(),
-    );
+    let doorways = opening::place_doorways(&mut grid, &rooms, config, corridor.as_ref());
     let windows = opening::place_windows(&mut grid, &rooms, config);
 
     // Step 5: Generate roof geometry
@@ -112,14 +109,29 @@ pub fn generate_layout(config: &BuildingConfig) -> BuildingLayout {
     }
 }
 
-/// Generates furniture for a building layout. Can be called independently.
+/// Generates semantic scene objects for a building layout.
 ///
-/// Returns furniture items placed in rooms based on room labels.
-/// Kitchen rooms get stoves, counters, tables, chairs.
-/// Bedroom rooms get beds, desks, chairs.
-/// Other rooms get tables and chairs.
-pub fn generate_furniture(layout: &BuildingLayout, config: &config::BuildingConfig) -> Vec<furniture::FurnitureItem> {
-    furniture::place_furniture(&layout.rooms, &layout.tile_grid, config, &layout.doorways)
+/// Scene objects are produced by scenelets: small functional clusters such as
+/// sleeping, dining, storage, kitchen work, and entry drop zones.
+pub fn generate_scene_objects(
+    layout: &BuildingLayout,
+    config: &config::BuildingConfig,
+) -> Vec<scene::SceneObject> {
+    scenelet::generate_scene_objects(
+        &layout.rooms,
+        &layout.tile_grid,
+        config,
+        &layout.doorways,
+        &layout.windows,
+    )
+}
+
+/// Compatibility wrapper for callers that still use the old furniture API.
+pub fn generate_furniture(
+    layout: &BuildingLayout,
+    config: &config::BuildingConfig,
+) -> Vec<furniture::FurnitureItem> {
+    generate_scene_objects(layout, config)
 }
 
 /// Marks the corridor strip as enclosed floor tiles in the grid.

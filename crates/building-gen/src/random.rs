@@ -40,6 +40,11 @@ impl SeededRng {
     pub fn gen_bool(&mut self, probability: f64) -> bool {
         self.rng.random_bool(probability)
     }
+
+    pub fn shuffle<T>(&mut self, slice: &mut [T]) {
+        use rand::seq::SliceRandom;
+        slice.shuffle(&mut self.rng);
+    }
 }
 
 #[cfg(test)]

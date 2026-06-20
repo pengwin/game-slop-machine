@@ -1,6 +1,6 @@
-use super::math_util::{append_quad, Quad};
-use super::wall::building_base_y;
 use super::MeshData;
+use super::math_util::{Quad, append_quad};
+use super::wall::building_base_y;
 use crate::config::BuildingConfig;
 use crate::tile::{TileGrid, TileType, WallKind};
 

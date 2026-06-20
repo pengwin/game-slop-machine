@@ -14,13 +14,15 @@ pub fn spawn_objects(
     commands.spawn((
         Ground,
         Name::new("Ground"),
-        Mesh3d(meshes.add(
-            Plane3d::default()
-                .mesh()
-                .size(config.ground_size, config.ground_size),
-        )),
+        Mesh3d(
+            meshes.add(
+                Plane3d::default()
+                    .mesh()
+                    .size(config.ground_size, config.ground_size),
+            ),
+        ),
         MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.3, 0.5, 0.3),
+            base_color: config.ground_color,
             ..default()
         })),
     ));

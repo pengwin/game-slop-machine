@@ -1,5 +1,5 @@
-use crate::mesh::colored_shapes::{append_colored_beveled_box, append_colored_box};
 use crate::mesh::MeshData;
+use crate::mesh::colored_shapes::{append_colored_beveled_box, append_colored_box};
 
 #[derive(Debug, Clone)]
 pub struct ShelfConfig {

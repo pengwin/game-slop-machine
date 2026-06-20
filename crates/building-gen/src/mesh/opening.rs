@@ -1,6 +1,6 @@
+use super::MeshData;
 use super::math_util::{Quad, append_quad};
 use super::wall::{building_base_y, wall_bounds_for_tile};
-use super::MeshData;
 use crate::config::BuildingConfig;
 use crate::tile::{TileGrid, TileType, WallAxis, WallOpening};
 
@@ -111,9 +111,31 @@ fn append_opening_trim_on_x_face(
 
     append_trim_rects(start_z, end_z, bottom_y, top_y, inset, |a, b, c, d| {
         if side > 0.0 {
-            append_quad(mesh, Quad { tl: [x, d, a], tr: [x, d, b], bl: [x, c, a], br: [x, c, b], normal, uv_min: [0.0, 0.0], uv_max: [1.0, 1.0] });
+            append_quad(
+                mesh,
+                Quad {
+                    tl: [x, d, a],
+                    tr: [x, d, b],
+                    bl: [x, c, a],
+                    br: [x, c, b],
+                    normal,
+                    uv_min: [0.0, 0.0],
+                    uv_max: [1.0, 1.0],
+                },
+            );
         } else {
-            append_quad(mesh, Quad { tl: [x, d, b], tr: [x, d, a], bl: [x, c, b], br: [x, c, a], normal, uv_min: [0.0, 0.0], uv_max: [1.0, 1.0] });
+            append_quad(
+                mesh,
+                Quad {
+                    tl: [x, d, b],
+                    tr: [x, d, a],
+                    bl: [x, c, b],
+                    br: [x, c, a],
+                    normal,
+                    uv_min: [0.0, 0.0],
+                    uv_max: [1.0, 1.0],
+                },
+            );
         }
     });
 }
@@ -136,9 +158,31 @@ fn append_opening_trim_on_z_face(
 
     append_trim_rects(start_x, end_x, bottom_y, top_y, inset, |a, b, c, d| {
         if side > 0.0 {
-            append_quad(mesh, Quad { tl: [a, d, z], tr: [b, d, z], bl: [a, c, z], br: [b, c, z], normal, uv_min: [0.0, 0.0], uv_max: [1.0, 1.0] });
+            append_quad(
+                mesh,
+                Quad {
+                    tl: [a, d, z],
+                    tr: [b, d, z],
+                    bl: [a, c, z],
+                    br: [b, c, z],
+                    normal,
+                    uv_min: [0.0, 0.0],
+                    uv_max: [1.0, 1.0],
+                },
+            );
         } else {
-            append_quad(mesh, Quad { tl: [b, d, z], tr: [a, d, z], bl: [b, c, z], br: [a, c, z], normal, uv_min: [0.0, 0.0], uv_max: [1.0, 1.0] });
+            append_quad(
+                mesh,
+                Quad {
+                    tl: [b, d, z],
+                    tr: [a, d, z],
+                    bl: [b, c, z],
+                    br: [a, c, z],
+                    normal,
+                    uv_min: [0.0, 0.0],
+                    uv_max: [1.0, 1.0],
+                },
+            );
         }
     });
 }
@@ -185,16 +229,30 @@ pub fn generate_door_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData 
                     let cx = (min_x + max_x) / 2.0;
                     let t = max_x - min_x;
 
-                    append_quad(&mut mesh, Quad {
-                        tl: [cx + t / 2.0, h, ds], tr: [cx + t / 2.0, h, de],
-                        bl: [cx + t / 2.0, min_y, ds], br: [cx + t / 2.0, min_y, de],
-                        normal: [1.0, 0.0, 0.0], uv_min: [0.0, 0.0], uv_max: [door_width, h],
-                    });
-                    append_quad(&mut mesh, Quad {
-                        tl: [cx - t / 2.0, h, de], tr: [cx - t / 2.0, h, ds],
-                        bl: [cx - t / 2.0, min_y, de], br: [cx - t / 2.0, min_y, ds],
-                        normal: [-1.0, 0.0, 0.0], uv_min: [0.0, 0.0], uv_max: [door_width, h],
-                    });
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [cx + t / 2.0, h, ds],
+                            tr: [cx + t / 2.0, h, de],
+                            bl: [cx + t / 2.0, min_y, ds],
+                            br: [cx + t / 2.0, min_y, de],
+                            normal: [1.0, 0.0, 0.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [door_width, h],
+                        },
+                    );
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [cx - t / 2.0, h, de],
+                            tr: [cx - t / 2.0, h, ds],
+                            bl: [cx - t / 2.0, min_y, de],
+                            br: [cx - t / 2.0, min_y, ds],
+                            normal: [-1.0, 0.0, 0.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [door_width, h],
+                        },
+                    );
                 }
                 WallAxis::X | WallAxis::Both => {
                     let width = max_x - min_x;
@@ -205,16 +263,30 @@ pub fn generate_door_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData 
                     let cz = (min_z + max_z) / 2.0;
                     let t = max_z - min_z;
 
-                    append_quad(&mut mesh, Quad {
-                        tl: [ds, h, cz + t / 2.0], tr: [de, h, cz + t / 2.0],
-                        bl: [ds, min_y, cz + t / 2.0], br: [de, min_y, cz + t / 2.0],
-                        normal: [0.0, 0.0, 1.0], uv_min: [0.0, 0.0], uv_max: [door_width, h],
-                    });
-                    append_quad(&mut mesh, Quad {
-                        tl: [de, h, cz - t / 2.0], tr: [ds, h, cz - t / 2.0],
-                        bl: [de, min_y, cz - t / 2.0], br: [ds, min_y, cz - t / 2.0],
-                        normal: [0.0, 0.0, -1.0], uv_min: [0.0, 0.0], uv_max: [door_width, h],
-                    });
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [ds, h, cz + t / 2.0],
+                            tr: [de, h, cz + t / 2.0],
+                            bl: [ds, min_y, cz + t / 2.0],
+                            br: [de, min_y, cz + t / 2.0],
+                            normal: [0.0, 0.0, 1.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [door_width, h],
+                        },
+                    );
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [de, h, cz - t / 2.0],
+                            tr: [ds, h, cz - t / 2.0],
+                            bl: [de, min_y, cz - t / 2.0],
+                            br: [ds, min_y, cz - t / 2.0],
+                            normal: [0.0, 0.0, -1.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [door_width, h],
+                        },
+                    );
                 }
             }
         }
@@ -253,16 +325,30 @@ pub fn generate_window_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshDat
                     let we = ws + window_width;
                     let offset = 0.02;
 
-                    append_quad(&mut mesh, Quad {
-                        tl: [max_x - offset, sill + wh, ws], tr: [max_x - offset, sill + wh, we],
-                        bl: [max_x - offset, sill, ws], br: [max_x - offset, sill, we],
-                        normal: [1.0, 0.0, 0.0], uv_min: [0.0, 0.0], uv_max: [window_width, wh],
-                    });
-                    append_quad(&mut mesh, Quad {
-                        tl: [min_x + offset, sill + wh, we], tr: [min_x + offset, sill + wh, ws],
-                        bl: [min_x + offset, sill, we], br: [min_x + offset, sill, ws],
-                        normal: [-1.0, 0.0, 0.0], uv_min: [0.0, 0.0], uv_max: [window_width, wh],
-                    });
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [max_x - offset, sill + wh, ws],
+                            tr: [max_x - offset, sill + wh, we],
+                            bl: [max_x - offset, sill, ws],
+                            br: [max_x - offset, sill, we],
+                            normal: [1.0, 0.0, 0.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [window_width, wh],
+                        },
+                    );
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [min_x + offset, sill + wh, we],
+                            tr: [min_x + offset, sill + wh, ws],
+                            bl: [min_x + offset, sill, we],
+                            br: [min_x + offset, sill, ws],
+                            normal: [-1.0, 0.0, 0.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [window_width, wh],
+                        },
+                    );
                 }
                 WallAxis::X | WallAxis::Both => {
                     let width = max_x - min_x;
@@ -272,16 +358,30 @@ pub fn generate_window_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshDat
                     let we = ws + window_width;
                     let offset = 0.02;
 
-                    append_quad(&mut mesh, Quad {
-                        tl: [ws, sill + wh, max_z - offset], tr: [we, sill + wh, max_z - offset],
-                        bl: [ws, sill, max_z - offset], br: [we, sill, max_z - offset],
-                        normal: [0.0, 0.0, 1.0], uv_min: [0.0, 0.0], uv_max: [window_width, wh],
-                    });
-                    append_quad(&mut mesh, Quad {
-                        tl: [we, sill + wh, min_z + offset], tr: [ws, sill + wh, min_z + offset],
-                        bl: [we, sill, min_z + offset], br: [ws, sill, min_z + offset],
-                        normal: [0.0, 0.0, -1.0], uv_min: [0.0, 0.0], uv_max: [window_width, wh],
-                    });
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [ws, sill + wh, max_z - offset],
+                            tr: [we, sill + wh, max_z - offset],
+                            bl: [ws, sill, max_z - offset],
+                            br: [we, sill, max_z - offset],
+                            normal: [0.0, 0.0, 1.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [window_width, wh],
+                        },
+                    );
+                    append_quad(
+                        &mut mesh,
+                        Quad {
+                            tl: [we, sill + wh, min_z + offset],
+                            tr: [ws, sill + wh, min_z + offset],
+                            bl: [we, sill, min_z + offset],
+                            br: [ws, sill, min_z + offset],
+                            normal: [0.0, 0.0, -1.0],
+                            uv_min: [0.0, 0.0],
+                            uv_max: [window_width, wh],
+                        },
+                    );
                 }
             }
         }

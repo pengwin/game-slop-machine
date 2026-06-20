@@ -24,7 +24,11 @@ impl OccupiedTiles {
             for dx in -1isize..=1 {
                 let nx = x as isize + dx;
                 let ny = y as isize + dy;
-                if nx >= 0 && ny >= 0 && (nx as usize) < self.grid_width && (ny as usize) < self.grid_height {
+                if nx >= 0
+                    && ny >= 0
+                    && (nx as usize) < self.grid_width
+                    && (ny as usize) < self.grid_height
+                {
                     self.tiles.insert((nx as usize, ny as usize));
                 }
             }
@@ -124,9 +128,7 @@ pub fn find_center_positions(
     let max_y = max_y.min(grid.height.saturating_sub(1));
 
     // Need enough room for wall distance
-    if max_x < min_x + min_distance_from_wall * 2
-        || max_y < min_y + min_distance_from_wall * 2
-    {
+    if max_x < min_x + min_distance_from_wall * 2 || max_y < min_y + min_distance_from_wall * 2 {
         return positions;
     }
 

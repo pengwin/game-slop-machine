@@ -113,20 +113,25 @@ pub fn spawn_district_on_command(
             &format!("District Building {}", building.lot_index),
         ));
 
-        // Generate and spawn furniture for this building
-        let furniture = building_gen::generate_furniture(&building.layout, &building.config);
-        if !furniture.is_empty() {
+        // Generate and spawn scene objects for this building.
+        let scene_objects =
+            building_gen::generate_scene_objects(&building.layout, &building.config);
+        if !scene_objects.is_empty() {
             entities.extend(spawn_furniture(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
-                &furniture,
+                &scene_objects,
                 Transform {
-                    translation: Vec3::new(building.world_position.x, 0.0, building.world_position.y),
+                    translation: Vec3::new(
+                        building.world_position.x,
+                        0.0,
+                        building.world_position.y,
+                    ),
                     rotation: Quat::from_rotation_y(building.rotation),
                     ..default()
                 },
-                &format!("District Building {} Furniture", building.lot_index),
+                &format!("District Building {} Scene Objects", building.lot_index),
             ));
         }
 

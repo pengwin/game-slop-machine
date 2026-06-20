@@ -1,5 +1,5 @@
-use crate::mesh::colored_shapes::{append_colored_box, append_colored_cylinder};
 use crate::mesh::MeshData;
+use crate::mesh::colored_shapes::{append_colored_box, append_colored_cylinder};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ChairBackStyle {
@@ -76,9 +76,11 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
 
     let seat_h = config.seat_height.clamp(0.05, actual_h * 0.8);
     let seat_t = config.seat_thickness.clamp(0.01, actual_h * 0.25);
-    let leg_t = config.leg_thickness.clamp(0.01, actual_w.min(actual_d) * 0.35);
+    let leg_t = config
+        .leg_thickness
+        .clamp(0.01, actual_w.min(actual_d) * 0.35);
     let leg_inset = config.leg_inset.max(0.0);
-    
+
     // Seat
     let seat_y = seat_h + seat_t / 2.0;
     match config.seat_shape {
@@ -103,11 +105,9 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
         }
     }
 
-    // Legs
     let mut leg_positions = Vec::new();
     let leg_h = seat_h; // legs go up to the bottom of the seat
     let leg_x = (hw - leg_inset - leg_t / 2.0).max(0.0);
-    let leg_z_front = -hd + leg_inset + leg_t / 2.0;
     let leg_z_rear = hd - leg_inset - leg_t / 2.0;
     let leg_x_amp = leg_x;
     let leg_z_amp = (hd - leg_inset - leg_t / 2.0).max(0.0);
@@ -182,7 +182,7 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
         let post_y = post_bottom + post_h / 2.0;
 
         let post_z = leg_z_rear;
-        
+
         for lx in [-leg_x, leg_x] {
             append_colored_box(
                 &mut mesh,
@@ -224,11 +224,11 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
                     if slat_w > 0.0 && slat_top_y > slat_bottom_y {
                         let slat_h = slat_top_y - slat_bottom_y;
                         let slat_center_y = slat_bottom_y + slat_h / 2.0;
-                        
+
                         let inner_w = back_w - 2.0 * leg_t;
                         let spacing = inner_w / (count as f32 + 1.0);
                         let start_x = -(inner_w / 2.0) + spacing;
-                        
+
                         for i in 0..count {
                             let x = start_x + spacing * (i as f32);
                             append_colored_box(

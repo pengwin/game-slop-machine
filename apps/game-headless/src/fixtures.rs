@@ -75,6 +75,18 @@ pub fn district_ground_size_for_fixture(fixture: &str) -> f32 {
     }
 }
 
+pub fn building_camera_for_fixture(fixture: &str) -> Option<CameraConfig> {
+    if fixture == "picture-room" {
+        Some(CameraConfig {
+            position: Vec3::new(8.8, 10.5, -3.2),
+            target: Vec3::new(4.0, 0.4, 3.0),
+            viewport_height: 9.2,
+        })
+    } else {
+        None
+    }
+}
+
 pub fn district_config_for_fixture(fixture: &str) -> TradeDistrictConfig {
     if fixture.starts_with("huge-trade-district") {
         let mut config = TradeDistrictConfig {
@@ -174,6 +186,34 @@ pub fn config_for_fixture(fixture: &str) -> BuildingConfig {
             has_corridor: true,
             corridor_width: 1.0,
             render_roof: false,
+            ..Default::default()
+        },
+        "picture-room" => BuildingConfig {
+            seed: 17,
+            has_stove: false,
+            footprint: Rect::new(0.0, 0.0, 8.0, 6.0),
+            entrance: building_gen::geometry::Vec2::new(4.0, 0.0),
+            room_specs: vec![RoomSpec::new("bedroom", 4)],
+            render_roof: false,
+            furniture: true,
+            wall_height: 2.0,
+            foundation_width: 0.22,
+            foundation_height: 0.10,
+            window_width: 0.75,
+            window_height: 1.0,
+            window_sill_height: 0.65,
+            visual_style: building_gen::config::BuildingVisualStyle {
+                wall_color: [0.82, 0.74, 0.58],
+                wall_top_color: [0.88, 0.80, 0.64],
+                exterior_wall_color: [0.86, 0.76, 0.56],
+                corner_color: [0.90, 0.80, 0.60],
+                t_junction_color: [0.86, 0.76, 0.56],
+                floor_color: [0.58, 0.54, 0.44],
+                door_color: [0.26, 0.18, 0.12],
+                trim_color: [0.43, 0.31, 0.20],
+                foundation_color: [0.46, 0.46, 0.42],
+                ..Default::default()
+            },
             ..Default::default()
         },
         _ => BuildingConfig {

@@ -8,7 +8,7 @@ all: buildings districts furniture
 # ── Building Fixtures ────────────────────────────────────────────────────
 
 # Generate all building fixtures
-buildings: procedural with-roof corridor four-doors four-windows two-room
+buildings: procedural with-roof corridor four-doors four-windows two-room picture-room
 
 procedural:
     cargo run -p game-headless -- fixtures/building-procedural.png procedural
@@ -27,6 +27,9 @@ four-windows:
 
 two-room:
     cargo run -p game-headless -- fixtures/building-two-room.png two-room
+
+picture-room:
+    cargo run -p game-headless -- fixtures/building-picture-room.png picture-room
 
 # ── District Fixtures ────────────────────────────────────────────────────
 

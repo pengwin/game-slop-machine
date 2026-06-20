@@ -42,7 +42,12 @@ pub fn distribute_splits(start: f32, end: f32, count: usize, tile_size: f32) -> 
     splits
 }
 
-pub fn distribute_weighted_splits(start: f32, end: f32, weights: &[f32], tile_size: f32) -> Vec<f32> {
+pub fn distribute_weighted_splits(
+    start: f32,
+    end: f32,
+    weights: &[f32],
+    tile_size: f32,
+) -> Vec<f32> {
     if weights.len() <= 1 {
         return vec![start, end];
     }
@@ -107,9 +112,5 @@ pub fn snap_to_grid(value: f32, tile_size: f32) -> f32 {
 }
 
 pub fn sorted_pair(a: f32, b: f32) -> (f32, f32) {
-    if a <= b {
-        (a, b)
-    } else {
-        (b, a)
-    }
+    if a <= b { (a, b) } else { (b, a) }
 }

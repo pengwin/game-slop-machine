@@ -19,7 +19,10 @@ pub fn generate_row_rooms_with_columns(
     rooms_per_row: usize,
 ) -> (Vec<Room>, Option<super::corridor::CorridorInfo>) {
     let ts = config.tile_size;
-    let rooms_per_row = rooms_per_row.clamp(1, super::scoring::max_rooms_per_row(config, axes, specs.len()));
+    let rooms_per_row = rooms_per_row.clamp(
+        1,
+        super::scoring::max_rooms_per_row(config, axes, specs.len()),
+    );
 
     let row_ranges = room_row_ranges(specs.len(), rooms_per_row);
     let row_weights: Vec<f32> = row_ranges

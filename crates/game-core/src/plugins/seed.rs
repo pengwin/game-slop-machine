@@ -11,10 +11,7 @@ impl Default for GenerationSeed {
 }
 
 /// Increments the generation seed when R is pressed.
-pub fn cycle_seed_on_command(
-    input: Res<ButtonInput<KeyCode>>,
-    mut seed: ResMut<GenerationSeed>,
-) {
+pub fn cycle_seed_on_command(input: Res<ButtonInput<KeyCode>>, mut seed: ResMut<GenerationSeed>) {
     if input.just_pressed(KeyCode::KeyR) {
         seed.0 = seed.0.wrapping_add(1);
         println!("Seed: {}", seed.0);

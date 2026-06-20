@@ -16,8 +16,13 @@ pub fn split_lots_for_buildings(lots: &[Lot], config: &TradeDistrictConfig) -> V
 fn split_lot_for_buildings(lot: &Lot, config: &TradeDistrictConfig) -> Vec<Lot> {
     let area = lot.width * lot.depth;
     let is_large_parcel = area >= config.preserve_large_lot_area;
-    if deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, config.seed)
-        > config.building_lot_split_chance.clamp(0.0, 1.0)
+    if deterministic_lot_unit(
+        lot.position.x,
+        lot.position.y,
+        lot.width,
+        lot.depth,
+        config.seed,
+    ) > config.building_lot_split_chance.clamp(0.0, 1.0)
     {
         return vec![single_building_lot(lot, config, is_large_parcel)];
     }
@@ -34,8 +39,13 @@ fn single_building_lot(lot: &Lot, config: &TradeDistrictConfig, is_large_parcel:
         return lot.clone();
     }
 
-    let landmark_pick =
-        deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, config.seed ^ 0xD1B5_4A32_D192_ED03);
+    let landmark_pick = deterministic_lot_unit(
+        lot.position.x,
+        lot.position.y,
+        lot.width,
+        lot.depth,
+        config.seed ^ 0xD1B5_4A32_D192_ED03,
+    );
     if landmark_pick <= config.landmark_lot_chance.clamp(0.0, 1.0) {
         return lot.clone();
     }
@@ -69,7 +79,13 @@ fn choose_building_lot_count(lot: &Lot, config: &TradeDistrictConfig) -> usize {
         return 1;
     }
 
-    let pick = deterministic_lot_unit(lot.position.x, lot.position.y, lot.width, lot.depth, config.seed ^ 0xA24B_AED4_963E_E407) * total_weight;
+    let pick = deterministic_lot_unit(
+        lot.position.x,
+        lot.position.y,
+        lot.width,
+        lot.depth,
+        config.seed ^ 0xA24B_AED4_963E_E407,
+    ) * total_weight;
     if pick < weights[0] {
         1
     } else if pick < weights[0] + weights[1] {

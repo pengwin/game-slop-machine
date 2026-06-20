@@ -27,11 +27,7 @@ pub fn place_doorways(
     doorways
 }
 
-pub fn place_windows(
-    grid: &mut TileGrid,
-    rooms: &[Room],
-    config: &BuildingConfig,
-) -> Vec<Window> {
+pub fn place_windows(grid: &mut TileGrid, rooms: &[Room], config: &BuildingConfig) -> Vec<Window> {
     windows::place_windows(grid, rooms, config)
 }
 
@@ -84,12 +80,7 @@ mod tests {
             }
         }
 
-        let doorways = place_doorways(
-            &mut grid,
-            &rooms,
-            &config,
-            corridor.as_ref(),
-        );
+        let doorways = place_doorways(&mut grid, &rooms, &config, corridor.as_ref());
 
         assert!(!doorways.is_empty(), "No doorways placed");
     }
@@ -100,12 +91,7 @@ mod tests {
         let (rooms, corridor) = zone_layout::generate_rooms(&config);
         let mut grid = rooms_to_tile_grid(&rooms, &config);
 
-        let _doorways = place_doorways(
-            &mut grid,
-            &rooms,
-            &config,
-            corridor.as_ref(),
-        );
+        let _doorways = place_doorways(&mut grid, &rooms, &config, corridor.as_ref());
         let windows = place_windows(&mut grid, &rooms, &config);
 
         for window in &windows {
