@@ -114,9 +114,45 @@ impl ProceduralTextures {
         handle
     }
 
+    pub fn get_plaster_normal_now(
+        &mut self,
+        seed: u32,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let key = format!("plaster_normal_{}", seed);
+        if let Some(handle) = self.cache.get(&key) {
+            return handle.clone();
+        }
+
+        let handle = images.add(plaster_normal(seed));
+        self.cache.insert(key, handle.clone());
+        handle
+    }
+
+    pub fn get_plaster_orm_now(
+        &mut self,
+        seed: u32,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let key = format!("plaster_orm_{}", seed);
+        if let Some(handle) = self.cache.get(&key) {
+            return handle.clone();
+        }
+
+        let handle = images.add(plaster_orm(seed));
+        self.cache.insert(key, handle.clone());
+        handle
+    }
+
     pub fn get_plaster_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("plaster_normal_{}", seed), images, move || {
             plaster_normal(seed)
+        })
+    }
+
+    pub fn get_plaster_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("plaster_orm_{}", seed), images, move || {
+            plaster_orm(seed)
         })
     }
 
@@ -287,6 +323,26 @@ fn build_normal(height: impl Fn(f32, f32) -> f32, strength: f32) -> Image {
     create_image(TEXTURE_SIZE, TEXTURE_SIZE, data, true)
 }
 
+fn build_orm(
+    occlusion: impl Fn(f32, f32) -> f32,
+    roughness: impl Fn(f32, f32) -> f32,
+    metallic: impl Fn(f32, f32) -> f32,
+) -> Image {
+    let mut data = vec![255; (TEXTURE_SIZE * TEXTURE_SIZE * 4) as usize];
+    for y in 0..TEXTURE_SIZE {
+        for x in 0..TEXTURE_SIZE {
+            let u = x as f32 / TEXTURE_SIZE as f32;
+            let v = y as f32 / TEXTURE_SIZE as f32;
+            let o = occlusion(u, v).clamp(0.0, 1.0);
+            let r = roughness(u, v).clamp(0.0, 1.0);
+            let m = metallic(u, v).clamp(0.0, 1.0);
+            write_rgba(&mut data, x, y, [o, r, m, 1.0]);
+        }
+    }
+    // ORM map shouldn't be sRGB, use linear. Same as normal map flag = true for create_image.
+    create_image(TEXTURE_SIZE, TEXTURE_SIZE, data, true)
+}
+
 fn write_rgba(data: &mut [u8], x: u32, y: u32, rgba: [f32; 4]) {
     let i = ((y * TEXTURE_SIZE + x) * 4) as usize;
     data[i] = to_u8(rgba[0]);
@@ -359,6 +415,22 @@ fn plaster_preview_albedo(seed: u32) -> Image {
 
 fn plaster_normal(seed: u32) -> Image {
     build_normal(|u, v| plaster_height(seed, u, v), 1.4)
+}
+
+fn plaster_orm(seed: u32) -> Image {
+    build_orm(
+        |u, v| {
+            // AO: deeper areas are darker
+            let h = plaster_height(seed, u, v);
+            0.6 + h * 0.4
+        },
+        |u, v| {
+            // Roughness: higher areas are slightly smoother, deeper areas are rougher
+            let h = plaster_height(seed, u, v);
+            0.98 - h * 0.15
+        },
+        |_, _| 0.0, // Metallic: 0
+    )
 }
 
 fn wood_height(seed: u32, u: f32, v: f32) -> f32 {

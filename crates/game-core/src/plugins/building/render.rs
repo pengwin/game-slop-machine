@@ -225,12 +225,16 @@ pub fn plaster_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    textured_material(
+    let orm = textures.get_plaster_orm(seed, images);
+    StandardMaterial {
         base_color,
-        textures.get_plaster_albedo(seed, images),
-        textures.get_plaster_normal(seed, images),
-        0.88,
-    )
+        base_color_texture: Some(textures.get_plaster_albedo(seed, images)),
+        normal_map_texture: Some(textures.get_plaster_normal(seed, images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
+        perceptual_roughness: 1.0,
+        ..default()
+    }
 }
 
 pub fn wood_material(

@@ -415,10 +415,14 @@ fn wall_preview_material(
 ) -> StandardMaterial {
     if fixture == "texture-plaster-wall" {
         let _ = rgb;
+        let orm = textures.get_plaster_orm_now(seed, images);
         StandardMaterial {
             base_color: Color::WHITE,
             base_color_texture: Some(textures.get_plaster_preview_albedo_now(seed, images)),
-            perceptual_roughness: 0.92,
+            normal_map_texture: Some(textures.get_plaster_normal_now(seed, images)),
+            metallic_roughness_texture: Some(orm.clone()),
+            occlusion_texture: Some(orm),
+            perceptual_roughness: 1.0,
             ..default()
         }
     } else {
