@@ -10,11 +10,12 @@ use bevy::{
     render::{
         camera::TemporalJitter,
         render_resource::TextureFormat,
-        view::screenshot::{save_to_disk, Screenshot},
+        view::screenshot::{Screenshot, save_to_disk},
     },
 };
 
-use crate::{fixtures, HeadlessFixture};
+use crate::{HeadlessFixture, fixtures};
+use game_core::plugins::building::procedural_texture::ProceduralTextures;
 use game_core::plugins::scene::camera_config::CameraConfig;
 use std::path::Path;
 
@@ -92,9 +93,7 @@ pub fn setup_screenshot(
         ));
     }
 
-    if fixtures::uses_studio_low_poly_render(&fixture.0)
-        && !fixtures::is_texture_fixture(&fixture.0)
-    {
+    if fixtures::uses_studio_low_poly_render(&fixture.0) && !fixtures::is_texture_fixture(&fixture.0) {
         camera.insert(EnvironmentMapLight {
             diffuse_map: asset_server.load("pisa_diffuse_rgb9e5_zstd.ktx2"),
             specular_map: asset_server.load("pisa_specular_rgb9e5_zstd.ktx2"),
@@ -111,15 +110,42 @@ pub fn capture_and_exit(
     fixture: Res<HeadlessFixture>,
     mut done: Local<bool>,
     mut frame_count: Local<u32>,
+    mut last_pending_textures: Local<Option<usize>>,
+    mut procedural_textures_ready_frame: Local<Option<u32>>,
     mut exit: MessageWriter<AppExit>,
+    textures: Option<Res<ProceduralTextures>>,
 ) {
     *frame_count += 1;
 
     if *frame_count >= 2 && !*done {
+        if let Some(textures) = textures.as_deref() {
+            let pending = textures.pending_count();
+            if pending > 0 {
+                let should_log =
+                    last_pending_textures.as_ref() != Some(&pending) || *frame_count % 30 == 0;
+                if should_log {
+                    println!(
+                        "headless frame {} fixture={} waiting for {} procedural textures",
+                        *frame_count, fixture.0, pending
+                    );
+                    *last_pending_textures = Some(pending);
+                }
+                return;
+            }
+
+            let ready_frame = procedural_textures_ready_frame.get_or_insert(*frame_count);
+            if *frame_count < *ready_frame + 30 {
+                return;
+            }
+        }
+
         let path = config.path.clone();
         ensure_parent_dir(&path);
         let _ = std::fs::remove_file(&path);
-        println!("headless frame {} fixture={} triggering capture", *frame_count, fixture.0);
+        println!(
+            "headless frame {} fixture={} triggering capture",
+            *frame_count, fixture.0
+        );
         commands
             .spawn(Screenshot::image(handle.0.clone()))
             .observe(save_to_disk(path));
@@ -140,7 +166,7 @@ pub fn capture_and_exit(
                             break;
                         }
                     }
-                    
+
                     if has_other_color {
                         println!("Screenshot capture complete (rendered successfully)");
                         exit.write(AppExit::Success);

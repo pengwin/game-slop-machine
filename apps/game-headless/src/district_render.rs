@@ -14,7 +14,8 @@ pub fn spawn_district(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     fixture: &str,
 ) {
     commands.insert_resource(fixtures::district_camera_for_fixture(fixture));
@@ -33,7 +34,12 @@ pub fn spawn_district(
     let sq_mesh = make_ground_quad(Vec3::new(0.0, 0.005, 0.0), sq * 2.0, sq * 2.0);
     commands.spawn((
         Mesh3d(meshes.add(sq_mesh)),
-        MeshMaterial3d(materials.add(stone_material(Color::srgb(0.76, 0.70, 0.50), textures))),
+        MeshMaterial3d(materials.add(stone_material(
+            Color::srgb(0.76, 0.70, 0.50),
+            textures,
+            images,
+            district_config.seed as u32,
+        ))),
         Transform::default(),
         Name::new("Town Square"),
     ));
@@ -54,7 +60,12 @@ pub fn spawn_district(
         let road_mesh = make_ground_quad(Vec3::ZERO, length, road.width);
         commands.spawn((
             Mesh3d(meshes.add(road_mesh)),
-            MeshMaterial3d(materials.add(road_material(Color::srgb(0.55, 0.45, 0.35), textures))),
+            MeshMaterial3d(materials.add(road_material(
+                Color::srgb(0.55, 0.45, 0.35),
+                textures,
+                images,
+                district_config.seed as u32,
+            ))),
             Transform {
                 translation: Vec3::new(cx, 0.005, cz),
                 rotation: Quat::from_rotation_y(-angle),
@@ -83,6 +94,7 @@ pub fn spawn_district(
                 meshes,
                 materials,
                 textures,
+                images,
                 &building.config,
                 &building.layout,
                 Transform {
@@ -102,6 +114,7 @@ pub fn spawn_district(
                 meshes,
                 materials,
                 textures,
+                images,
                 lot.entrance,
                 door_world_position,
                 building.lot_index,
@@ -175,7 +188,8 @@ fn spawn_entrance_approach(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     start: Vec2,
     end: Vec2,
     lot_index: usize,
@@ -191,7 +205,12 @@ fn spawn_entrance_approach(
     let center = Vec2::new((start.x + end.x) / 2.0, (start.y + end.y) / 2.0);
     commands.spawn((
         Mesh3d(meshes.add(make_ground_quad(Vec3::ZERO, length, 0.75))),
-        MeshMaterial3d(materials.add(road_material(Color::srgb(0.24, 0.18, 0.12), textures))),
+        MeshMaterial3d(materials.add(road_material(
+            Color::srgb(0.24, 0.18, 0.12),
+            textures,
+            images,
+            lot_index as u32,
+        ))),
         Transform {
             translation: Vec3::new(center.x, 0.035, center.y),
             rotation: Quat::from_rotation_y(-angle),

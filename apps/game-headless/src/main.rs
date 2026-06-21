@@ -13,10 +13,10 @@ use bevy::{
     window::ExitCondition,
     winit::WinitPlugin,
 };
-use game_core::plugins::building::procedural_texture::{generate_textures, ProceduralTextures};
+use game_core::plugins::GamePlugin;
+use game_core::plugins::building::procedural_texture::ProceduralTextures;
 use game_core::plugins::scene::camera_config::CameraConfig;
 use game_core::plugins::scene::scene_config::SceneConfig;
-use game_core::plugins::GamePlugin;
 use std::time::Duration;
 
 fn main() {
@@ -120,32 +120,21 @@ fn generate_building(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
     fixture: Res<HeadlessFixture>,
-    textures: Option<Res<ProceduralTextures>>,
+    mut textures: ResMut<ProceduralTextures>,
 ) {
-    let generated_textures;
-    let textures = match textures {
-        Some(ref textures) => textures.as_ref(),
-        None => {
-            generated_textures = generate_textures(&mut images);
-            commands.insert_resource(generated_textures.clone());
-            &generated_textures
-        }
-    };
-
     if fixtures::is_district_fixture(&fixture.0) {
         district_render::spawn_district(
             &mut commands,
             &mut meshes,
             &mut materials,
-            textures,
+            &mut textures,
+            &mut images,
             &fixture.0,
         );
         return;
     }
 
-    if fixture.0 == "texture-plaster-wall" {
-        setup_studio_low_poly_render(&mut commands);
-    } else if fixtures::is_texture_fixture(&fixture.0) {
+    if fixtures::is_texture_fixture(&fixture.0) {
         setup_texture_fixture_render(&mut commands);
     } else if fixtures::uses_studio_low_poly_render(&fixture.0) {
         setup_studio_low_poly_render(&mut commands);
@@ -156,7 +145,8 @@ fn generate_building(
             &mut commands,
             &mut meshes,
             &mut materials,
-            textures,
+            &mut textures,
+            &mut images,
             &fixture.0,
         );
         return;
@@ -177,7 +167,8 @@ fn generate_building(
         &mut commands,
         &mut meshes,
         &mut materials,
-        textures,
+        &mut textures,
+        &mut images,
         &config,
         &fixture.0,
     );

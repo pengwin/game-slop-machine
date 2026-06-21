@@ -35,10 +35,7 @@ pub fn is_furniture_fixture(fixture: &str) -> bool {
 }
 
 pub fn is_texture_fixture(fixture: &str) -> bool {
-    matches!(
-        fixture,
-        "texture-plaster-wall" | "texture-wood-table" | "texture-material-board"
-    )
+    matches!(fixture, "texture-wood-table" | "texture-material-board")
 }
 
 pub fn uses_studio_low_poly_render(fixture: &str) -> bool {
@@ -65,9 +62,9 @@ pub fn furniture_camera_for_fixture(fixture: &str) -> CameraConfig {
 pub fn texture_camera_for_fixture(fixture: &str) -> CameraConfig {
     match fixture {
         "texture-plaster-wall" => CameraConfig {
-            position: Vec3::new(9.0, 7.1, 0.6),
-            target: Vec3::new(6.8, 0.7, 4.8),
-            viewport_height: 5.2,
+            position: Vec3::new(7.8, 10.2, -4.4),
+            target: Vec3::new(4.0, 0.50, 3.0),
+            viewport_height: 8.7,
         },
         "texture-wood-table" => CameraConfig {
             position: Vec3::new(1.7, 1.15, 2.0),
@@ -111,7 +108,7 @@ pub fn district_ground_size_for_fixture(fixture: &str) -> f32 {
 }
 
 pub fn building_camera_for_fixture(fixture: &str) -> Option<CameraConfig> {
-    if fixture == "picture-room" {
+    if matches!(fixture, "picture-room" | "texture-plaster-wall") {
         Some(CameraConfig {
             position: Vec3::new(7.8, 10.2, -4.4),
             target: Vec3::new(4.0, 0.50, 3.0),
@@ -223,7 +220,7 @@ pub fn config_for_fixture(fixture: &str) -> BuildingConfig {
             render_roof: false,
             ..Default::default()
         },
-        "picture-room" => BuildingConfig {
+        "picture-room" | "texture-plaster-wall" => BuildingConfig {
             seed: 17,
             has_stove: false,
             footprint: Rect::new(0.0, 0.0, 8.0, 6.0),

@@ -2,23 +2,26 @@ use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::Vec2;
-use building_gen::mesh::generate_building_mesh;
 use building_gen::mesh::MeshData;
+use building_gen::mesh::generate_building_mesh;
 use building_gen::scene::{SceneObject, SceneObjectKind};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
 use game_core::plugins::building::mesh_util::convert_mesh;
+use game_core::plugins::building::procedural_texture::ProceduralTextures;
+use game_core::plugins::building::render::spawn_building_mesh;
 
 pub fn spawn_building_preview(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    _textures: &game_core::plugins::building::procedural_texture::ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     config: &BuildingConfig,
     fixture: &str,
 ) {
     let (grid, layout) = match fixture {
-        "procedural" | "with-roof" | "corridor" | "picture-room" => {
+        "procedural" | "with-roof" | "corridor" | "picture-room" | "texture-plaster-wall" => {
             let l = building_gen::generate_layout(config);
             (l.tile_grid.clone(), Some(l))
         }
@@ -129,6 +132,22 @@ pub fn spawn_building_preview(
         bmesh.window_mesh.indices.len() / 3
     );
 
+    if fixture == "procedural" {
+        spawn_building_mesh(
+            commands,
+            meshes,
+            materials,
+            textures,
+            images,
+            config,
+            &bmesh,
+            Transform::default(),
+            "Procedural Preview",
+        );
+        println!("{} test building generated", fixture);
+        return;
+    }
+
     if !bmesh.foundation_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
@@ -141,11 +160,16 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.wall_mesh.is_empty() {
+        let wall_mesh = wall_preview_mesh(fixture, &bmesh.wall_mesh);
         commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&bmesh.wall_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
+            Mesh3d(meshes.add(convert_mesh(&wall_mesh))),
+            MeshMaterial3d(materials.add(wall_preview_material(
+                fixture,
                 config.visual_style.wall_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Walls"),
@@ -153,11 +177,16 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.wall_top_mesh.is_empty() {
+        let wall_top_mesh = wall_preview_mesh(fixture, &bmesh.wall_top_mesh);
         commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&bmesh.wall_top_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
+            Mesh3d(meshes.add(convert_mesh(&wall_top_mesh))),
+            MeshMaterial3d(materials.add(wall_preview_material(
+                fixture,
                 config.visual_style.wall_top_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Wall Top Faces"),
@@ -168,9 +197,13 @@ pub fn spawn_building_preview(
         let bevel_mesh = building_wall_bevel_mesh(config);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bevel_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
+            MeshMaterial3d(materials.add(wall_preview_material(
+                fixture,
                 config.visual_style.wall_top_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Building Wall Bevels"),
@@ -178,11 +211,16 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_wall_mesh.is_empty() {
+        let exterior_wall_mesh = wall_preview_mesh(fixture, &bmesh.exterior_wall_mesh);
         commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_wall_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
+            Mesh3d(meshes.add(convert_mesh(&exterior_wall_mesh))),
+            MeshMaterial3d(materials.add(wall_preview_material(
+                fixture,
                 config.visual_style.exterior_wall_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Exterior Wall Faces"),
@@ -190,11 +228,16 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_corner_mesh.is_empty() {
+        let exterior_corner_mesh = wall_preview_mesh(fixture, &bmesh.exterior_corner_mesh);
         commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_corner_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
+            Mesh3d(meshes.add(convert_mesh(&exterior_corner_mesh))),
+            MeshMaterial3d(materials.add(wall_preview_material(
+                fixture,
                 config.visual_style.corner_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Exterior Corner Faces"),
@@ -202,11 +245,16 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_t_junction_mesh.is_empty() {
+        let exterior_t_junction_mesh = wall_preview_mesh(fixture, &bmesh.exterior_t_junction_mesh);
         commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&bmesh.exterior_t_junction_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
+            Mesh3d(meshes.add(convert_mesh(&exterior_t_junction_mesh))),
+            MeshMaterial3d(materials.add(wall_preview_material(
+                fixture,
                 config.visual_style.t_junction_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Exterior T-Junction Faces"),
@@ -330,7 +378,7 @@ pub fn spawn_building_preview(
                     Name::new(format!("{:?}", item.item_type)),
                 ));
             }
-            if fixture == "picture-room" {
+            if matches!(fixture, "picture-room" | "texture-plaster-wall") {
                 spawn_picture_room_staged_props(commands, meshes, materials, config);
             }
         }
@@ -356,6 +404,51 @@ fn low_poly_cull_material(color: Color) -> StandardMaterial {
         cull_mode: None,
         ..low_poly_material(color)
     }
+}
+
+fn wall_preview_material(
+    fixture: &str,
+    rgb: [f32; 3],
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    if fixture == "texture-plaster-wall" {
+        let _ = rgb;
+        StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(textures.get_plaster_preview_albedo_now(seed, images)),
+            perceptual_roughness: 0.92,
+            ..default()
+        }
+    } else {
+        low_poly_material(style_color(rgb))
+    }
+}
+
+fn wall_preview_mesh(fixture: &str, mesh: &MeshData) -> MeshData {
+    if fixture != "texture-plaster-wall" {
+        return mesh.clone();
+    }
+
+    let mut mesh = mesh.clone();
+    let scale = 0.62;
+    for (uv, (position, normal)) in mesh
+        .uvs
+        .iter_mut()
+        .zip(mesh.vertices.iter().zip(mesh.normals.iter()))
+    {
+        let [x, y, z] = *position;
+        let [nx, ny, nz] = *normal;
+        if ny.abs() > 0.75 {
+            *uv = [x * scale, z * scale];
+        } else if nx.abs() > nz.abs() {
+            *uv = [z * scale, y * scale];
+        } else {
+            *uv = [x * scale, y * scale];
+        }
+    }
+    mesh
 }
 
 fn building_wall_bevel_mesh(config: &BuildingConfig) -> MeshData {

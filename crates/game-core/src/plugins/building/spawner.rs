@@ -17,7 +17,8 @@ pub fn spawn_building_on_command(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    textures: Res<ProceduralTextures>,
+    mut textures: ResMut<ProceduralTextures>,
+    mut images: ResMut<Assets<Image>>,
     input: Res<ButtonInput<KeyCode>>,
     existing: Option<ResMut<CurrentBuilding>>,
 ) {
@@ -45,7 +46,8 @@ pub fn spawn_building_on_command(
         &mut commands,
         &mut meshes,
         &mut materials,
-        &textures,
+        &mut textures,
+        &mut images,
         &config,
         &building_gen::layout::BuildingLayout {
             tile_grid: grid,

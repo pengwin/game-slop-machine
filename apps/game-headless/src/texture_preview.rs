@@ -1,19 +1,20 @@
 use crate::fixtures;
 use bevy::prelude::*;
-use building_gen::mesh::math_util::{append_quad, Quad};
 use building_gen::mesh::MeshData;
+use building_gen::mesh::math_util::{Quad, append_quad};
 use game_core::plugins::building::mesh_util::convert_mesh;
 use game_core::plugins::building::procedural_texture::ProceduralTextures;
 use game_core::plugins::building::render::{
-    brick_material, plaster_material, road_material, roof_tile_material, spawn_building_layout,
-    stone_material, wood_material,
+    brick_material, plaster_material, road_material, roof_tile_material,
+    spawn_building_layout, stone_material, wood_material,
 };
 
 pub fn spawn_texture_preview(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     fixture: &str,
 ) {
     println!("Spawning texture preview fixture: {}", fixture);
@@ -32,10 +33,12 @@ pub fn spawn_texture_preview(
     }
 
     match fixture {
-        "texture-plaster-wall" => spawn_plaster_wall(commands, meshes, materials, textures),
-        "texture-wood-table" => spawn_wood_table(commands, meshes, materials, textures),
-        "texture-material-board" => spawn_material_board(commands, meshes, materials, textures),
-        _ => spawn_material_board(commands, meshes, materials, textures),
+        "texture-plaster-wall" => spawn_plaster_wall(commands, meshes, materials, textures, images),
+        "texture-wood-table" => spawn_wood_table(commands, meshes, materials, textures, images),
+        "texture-material-board" => {
+            spawn_material_board(commands, meshes, materials, textures, images)
+        }
+        _ => spawn_material_board(commands, meshes, materials, textures, images),
     }
 }
 
@@ -43,7 +46,8 @@ fn spawn_plaster_wall(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
 ) {
     let config = fixtures::config_for_fixture("picture-room");
     let layout = building_gen::generate_layout(&config);
@@ -52,6 +56,7 @@ fn spawn_plaster_wall(
         meshes,
         materials,
         textures,
+        images,
         &config,
         &layout,
         Transform::default(),
@@ -63,12 +68,18 @@ fn spawn_wood_table(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
 ) {
     let table = textured_table_mesh();
     commands.spawn((
         Mesh3d(meshes.add(convert_mesh(&table))),
-        MeshMaterial3d(materials.add(wood_material(Color::srgb(0.78, 0.56, 0.34), textures))),
+        MeshMaterial3d(materials.add(wood_material(
+            Color::srgb(0.78, 0.56, 0.34),
+            textures,
+            images,
+            0,
+        ))),
         Transform::default(),
         Name::new("Texture Wood Table"),
     ));
@@ -78,32 +89,33 @@ fn spawn_material_board(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
 ) {
     let swatches = [
         (
             "Plaster",
-            plaster_material(Color::srgb(0.86, 0.82, 0.72), textures),
+            plaster_material(Color::srgb(0.86, 0.82, 0.72), textures, images, 0),
         ),
         (
             "Wood",
-            wood_material(Color::srgb(0.78, 0.56, 0.34), textures),
+            wood_material(Color::srgb(0.78, 0.56, 0.34), textures, images, 0),
         ),
         (
             "Brick",
-            brick_material(Color::srgb(0.92, 0.72, 0.58), textures),
+            brick_material(Color::srgb(0.92, 0.72, 0.58), textures, images, 0),
         ),
         (
             "Roof",
-            roof_tile_material(Color::srgb(0.78, 0.36, 0.24), textures),
+            roof_tile_material(Color::srgb(0.78, 0.36, 0.24), textures, images, 0),
         ),
         (
             "Stone",
-            stone_material(Color::srgb(0.68, 0.66, 0.58), textures),
+            stone_material(Color::srgb(0.68, 0.66, 0.58), textures, images, 0),
         ),
         (
             "Road",
-            road_material(Color::srgb(0.62, 0.52, 0.40), textures),
+            road_material(Color::srgb(0.62, 0.52, 0.40), textures, images, 0),
         ),
     ];
 

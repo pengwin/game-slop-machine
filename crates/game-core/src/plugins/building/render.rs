@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::layout::BuildingLayout;
-use building_gen::mesh::{generate_building_mesh, BuildingMesh, MeshData};
+use building_gen::mesh::{BuildingMesh, MeshData, generate_building_mesh};
 
 use super::mesh_util::convert_mesh;
 use super::procedural_texture::ProceduralTextures;
@@ -10,7 +10,8 @@ pub fn spawn_building_layout(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     config: &BuildingConfig,
     layout: &BuildingLayout,
     transform: Transform,
@@ -22,6 +23,7 @@ pub fn spawn_building_layout(
         meshes,
         materials,
         textures,
+        images,
         config,
         &bmesh,
         transform,
@@ -33,7 +35,8 @@ pub fn spawn_building_mesh(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     config: &BuildingConfig,
     bmesh: &BuildingMesh,
     transform: Transform,
@@ -48,7 +51,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.foundation_mesh,
-        foundation_material(config, textures),
+        foundation_material(config, textures, images, config.seed as u32),
         transform,
         &name("Foundation"),
     );
@@ -58,7 +61,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.wall_mesh,
-        wall_material(config, textures),
+        wall_material(config, textures, images, config.seed as u32),
         transform,
         &name("Walls"),
     );
@@ -68,7 +71,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.wall_top_mesh,
-        wall_top_material(config, textures),
+        wall_top_material(config, textures, images, config.seed as u32),
         transform,
         &name("Wall Top Faces"),
     );
@@ -78,7 +81,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.exterior_wall_mesh,
-        exterior_wall_material(config, textures),
+        exterior_wall_material(config, textures, images, config.seed as u32),
         transform,
         &name("Exterior Wall Faces"),
     );
@@ -88,7 +91,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.exterior_corner_mesh,
-        exterior_corner_material(config, textures),
+        exterior_corner_material(config, textures, images, config.seed as u32),
         transform,
         &name("Exterior Corner Faces"),
     );
@@ -98,7 +101,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.exterior_t_junction_mesh,
-        exterior_t_junction_material(config, textures),
+        exterior_t_junction_material(config, textures, images, config.seed as u32),
         transform,
         &name("Exterior T-Junction Faces"),
     );
@@ -108,7 +111,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.floor_mesh,
-        floor_material(config, textures),
+        floor_material(config, textures, images, config.seed as u32),
         transform,
         &name("Floor"),
     );
@@ -120,7 +123,7 @@ pub fn spawn_building_mesh(
             materials,
             &mut entities,
             &bmesh.roof_mesh,
-            roof_material(config, textures),
+            roof_material(config, textures, images, config.seed as u32),
             transform,
             &name("Roof"),
         );
@@ -130,7 +133,7 @@ pub fn spawn_building_mesh(
             materials,
             &mut entities,
             &bmesh.gable_mesh,
-            exterior_wall_material(config, textures),
+            exterior_wall_material(config, textures, images, config.seed as u32),
             transform,
             &name("Gables"),
         );
@@ -142,7 +145,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.door_mesh,
-        door_material(config, textures),
+        door_material(config, textures, images, config.seed as u32),
         transform,
         &name("Doors"),
     );
@@ -216,72 +219,127 @@ pub fn textured_material(
     }
 }
 
-pub fn plaster_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+pub fn plaster_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.plaster_albedo.clone(),
-        textures.plaster_normal.clone(),
+        textures.get_plaster_albedo(seed, images),
+        textures.get_plaster_normal(seed, images),
         0.88,
     )
 }
 
-pub fn wood_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+pub fn wood_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.wood_albedo.clone(),
-        textures.wood_normal.clone(),
+        textures.get_wood_albedo(seed, images),
+        textures.get_wood_normal(seed, images),
         0.68,
     )
 }
 
-pub fn brick_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+pub fn brick_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.brick_albedo.clone(),
-        textures.brick_normal.clone(),
+        textures.get_brick_albedo(seed, images),
+        textures.get_brick_normal(seed, images),
         0.84,
     )
 }
 
-pub fn roof_tile_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+pub fn roof_tile_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.roof_albedo.clone(),
-        textures.roof_normal.clone(),
+        textures.get_roof_albedo(seed, images),
+        textures.get_roof_normal(seed, images),
         0.78,
     )
 }
 
-pub fn stone_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+pub fn stone_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.stone_albedo.clone(),
-        textures.stone_normal.clone(),
+        textures.get_stone_albedo(seed, images),
+        textures.get_stone_normal(seed, images),
         0.95,
     )
 }
 
-pub fn road_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+pub fn road_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.road_albedo.clone(),
-        textures.road_normal.clone(),
+        textures.get_road_albedo(seed, images),
+        textures.get_road_normal(seed, images),
         0.98,
     )
 }
 
-fn foundation_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
-    stone_material(color(config.visual_style.foundation_color), textures)
+fn foundation_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    stone_material(
+        color(config.visual_style.foundation_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
-fn wall_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
-    plaster_material(color(config.visual_style.wall_color), textures)
+fn wall_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    plaster_material(
+        color(config.visual_style.wall_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
-fn wall_top_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
+fn wall_top_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.wall_top_color),
-        base_color_texture: Some(textures.plaster_albedo.clone()),
+        base_color_texture: Some(textures.get_plaster_albedo(seed, images)),
         unlit: true,
         ..default()
     }
@@ -289,38 +347,79 @@ fn wall_top_material(config: &BuildingConfig, textures: &ProceduralTextures) -> 
 
 fn exterior_wall_material(
     config: &BuildingConfig,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
 ) -> StandardMaterial {
-    brick_material(color(config.visual_style.exterior_wall_color), textures)
+    brick_material(
+        color(config.visual_style.exterior_wall_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
 fn exterior_corner_material(
     config: &BuildingConfig,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
 ) -> StandardMaterial {
-    brick_material(color(config.visual_style.corner_color), textures)
+    brick_material(color(config.visual_style.corner_color), textures, images, seed)
 }
 
 fn exterior_t_junction_material(
     config: &BuildingConfig,
-    textures: &ProceduralTextures,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
 ) -> StandardMaterial {
-    brick_material(color(config.visual_style.t_junction_color), textures)
+    brick_material(
+        color(config.visual_style.t_junction_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
-fn floor_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
-    wood_material(color(config.visual_style.floor_color), textures)
+fn floor_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    wood_material(
+        color(config.visual_style.floor_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
-fn roof_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
-    roof_tile_material(color(config.visual_style.roof_color), textures)
+fn roof_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    roof_tile_material(
+        color(config.visual_style.roof_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
-fn door_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
+fn door_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.door_color),
-        base_color_texture: Some(textures.wood_albedo.clone()),
-        normal_map_texture: Some(textures.wood_normal.clone()),
+        base_color_texture: Some(textures.get_wood_albedo(seed, images)),
+        normal_map_texture: Some(textures.get_wood_normal(seed, images)),
         cull_mode: None,
         perceptual_roughness: 0.72,
         ..default()
