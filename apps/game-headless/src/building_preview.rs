@@ -160,7 +160,7 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.wall_mesh.is_empty() {
-        let wall_mesh = wall_preview_mesh(fixture, &bmesh.wall_mesh);
+        let wall_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.wall_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&wall_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -177,7 +177,7 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.wall_top_mesh.is_empty() {
-        let wall_top_mesh = wall_preview_mesh(fixture, &bmesh.wall_top_mesh);
+        let wall_top_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.wall_top_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&wall_top_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -211,7 +211,7 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_wall_mesh.is_empty() {
-        let exterior_wall_mesh = wall_preview_mesh(fixture, &bmesh.exterior_wall_mesh);
+        let exterior_wall_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_wall_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&exterior_wall_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -228,7 +228,7 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_corner_mesh.is_empty() {
-        let exterior_corner_mesh = wall_preview_mesh(fixture, &bmesh.exterior_corner_mesh);
+        let exterior_corner_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_corner_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&exterior_corner_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -245,7 +245,7 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_t_junction_mesh.is_empty() {
-        let exterior_t_junction_mesh = wall_preview_mesh(fixture, &bmesh.exterior_t_junction_mesh);
+        let exterior_t_junction_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_t_junction_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&exterior_t_junction_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -430,27 +430,29 @@ fn wall_preview_material(
     }
 }
 
-fn wall_preview_mesh(fixture: &str, mesh: &MeshData) -> MeshData {
+fn wall_preview_mesh(fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
     if fixture != "texture-plaster-wall" {
         return mesh.clone();
     }
 
-    let mut mesh = mesh.clone();
+    let mut mesh = game_core::plugins::building::mesh_util::subdivide_mesh_data(mesh, 0.5);
     let scale = 0.62;
-    for (uv, (position, normal)) in mesh
-        .uvs
-        .iter_mut()
-        .zip(mesh.vertices.iter().zip(mesh.normals.iter()))
-    {
-        let [x, y, z] = *position;
-        let [nx, ny, nz] = *normal;
+    mesh.colors.clear();
+    for i in 0..mesh.vertices.len() {
+        let position = mesh.vertices[i];
+        let normal = mesh.normals[i];
+        
+        let [x, y, z] = position;
+        let [nx, ny, nz] = normal;
         if ny.abs() > 0.75 {
-            *uv = [x * scale, z * scale];
+            mesh.uvs[i] = [x * scale, z * scale];
         } else if nx.abs() > nz.abs() {
-            *uv = [z * scale, y * scale];
+            mesh.uvs[i] = [z * scale, y * scale];
         } else {
-            *uv = [x * scale, y * scale];
+            mesh.uvs[i] = [x * scale, y * scale];
         }
+        
+        mesh.colors.push(game_core::plugins::building::procedural_texture::global_dirt_color(seed, position, normal));
     }
     mesh
 }

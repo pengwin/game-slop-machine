@@ -54,6 +54,7 @@ pub fn spawn_building_mesh(
         foundation_material(config, textures, images, config.seed as u32),
         transform,
         &name("Foundation"),
+        None,
     );
     spawn_part(
         commands,
@@ -64,6 +65,7 @@ pub fn spawn_building_mesh(
         wall_material(config, textures, images, config.seed as u32),
         transform,
         &name("Walls"),
+        Some(config.seed as u32),
     );
     spawn_part(
         commands,
@@ -74,6 +76,7 @@ pub fn spawn_building_mesh(
         wall_top_material(config, textures, images, config.seed as u32),
         transform,
         &name("Wall Top Faces"),
+        Some(config.seed as u32),
     );
     spawn_part(
         commands,
@@ -84,6 +87,7 @@ pub fn spawn_building_mesh(
         exterior_wall_material(config, textures, images, config.seed as u32),
         transform,
         &name("Exterior Wall Faces"),
+        Some(config.seed as u32),
     );
     spawn_part(
         commands,
@@ -94,6 +98,7 @@ pub fn spawn_building_mesh(
         exterior_corner_material(config, textures, images, config.seed as u32),
         transform,
         &name("Exterior Corner Faces"),
+        Some(config.seed as u32),
     );
     spawn_part(
         commands,
@@ -104,6 +109,7 @@ pub fn spawn_building_mesh(
         exterior_t_junction_material(config, textures, images, config.seed as u32),
         transform,
         &name("Exterior T-Junction Faces"),
+        Some(config.seed as u32),
     );
     spawn_part(
         commands,
@@ -114,6 +120,7 @@ pub fn spawn_building_mesh(
         floor_material(config, textures, images, config.seed as u32),
         transform,
         &name("Floor"),
+        None,
     );
 
     if config.render_roof {
@@ -126,6 +133,7 @@ pub fn spawn_building_mesh(
             roof_material(config, textures, images, config.seed as u32),
             transform,
             &name("Roof"),
+            None,
         );
         spawn_part(
             commands,
@@ -136,6 +144,7 @@ pub fn spawn_building_mesh(
             exterior_wall_material(config, textures, images, config.seed as u32),
             transform,
             &name("Gables"),
+            Some(config.seed as u32),
         );
     }
 
@@ -148,6 +157,7 @@ pub fn spawn_building_mesh(
         door_material(config, textures, images, config.seed as u32),
         transform,
         &name("Doors"),
+        None,
     );
     spawn_part(
         commands,
@@ -158,6 +168,7 @@ pub fn spawn_building_mesh(
         opening_trim_material(config),
         transform,
         &name("Opening Trim"),
+        None,
     );
     spawn_part(
         commands,
@@ -168,6 +179,7 @@ pub fn spawn_building_mesh(
         window_material(),
         transform,
         &name("Windows"),
+        None,
     );
 
     entities
@@ -183,15 +195,25 @@ fn spawn_part(
     material: StandardMaterial,
     transform: Transform,
     name: &str,
+    dirt_seed: Option<u32>,
 ) {
     if mesh_data.is_empty() {
         return;
     }
 
+    let mesh = if let Some(seed) = dirt_seed {
+        let subdivided = super::mesh_util::subdivide_mesh_data(mesh_data, 0.5); // Subdivide to 0.5m chunks for high vertex color density
+        let mut m = convert_mesh(&subdivided);
+        super::mesh_util::apply_dirt_vertex_colors(&mut m, seed);
+        m
+    } else {
+        convert_mesh(mesh_data)
+    };
+
     entities.push(
         commands
             .spawn((
-                Mesh3d(meshes.add(convert_mesh(mesh_data))),
+                Mesh3d(meshes.add(mesh)),
                 MeshMaterial3d(materials.add(material)),
                 transform,
                 Name::new(name.to_string()),

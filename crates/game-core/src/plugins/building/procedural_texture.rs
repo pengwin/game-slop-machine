@@ -355,11 +355,39 @@ fn to_u8(v: f32) -> u8 {
     (v.clamp(0.0, 1.0) * 255.0).round() as u8
 }
 
-fn fbm(seed: u32, frequency: f64, octaves: usize, u: f32, v: f32) -> f32 {
+pub fn fbm(seed: u32, frequency: f64, octaves: usize, u: f32, v: f32) -> f32 {
     let noise = Fbm::<Perlin>::new(seed)
         .set_frequency(frequency)
         .set_octaves(octaves);
     (noise.get([u as f64, v as f64]) as f32 * 0.5 + 0.5).clamp(0.0, 1.0)
+}
+
+pub fn global_dirt_color(seed: u32, position: [f32; 3], normal: [f32; 3]) -> [f32; 4] {
+    let [x, y, z] = position;
+    let (u, v) = if normal[1].abs() > 0.75 {
+        (x, z)
+    } else if normal[0].abs() > normal[2].abs() {
+        (z, y)
+    } else {
+        (x, y)
+    };
+    
+    // Large dirt patches across the wall (frequency 0.25)
+    let dirt_mask = fbm(95 ^ seed, 0.25, 3, u, v);
+    let dirt = (dirt_mask * 1.6 - 0.2).clamp(0.0, 1.0);
+    
+    // Vertical gradient: dirty near the floor (y=0)
+    let bottom_dirt = (1.0 - (y * 0.6)).clamp(0.0, 1.0);
+    
+    // Total dirt amount
+    let total_dirt = (dirt + bottom_dirt * 0.7).clamp(0.0, 1.0);
+    
+    // Shift color: lower RGB and push hue towards warm brown-grey
+    let r = 1.0 - total_dirt * 0.35;
+    let g = 1.0 - total_dirt * 0.45;
+    let b = 1.0 - total_dirt * 0.55;
+    
+    [r, g, b, 1.0]
 }
 
 fn cell_noise(seed: u32, ix: i32, iy: i32) -> f32 {
@@ -386,24 +414,30 @@ fn plaster_height(seed: u32, u: f32, v: f32) -> f32 {
 
 fn plaster_albedo(seed: u32) -> Image {
     build_albedo(
-        [0.96, 0.95, 0.90],
-        |u, v| 0.82 + plaster_height(seed, u, v) * 0.20,
+        [0.95, 0.88, 0.70], // Light yellow/sand color
+        |u, v| {
+            let base = 0.82 + plaster_height(seed, u, v) * 0.20;
+            base.clamp(0.4, 1.1)
+        },
         |_, _| [1.0, 1.0, 1.0],
     )
 }
 
 fn plaster_preview_albedo(seed: u32) -> Image {
     build_albedo(
-        [0.68, 0.59, 0.46],
+        [0.95, 0.88, 0.70], // Light yellow/sand color
         |u, v| {
             let broad = fbm(90 ^ seed, 2.3, 5, u * 0.82 + 0.13, v * 0.82 - 0.07);
             let cloudy = fbm(91 ^ seed, 6.5, 4, u + broad * 0.10, v - broad * 0.08);
             let fine = fbm(92 ^ seed, 30.0, 2, u, v);
-            (0.90 + broad * 0.10 + cloudy * 0.07 + fine * 0.020).clamp(0.76, 1.03)
+            
+            let base_shade = 0.90 + broad * 0.10 + cloudy * 0.07 + fine * 0.020;
+            base_shade.clamp(0.6, 1.1)
         },
         |u, v| {
             let stain = fbm(93 ^ seed, 3.4, 4, u + 0.17, v - 0.11);
             let age = fbm(94 ^ seed, 12.0, 2, u - 0.23, v + 0.19);
+            
             [
                 0.96 + stain * 0.030 + age * 0.010,
                 0.96 + stain * 0.026 + age * 0.008,
