@@ -20,6 +20,7 @@ pub fn spawn_district_on_command(
     input: Res<ButtonInput<KeyCode>>,
     config: Res<DistrictGenConfig>,
     seed: Res<GenerationSeed>,
+    textures: Res<crate::plugins::building::procedural_texture::ProceduralTextures>,
     existing: Option<ResMut<CurrentDistrict>>,
 ) {
     if !input.just_pressed(KeyCode::KeyT) {
@@ -103,6 +104,7 @@ pub fn spawn_district_on_command(
             &mut commands,
             &mut meshes,
             &mut materials,
+            &textures,
             &building.config,
             &building.layout,
             Transform {

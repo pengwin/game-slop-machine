@@ -34,6 +34,13 @@ pub fn is_furniture_fixture(fixture: &str) -> bool {
     )
 }
 
+pub fn is_texture_fixture(fixture: &str) -> bool {
+    matches!(
+        fixture,
+        "texture-plaster-wall" | "texture-wood-table" | "texture-material-board"
+    )
+}
+
 pub fn uses_studio_low_poly_render(fixture: &str) -> bool {
     !is_district_fixture(fixture)
 }
@@ -52,6 +59,26 @@ pub fn furniture_camera_for_fixture(fixture: &str) -> CameraConfig {
         position: pos,
         target: Vec3::new(0.0, 0.2, 0.0),
         viewport_height: vh,
+    }
+}
+
+pub fn texture_camera_for_fixture(fixture: &str) -> CameraConfig {
+    match fixture {
+        "texture-plaster-wall" => CameraConfig {
+            position: Vec3::new(9.0, 7.1, 0.6),
+            target: Vec3::new(6.8, 0.7, 4.8),
+            viewport_height: 5.2,
+        },
+        "texture-wood-table" => CameraConfig {
+            position: Vec3::new(1.7, 1.15, 2.0),
+            target: Vec3::new(0.0, 0.45, 0.0),
+            viewport_height: 1.8,
+        },
+        _ => CameraConfig {
+            position: Vec3::new(2.4, 1.8, 4.2),
+            target: Vec3::new(0.0, 0.75, 0.0),
+            viewport_height: 2.9,
+        },
     }
 }
 

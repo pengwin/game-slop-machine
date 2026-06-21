@@ -4,6 +4,7 @@ use building_gen::geometry::{Rect, Vec2};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
 
+use super::procedural_texture::ProceduralTextures;
 use super::render::spawn_building_layout;
 
 #[derive(Resource)]
@@ -16,6 +17,7 @@ pub fn spawn_building_on_command(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    textures: Res<ProceduralTextures>,
     input: Res<ButtonInput<KeyCode>>,
     existing: Option<ResMut<CurrentBuilding>>,
 ) {
@@ -43,6 +45,7 @@ pub fn spawn_building_on_command(
         &mut commands,
         &mut meshes,
         &mut materials,
+        &textures,
         &config,
         &building_gen::layout::BuildingLayout {
             tile_grid: grid,

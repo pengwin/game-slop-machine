@@ -3,7 +3,9 @@ use building_gen::district::generate_district;
 use building_gen::district::layout::TradeDistrictLayout;
 use building_gen::geometry::Vec2;
 use game_core::plugins::building::mesh_util::{local_to_world, make_ground_quad};
+use game_core::plugins::building::procedural_texture::ProceduralTextures;
 use game_core::plugins::building::render::spawn_building_layout;
+use game_core::plugins::building::render::{road_material, stone_material};
 use game_core::plugins::scene::scene_config::SceneConfig;
 
 use super::fixtures;
@@ -12,6 +14,7 @@ pub fn spawn_district(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    textures: &ProceduralTextures,
     fixture: &str,
 ) {
     commands.insert_resource(fixtures::district_camera_for_fixture(fixture));
@@ -30,11 +33,7 @@ pub fn spawn_district(
     let sq_mesh = make_ground_quad(Vec3::new(0.0, 0.005, 0.0), sq * 2.0, sq * 2.0);
     commands.spawn((
         Mesh3d(meshes.add(sq_mesh)),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.76, 0.70, 0.50),
-            perceptual_roughness: 0.95,
-            ..default()
-        })),
+        MeshMaterial3d(materials.add(stone_material(Color::srgb(0.76, 0.70, 0.50), textures))),
         Transform::default(),
         Name::new("Town Square"),
     ));
@@ -55,11 +54,7 @@ pub fn spawn_district(
         let road_mesh = make_ground_quad(Vec3::ZERO, length, road.width);
         commands.spawn((
             Mesh3d(meshes.add(road_mesh)),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.55, 0.45, 0.35),
-                perceptual_roughness: 0.95,
-                ..default()
-            })),
+            MeshMaterial3d(materials.add(road_material(Color::srgb(0.55, 0.45, 0.35), textures))),
             Transform {
                 translation: Vec3::new(cx, 0.005, cz),
                 rotation: Quat::from_rotation_y(-angle),
@@ -87,6 +82,7 @@ pub fn spawn_district(
                 commands,
                 meshes,
                 materials,
+                textures,
                 &building.config,
                 &building.layout,
                 Transform {
@@ -105,6 +101,7 @@ pub fn spawn_district(
                 commands,
                 meshes,
                 materials,
+                textures,
                 lot.entrance,
                 door_world_position,
                 building.lot_index,
@@ -178,6 +175,7 @@ fn spawn_entrance_approach(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    textures: &ProceduralTextures,
     start: Vec2,
     end: Vec2,
     lot_index: usize,
@@ -193,11 +191,7 @@ fn spawn_entrance_approach(
     let center = Vec2::new((start.x + end.x) / 2.0, (start.y + end.y) / 2.0);
     commands.spawn((
         Mesh3d(meshes.add(make_ground_quad(Vec3::ZERO, length, 0.75))),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.24, 0.18, 0.12),
-            perceptual_roughness: 0.95,
-            ..default()
-        })),
+        MeshMaterial3d(materials.add(road_material(Color::srgb(0.24, 0.18, 0.12), textures))),
         Transform {
             translation: Vec3::new(center.x, 0.035, center.y),
             rotation: Quat::from_rotation_y(-angle),

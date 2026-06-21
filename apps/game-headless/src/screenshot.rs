@@ -1,21 +1,22 @@
 use bevy::{
     anti_alias::taa::TemporalAntiAliasing,
     camera::RenderTarget,
-    post_process::dof::{DepthOfFieldMode, DepthOfField},
     core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass},
     core_pipeline::tonemapping::Tonemapping,
     light::ShadowFilteringMethod,
     pbr::ContactShadows,
+    post_process::dof::{DepthOfField, DepthOfFieldMode},
     prelude::*,
     render::{
         camera::TemporalJitter,
         render_resource::TextureFormat,
-        view::screenshot::{Screenshot, save_to_disk},
+        view::screenshot::{save_to_disk, Screenshot},
     },
 };
 
-use crate::{HeadlessFixture, fixtures};
+use crate::{fixtures, HeadlessFixture};
 use game_core::plugins::scene::camera_config::CameraConfig;
+use std::path::Path;
 
 #[derive(Resource)]
 pub struct ScreenshotConfig {
@@ -35,6 +36,12 @@ pub fn setup_screenshot(
     camera_config: Res<CameraConfig>,
     fixture: Res<HeadlessFixture>,
 ) {
+    println!(
+        "Headless screenshot setup: fixture={}, output={}, size={}x{}",
+        fixture.0, config.path, config.width, config.height
+    );
+    ensure_parent_dir(&config.path);
+
     let mut image = Image::new_target_texture(
         config.width,
         config.height,
@@ -49,25 +56,7 @@ pub fn setup_screenshot(
     let mut camera = commands.spawn((
         Camera3d::default(),
         Msaa::Off,
-        TemporalJitter::default(),
-        TemporalAntiAliasing::default(),
         ShadowFilteringMethod::Gaussian,
-        (
-            DepthPrepass,
-            NormalPrepass,
-            MotionVectorPrepass,
-        ),
-        ContactShadows {
-            linear_steps: 16,
-            thickness: 0.1,
-            length: 0.3,
-        },
-        DepthOfField {
-            mode: DepthOfFieldMode::Bokeh,
-            focal_distance: 15.0,
-            aperture_f_stops: 1.2,
-            ..default()
-        },
         Tonemapping::AcesFitted,
         Camera {
             order: 1,
@@ -84,7 +73,28 @@ pub fn setup_screenshot(
             .looking_at(camera_config.target, Vec3::Y),
     ));
 
-    if fixtures::uses_studio_low_poly_render(&fixture.0) {
+    if !fixtures::is_texture_fixture(&fixture.0) {
+        camera.insert((
+            TemporalJitter::default(),
+            TemporalAntiAliasing::default(),
+            (DepthPrepass, NormalPrepass, MotionVectorPrepass),
+            ContactShadows {
+                linear_steps: 16,
+                thickness: 0.1,
+                length: 0.3,
+            },
+            DepthOfField {
+                mode: DepthOfFieldMode::Bokeh,
+                focal_distance: 15.0,
+                aperture_f_stops: 1.2,
+                ..default()
+            },
+        ));
+    }
+
+    if fixtures::uses_studio_low_poly_render(&fixture.0)
+        && !fixtures::is_texture_fixture(&fixture.0)
+    {
         camera.insert(EnvironmentMapLight {
             diffuse_map: asset_server.load("pisa_diffuse_rgb9e5_zstd.ktx2"),
             specular_map: asset_server.load("pisa_specular_rgb9e5_zstd.ktx2"),
@@ -98,23 +108,66 @@ pub fn capture_and_exit(
     mut commands: Commands,
     config: Res<ScreenshotConfig>,
     handle: Res<RenderTargetHandle>,
+    fixture: Res<HeadlessFixture>,
     mut done: Local<bool>,
     mut frame_count: Local<u32>,
     mut exit: MessageWriter<AppExit>,
 ) {
     *frame_count += 1;
 
-    if *frame_count >= 30 && !*done {
+    if *frame_count >= 2 && !*done {
         let path = config.path.clone();
-        println!("Capturing screenshot to: {}", path);
+        ensure_parent_dir(&path);
+        let _ = std::fs::remove_file(&path);
+        println!("headless frame {} fixture={} triggering capture", *frame_count, fixture.0);
         commands
             .spawn(Screenshot::image(handle.0.clone()))
             .observe(save_to_disk(path));
         *done = true;
     }
 
-    if *frame_count >= 45 {
-        println!("Screenshot capture complete");
-        exit.write(AppExit::Success);
+    if *done {
+        let path = config.path.clone();
+        if std::path::Path::new(&path).exists() {
+            // Attempt to read the image. It might fail if the file is partially written.
+            if let Ok(img) = image::open(&path) {
+                let img = img.to_rgba8();
+                if let Some(first_pixel) = img.pixels().next() {
+                    let mut has_other_color = false;
+                    for pixel in img.pixels() {
+                        if pixel != first_pixel {
+                            has_other_color = true;
+                            break;
+                        }
+                    }
+                    
+                    if has_other_color {
+                        println!("Screenshot capture complete (rendered successfully)");
+                        exit.write(AppExit::Success);
+                    } else {
+                        println!("Screenshot was a solid color, retrying...");
+                        let _ = std::fs::remove_file(&path);
+                        *done = false;
+                    }
+                } else {
+                    // Empty image
+                    let _ = std::fs::remove_file(&path);
+                    *done = false;
+                }
+            }
+        }
+    }
+}
+
+fn ensure_parent_dir(path: &str) {
+    if let Some(parent) = Path::new(path).parent() {
+        if !parent.as_os_str().is_empty() {
+            if let Err(err) = std::fs::create_dir_all(parent) {
+                eprintln!(
+                    "Could not create screenshot directory {:?}: {}",
+                    parent, err
+                );
+            }
+        }
     }
 }

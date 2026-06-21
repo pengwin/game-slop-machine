@@ -7,3 +7,4 @@ edition.workspace = true
 bevy.workspace = true
 game-core.workspace = true
 building-gen = { path = "../../crates/building-gen" }
+image = "0.25.10"

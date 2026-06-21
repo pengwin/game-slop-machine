@@ -1,14 +1,16 @@
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::layout::BuildingLayout;
-use building_gen::mesh::{BuildingMesh, MeshData, generate_building_mesh};
+use building_gen::mesh::{generate_building_mesh, BuildingMesh, MeshData};
 
 use super::mesh_util::convert_mesh;
+use super::procedural_texture::ProceduralTextures;
 
 pub fn spawn_building_layout(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    textures: &ProceduralTextures,
     config: &BuildingConfig,
     layout: &BuildingLayout,
     transform: Transform,
@@ -19,6 +21,7 @@ pub fn spawn_building_layout(
         commands,
         meshes,
         materials,
+        textures,
         config,
         &bmesh,
         transform,
@@ -30,6 +33,7 @@ pub fn spawn_building_mesh(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    textures: &ProceduralTextures,
     config: &BuildingConfig,
     bmesh: &BuildingMesh,
     transform: Transform,
@@ -44,7 +48,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.foundation_mesh,
-        foundation_material(config),
+        foundation_material(config, textures),
         transform,
         &name("Foundation"),
     );
@@ -54,7 +58,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.wall_mesh,
-        wall_material(config),
+        wall_material(config, textures),
         transform,
         &name("Walls"),
     );
@@ -64,7 +68,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.wall_top_mesh,
-        wall_top_material(config),
+        wall_top_material(config, textures),
         transform,
         &name("Wall Top Faces"),
     );
@@ -74,7 +78,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.exterior_wall_mesh,
-        exterior_wall_material(config),
+        exterior_wall_material(config, textures),
         transform,
         &name("Exterior Wall Faces"),
     );
@@ -84,7 +88,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.exterior_corner_mesh,
-        exterior_corner_material(config),
+        exterior_corner_material(config, textures),
         transform,
         &name("Exterior Corner Faces"),
     );
@@ -94,7 +98,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.exterior_t_junction_mesh,
-        exterior_t_junction_material(config),
+        exterior_t_junction_material(config, textures),
         transform,
         &name("Exterior T-Junction Faces"),
     );
@@ -104,7 +108,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.floor_mesh,
-        floor_material(config),
+        floor_material(config, textures),
         transform,
         &name("Floor"),
     );
@@ -116,7 +120,7 @@ pub fn spawn_building_mesh(
             materials,
             &mut entities,
             &bmesh.roof_mesh,
-            roof_material(config),
+            roof_material(config, textures),
             transform,
             &name("Roof"),
         );
@@ -126,7 +130,7 @@ pub fn spawn_building_mesh(
             materials,
             &mut entities,
             &bmesh.gable_mesh,
-            exterior_wall_material(config),
+            exterior_wall_material(config, textures),
             transform,
             &name("Gables"),
         );
@@ -138,7 +142,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.door_mesh,
-        door_material(config),
+        door_material(config, textures),
         transform,
         &name("Doors"),
     );
@@ -193,72 +197,132 @@ fn spawn_part(
     );
 }
 
-fn color(rgb: [f32; 3]) -> Color {
+pub fn color(rgb: [f32; 3]) -> Color {
     Color::srgb(rgb[0], rgb[1], rgb[2])
 }
 
-fn foundation_material(config: &BuildingConfig) -> StandardMaterial {
+pub fn textured_material(
+    base_color: Color,
+    albedo: Handle<Image>,
+    normal: Handle<Image>,
+    perceptual_roughness: f32,
+) -> StandardMaterial {
     StandardMaterial {
-        base_color: color(config.visual_style.foundation_color),
-        perceptual_roughness: 0.95,
+        base_color,
+        base_color_texture: Some(albedo),
+        normal_map_texture: Some(normal),
+        perceptual_roughness,
         ..default()
     }
 }
 
-fn wall_material(config: &BuildingConfig) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.wall_color),
-        ..default()
-    }
+pub fn plaster_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+    textured_material(
+        base_color,
+        textures.plaster_albedo.clone(),
+        textures.plaster_normal.clone(),
+        0.88,
+    )
 }
 
-fn wall_top_material(config: &BuildingConfig) -> StandardMaterial {
+pub fn wood_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+    textured_material(
+        base_color,
+        textures.wood_albedo.clone(),
+        textures.wood_normal.clone(),
+        0.68,
+    )
+}
+
+pub fn brick_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+    textured_material(
+        base_color,
+        textures.brick_albedo.clone(),
+        textures.brick_normal.clone(),
+        0.84,
+    )
+}
+
+pub fn roof_tile_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+    textured_material(
+        base_color,
+        textures.roof_albedo.clone(),
+        textures.roof_normal.clone(),
+        0.78,
+    )
+}
+
+pub fn stone_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+    textured_material(
+        base_color,
+        textures.stone_albedo.clone(),
+        textures.stone_normal.clone(),
+        0.95,
+    )
+}
+
+pub fn road_material(base_color: Color, textures: &ProceduralTextures) -> StandardMaterial {
+    textured_material(
+        base_color,
+        textures.road_albedo.clone(),
+        textures.road_normal.clone(),
+        0.98,
+    )
+}
+
+fn foundation_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
+    stone_material(color(config.visual_style.foundation_color), textures)
+}
+
+fn wall_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
+    plaster_material(color(config.visual_style.wall_color), textures)
+}
+
+fn wall_top_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.wall_top_color),
+        base_color_texture: Some(textures.plaster_albedo.clone()),
         unlit: true,
         ..default()
     }
 }
 
-fn exterior_wall_material(config: &BuildingConfig) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.exterior_wall_color),
-        ..default()
-    }
+fn exterior_wall_material(
+    config: &BuildingConfig,
+    textures: &ProceduralTextures,
+) -> StandardMaterial {
+    brick_material(color(config.visual_style.exterior_wall_color), textures)
 }
 
-fn exterior_corner_material(config: &BuildingConfig) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.corner_color),
-        ..default()
-    }
+fn exterior_corner_material(
+    config: &BuildingConfig,
+    textures: &ProceduralTextures,
+) -> StandardMaterial {
+    brick_material(color(config.visual_style.corner_color), textures)
 }
 
-fn exterior_t_junction_material(config: &BuildingConfig) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.t_junction_color),
-        ..default()
-    }
+fn exterior_t_junction_material(
+    config: &BuildingConfig,
+    textures: &ProceduralTextures,
+) -> StandardMaterial {
+    brick_material(color(config.visual_style.t_junction_color), textures)
 }
 
-fn floor_material(config: &BuildingConfig) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.floor_color),
-        ..default()
-    }
+fn floor_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
+    wood_material(color(config.visual_style.floor_color), textures)
 }
 
-fn roof_material(config: &BuildingConfig) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.roof_color),
-        ..default()
-    }
+fn roof_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
+    roof_tile_material(color(config.visual_style.roof_color), textures)
 }
 
-fn door_material(config: &BuildingConfig) -> StandardMaterial {
+fn door_material(config: &BuildingConfig, textures: &ProceduralTextures) -> StandardMaterial {
     StandardMaterial {
         base_color: color(config.visual_style.door_color),
+        base_color_texture: Some(textures.wood_albedo.clone()),
+        normal_map_texture: Some(textures.wood_normal.clone()),
         cull_mode: None,
+        perceptual_roughness: 0.72,
         ..default()
     }
 }

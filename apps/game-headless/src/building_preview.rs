@@ -2,8 +2,8 @@ use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::Vec2;
-use building_gen::mesh::MeshData;
 use building_gen::mesh::generate_building_mesh;
+use building_gen::mesh::MeshData;
 use building_gen::scene::{SceneObject, SceneObjectKind};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
@@ -13,6 +13,7 @@ pub fn spawn_building_preview(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    _textures: &game_core::plugins::building::procedural_texture::ProceduralTextures,
     config: &BuildingConfig,
     fixture: &str,
 ) {
@@ -40,10 +41,10 @@ pub fn spawn_building_preview(
     // Debug: print opening tiles
     for y in 0..grid.height {
         for x in 0..grid.width {
-            if let TileType::Wall(wall) = grid.get(x, y)
-                && let Some(opening) = wall.opening
-            {
-                println!("  Opening at ({}, {}): {:?}", x, y, opening);
+            if let TileType::Wall(wall) = grid.get(x, y) {
+                if let Some(opening) = wall.opening {
+                    println!("  Opening at ({}, {}): {:?}", x, y, opening);
+                }
             }
         }
     }

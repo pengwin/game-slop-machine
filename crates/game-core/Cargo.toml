@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 bevy.workspace = true
 building-gen = { path = "../building-gen" }
+noise = "0.9.0"

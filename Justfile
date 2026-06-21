@@ -3,7 +3,7 @@
 # Run `just` to see all available recipes.
 
 # Generate all fixture screenshots
-all: buildings districts furniture
+all: buildings districts furniture textures
 
 # ── Building Fixtures ────────────────────────────────────────────────────
 
@@ -11,25 +11,25 @@ all: buildings districts furniture
 buildings: procedural with-roof corridor four-doors four-windows two-room picture-room
 
 procedural:
-    cargo run -p game-headless -- fixtures/building-procedural.png procedural
+    cargo run --release -p game-headless -- fixtures/building-procedural.png procedural
 
 with-roof:
-    cargo run -p game-headless -- fixtures/building-with-roof.png with-roof
+    cargo run --release -p game-headless -- fixtures/building-with-roof.png with-roof
 
 corridor:
-    cargo run -p game-headless -- fixtures/building-corridor.png corridor
+    cargo run --release -p game-headless -- fixtures/building-corridor.png corridor
 
 four-doors:
-    cargo run -p game-headless -- fixtures/building-four-doors.png four-doors
+    cargo run --release -p game-headless -- fixtures/building-four-doors.png four-doors
 
 four-windows:
-    cargo run -p game-headless -- fixtures/building-four-windows.png four-windows
+    cargo run --release -p game-headless -- fixtures/building-four-windows.png four-windows
 
 two-room:
-    cargo run -p game-headless -- fixtures/building-two-room.png two-room
+    cargo run --release -p game-headless -- fixtures/building-two-room.png two-room
 
 picture-room:
-    cargo run -p game-headless -- fixtures/building-picture-room.png picture-room
+    cargo run --release -p game-headless -- fixtures/building-picture-room.png picture-room
 
 # ── District Fixtures ────────────────────────────────────────────────────
 
@@ -37,22 +37,22 @@ picture-room:
 districts: district district-lots district-no-roof huge-trade-district huge-trade-district-lots huge-trade-district-no-roof
 
 district:
-    cargo run -p game-headless -- fixtures/district.png district
+    cargo run --release -p game-headless -- fixtures/district.png district
 
 district-lots:
-    cargo run -p game-headless -- fixtures/district-lots.png district-lots
+    cargo run --release -p game-headless -- fixtures/district-lots.png district-lots
 
 district-no-roof:
-    cargo run -p game-headless -- fixtures/district-no-roof.png district-no-roof
+    cargo run --release -p game-headless -- fixtures/district-no-roof.png district-no-roof
 
 huge-trade-district:
-    cargo run -p game-headless -- fixtures/district-huge.png huge-trade-district
+    cargo run --release -p game-headless -- fixtures/district-huge.png huge-trade-district
 
 huge-trade-district-lots:
-    cargo run -p game-headless -- fixtures/district-huge-lots.png huge-trade-district-lots
+    cargo run --release -p game-headless -- fixtures/district-huge-lots.png huge-trade-district-lots
 
 huge-trade-district-no-roof:
-    cargo run -p game-headless -- fixtures/district-huge-no-roof.png huge-trade-district-no-roof
+    cargo run --release -p game-headless -- fixtures/district-huge-no-roof.png huge-trade-district-no-roof
 
 # ── Furniture Fixtures ───────────────────────────────────────────────────
 
@@ -60,37 +60,51 @@ huge-trade-district-no-roof:
 furniture: furniture-all furniture-table furniture-chair furniture-bed furniture-stove furniture-counter furniture-desk furniture-barrel furniture-crate furniture-bench furniture-shelf
 
 furniture-all:
-    cargo run -p game-headless -- fixtures/furniture-all.png all-furniture
+    cargo run --release -p game-headless -- fixtures/furniture-all.png all-furniture
 
 furniture-table:
-    cargo run -p game-headless -- fixtures/furniture-table.png table
+    cargo run --release -p game-headless -- fixtures/furniture-table.png table
 
 furniture-chair:
-    cargo run -p game-headless -- fixtures/furniture-chair.png chair
+    cargo run --release -p game-headless -- fixtures/furniture-chair.png chair
 
 furniture-bed:
-    cargo run -p game-headless -- fixtures/furniture-bed.png bed
+    cargo run --release -p game-headless -- fixtures/furniture-bed.png bed
 
 furniture-stove:
-    cargo run -p game-headless -- fixtures/furniture-stove.png stove
+    cargo run --release -p game-headless -- fixtures/furniture-stove.png stove
 
 furniture-counter:
-    cargo run -p game-headless -- fixtures/furniture-counter.png counter
+    cargo run --release -p game-headless -- fixtures/furniture-counter.png counter
 
 furniture-desk:
-    cargo run -p game-headless -- fixtures/furniture-desk.png desk
+    cargo run --release -p game-headless -- fixtures/furniture-desk.png desk
 
 furniture-barrel:
-    cargo run -p game-headless -- fixtures/furniture-barrel.png barrel
+    cargo run --release -p game-headless -- fixtures/furniture-barrel.png barrel
 
 furniture-crate:
-    cargo run -p game-headless -- fixtures/furniture-crate.png crate
+    cargo run --release -p game-headless -- fixtures/furniture-crate.png crate
 
 furniture-bench:
-    cargo run -p game-headless -- fixtures/furniture-bench.png bench
+    cargo run --release -p game-headless -- fixtures/furniture-bench.png bench
 
 furniture-shelf:
-    cargo run -p game-headless -- fixtures/furniture-shelf.png shelf
+    cargo run --release -p game-headless -- fixtures/furniture-shelf.png shelf
+
+# ── Texture Fixtures ─────────────────────────────────────────────────────
+
+# Generate all texture close-up fixtures
+textures: texture-plaster-wall texture-wood-table texture-material-board
+
+texture-plaster-wall:
+    cargo run --release -p game-headless -- fixtures/texture-plaster-wall.png texture-plaster-wall
+
+texture-wood-table:
+    cargo run --release -p game-headless -- fixtures/texture-wood-table.png texture-wood-table
+
+texture-material-board:
+    cargo run --release -p game-headless -- fixtures/texture-material-board.png texture-material-board
 
 # ── Utilities ────────────────────────────────────────────────────────────
 

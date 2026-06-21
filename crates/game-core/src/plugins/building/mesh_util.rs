@@ -48,7 +48,7 @@ pub fn make_ground_quad(center: Vec3, width: f32, depth: f32) -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 4]);
     mesh.insert_attribute(
         Mesh::ATTRIBUTE_UV_0,
-        vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+        vec![[0.0, 0.0], [width, 0.0], [width, depth], [0.0, depth]],
     );
     mesh.insert_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]));
 
