@@ -1,12 +1,13 @@
-use bevy::prelude::*;
-use bevy::render::render_resource::TextureFormat;
-use super::builders::{TEXTURE_SIZE, create_placeholder};
-use super::plaster::*;
-use super::wood::*;
 use super::brick::*;
+use super::builders::{TEXTURE_SIZE, create_placeholder};
+use super::concrete::*;
+use super::plaster::*;
+use super::road::*;
 use super::roof::*;
 use super::stone::*;
-use super::road::*;
+use super::wood::*;
+use bevy::prelude::*;
+use bevy::render::render_resource::TextureFormat;
 
 fn image_bytes(image: &Image) -> &[u8] {
     image
@@ -31,6 +32,9 @@ fn generated_images_have_expected_layout() {
         (stone_normal(7), true),
         (road_albedo(7), false),
         (road_normal(7), true),
+        (concrete_albedo(7), false),
+        (concrete_normal(7), true),
+        (concrete_orm(7), true),
     ] {
         assert_eq!(image.texture_descriptor.size.width, TEXTURE_SIZE);
         assert_eq!(image.texture_descriptor.size.height, TEXTURE_SIZE);
@@ -73,6 +77,7 @@ fn albedo_images_are_not_flat_fills() {
         roof_albedo(11),
         stone_albedo(11),
         road_albedo(11),
+        concrete_albedo(11),
     ] {
         let bytes = image_bytes(&image);
         assert!(

@@ -9,7 +9,7 @@ use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape
 use building_gen::tile_converter::classify_wall_tiles;
 use game_core::plugins::building::mesh_util::convert_mesh;
 use game_core::plugins::building::procedural_texture::ProceduralTextures;
-use game_core::plugins::building::render::spawn_building_mesh;
+use game_core::plugins::building::render::{concrete_material, spawn_building_mesh};
 
 pub fn spawn_building_preview(
     commands: &mut Commands,
@@ -151,9 +151,12 @@ pub fn spawn_building_preview(
     if !bmesh.foundation_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.foundation_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
-                config.visual_style.foundation_color,
-            )))),
+            MeshMaterial3d(materials.add(concrete_material(
+                style_color(config.visual_style.foundation_color),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             Transform::default(),
             Name::new("Foundation"),
         ));
@@ -441,7 +444,7 @@ fn wall_preview_mesh(fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
     for i in 0..mesh.vertices.len() {
         let position = mesh.vertices[i];
         let normal = mesh.normals[i];
-        
+
         let [x, y, z] = position;
         let [nx, ny, nz] = normal;
         if ny.abs() > 0.75 {
@@ -451,7 +454,7 @@ fn wall_preview_mesh(fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
         } else {
             mesh.uvs[i] = [x * scale, y * scale];
         }
-        
+
         mesh.colors.push(game_core::plugins::building::procedural_texture::global_dirt_color(seed, position, normal));
     }
     mesh

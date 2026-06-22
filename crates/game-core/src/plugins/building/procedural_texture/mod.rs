@@ -1,13 +1,14 @@
+mod brick;
 mod builders;
+mod concrete;
 mod noise;
 mod plaster;
-mod wood;
-mod brick;
+mod road;
 mod roof;
 mod stone;
-mod road;
 #[cfg(test)]
 mod tests;
+mod wood;
 
 use bevy::prelude::*;
 use bevy::tasks::AsyncComputeTaskPool;
@@ -136,11 +137,7 @@ impl ProceduralTextures {
         handle
     }
 
-    pub fn get_plaster_orm_now(
-        &mut self,
-        seed: u32,
-        images: &mut Assets<Image>,
-    ) -> Handle<Image> {
+    pub fn get_plaster_orm_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         let key = format!("plaster_orm_{}", seed);
         if let Some(handle) = self.cache.get(&key) {
             return handle.clone();
@@ -220,6 +217,24 @@ impl ProceduralTextures {
     pub fn get_road_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("road_normal_{}", seed), images, move || {
             road::road_normal(seed)
+        })
+    }
+
+    pub fn get_concrete_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("concrete_albedo_{}", seed), images, move || {
+            concrete::concrete_albedo(seed)
+        })
+    }
+
+    pub fn get_concrete_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("concrete_normal_{}", seed), images, move || {
+            concrete::concrete_normal(seed)
+        })
+    }
+
+    pub fn get_concrete_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("concrete_orm_{}", seed), images, move || {
+            concrete::concrete_orm(seed)
         })
     }
 }

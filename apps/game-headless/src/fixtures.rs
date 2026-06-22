@@ -243,7 +243,7 @@ pub fn config_for_fixture(fixture: &str) -> BuildingConfig {
                 floor_color: [0.63, 0.60, 0.51],
                 door_color: [0.34, 0.21, 0.13],
                 trim_color: [0.48, 0.32, 0.19],
-                foundation_color: [0.50, 0.50, 0.46],
+                foundation_color: [0.58, 0.58, 0.56],
                 ..Default::default()
             },
             ..Default::default()

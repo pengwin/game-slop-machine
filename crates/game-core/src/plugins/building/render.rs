@@ -329,13 +329,31 @@ pub fn road_material(
     )
 }
 
+pub fn concrete_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    let orm = textures.get_concrete_orm(seed, images);
+    StandardMaterial {
+        base_color,
+        base_color_texture: Some(textures.get_concrete_albedo(seed, images)),
+        normal_map_texture: Some(textures.get_concrete_normal(seed, images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
+        perceptual_roughness: 1.0,
+        ..default()
+    }
+}
+
 fn foundation_material(
     config: &BuildingConfig,
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    stone_material(
+    concrete_material(
         color(config.visual_style.foundation_color),
         textures,
         images,
@@ -391,7 +409,12 @@ fn exterior_corner_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    brick_material(color(config.visual_style.corner_color), textures, images, seed)
+    brick_material(
+        color(config.visual_style.corner_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
 fn exterior_t_junction_material(

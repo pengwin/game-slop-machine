@@ -5,7 +5,7 @@ use building_gen::mesh::math_util::{Quad, append_quad};
 use game_core::plugins::building::mesh_util::convert_mesh;
 use game_core::plugins::building::procedural_texture::ProceduralTextures;
 use game_core::plugins::building::render::{
-    brick_material, plaster_material, road_material, roof_tile_material,
+    brick_material, concrete_material, plaster_material, road_material, roof_tile_material,
     spawn_building_layout, stone_material, wood_material,
 };
 
@@ -116,6 +116,10 @@ fn spawn_material_board(
         (
             "Road",
             road_material(Color::srgb(0.62, 0.52, 0.40), textures, images, 0),
+        ),
+        (
+            "Concrete",
+            concrete_material(Color::srgb(0.68, 0.66, 0.62), textures, images, 0),
         ),
     ];
 
