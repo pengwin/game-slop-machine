@@ -42,7 +42,7 @@ pub fn generate_floor_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData
 pub fn generate_floor_grout_mesh(grid: &TileGrid, config: &BuildingConfig) -> MeshData {
     let mut mesh = MeshData::default();
     let ts = config.tile_size;
-    let line = (ts * 0.016).clamp(0.006, 0.014);
+    let line = (ts * 0.004).clamp(0.0015, 0.0035);
     let origin_x = grid.origin.x;
     let origin_z = grid.origin.y;
     let floor_y = building_base_y(config) + 0.004;

@@ -502,7 +502,7 @@ fn roof_material(
 
 fn floor_grout_material() -> StandardMaterial {
     StandardMaterial {
-        base_color: Color::srgba(0.22, 0.20, 0.17, 0.28),
+        base_color: Color::srgba(0.44, 0.39, 0.31, 0.055),
         alpha_mode: AlphaMode::Blend,
         perceptual_roughness: 1.0,
         cull_mode: None,

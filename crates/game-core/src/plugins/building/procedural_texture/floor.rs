@@ -4,7 +4,7 @@ use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::{cell_noise, fbm};
 
 const TILE_SCALE: f32 = 2.0;
-const GROUT: f32 = 0.055;
+const GROUT: f32 = 0.032;
 
 fn tile_cell(u: f32, v: f32) -> (i32, i32, f32, f32) {
     let tu = u * TILE_SCALE;
@@ -20,17 +20,17 @@ fn grout_mask(local_u: f32, local_v: f32) -> f32 {
 pub fn floor_height(seed: u32, u: f32, v: f32) -> f32 {
     let (ix, iy, lu, lv) = tile_cell(u, v);
     let grout = grout_mask(lu, lv);
-    let tile_variation = cell_noise(31 ^ seed, ix, iy) * 0.12;
+    let tile_variation = cell_noise(31 ^ seed, ix, iy) * 0.08;
     let broad = fbm(32 ^ seed, 4.0, 4, u, v) * 0.22;
-    let chips = fbm(33 ^ seed, 34.0, 2, u + tile_variation, v - tile_variation) * 0.10;
-    let grout_drop = (1.0 - grout) * 0.55;
+    let chips = fbm(33 ^ seed, 34.0, 2, u + tile_variation, v - tile_variation) * 0.07;
+    let grout_drop = (1.0 - grout) * 0.14;
 
     (0.55 + tile_variation + broad + chips - grout_drop).clamp(0.0, 1.0)
 }
 
 pub fn floor_albedo(seed: u32) -> Image {
     build_albedo(
-        [0.74, 0.68, 0.56],
+        [0.64, 0.58, 0.48],
         |u, v| {
             let (ix, iy, lu, lv) = tile_cell(u, v);
             let grout = grout_mask(lu, lv);
@@ -38,18 +38,18 @@ pub fn floor_albedo(seed: u32) -> Image {
             let cloudy = fbm(35 ^ seed, 8.0, 4, u + tile * 0.03, v - tile * 0.02);
             let dirt = fbm(36 ^ seed, 2.5, 4, u - 0.17, v + 0.09);
             let wear = fbm(37 ^ seed, 18.0, 2, u + 0.23, v - 0.13);
-            let edge_dirt = (1.0 - grout).powf(1.7);
+            let edge_dirt = (1.0 - grout).powf(2.6);
 
-            (0.86 + tile * 0.16 + cloudy * 0.14 - dirt * 0.10 - edge_dirt * 0.34 + wear * 0.05)
-                .clamp(0.42, 1.16)
+            (0.90 + tile * 0.055 + cloudy * 0.14 - dirt * 0.075 - edge_dirt * 0.075 + wear * 0.035)
+                .clamp(0.66, 1.10)
         },
         |u, v| {
             let (ix, iy, lu, lv) = tile_cell(u, v);
             let grout = grout_mask(lu, lv);
             let tile = cell_noise(38 ^ seed, ix, iy);
             let stain = fbm(39 ^ seed, 5.0, 3, u + 0.41, v - 0.29);
-            let warm = 0.93 + tile * 0.12 - stain * 0.045;
-            let grout_tint = 0.58 + grout * 0.42;
+            let warm = 0.96 + tile * 0.045 - stain * 0.035;
+            let grout_tint = 0.89 + grout * 0.11;
 
             [
                 warm * grout_tint,
@@ -61,7 +61,7 @@ pub fn floor_albedo(seed: u32) -> Image {
 }
 
 pub fn floor_normal(seed: u32) -> Image {
-    build_normal(|u, v| floor_height(seed, u, v), 3.1)
+    build_normal(|u, v| floor_height(seed, u, v), 1.65)
 }
 
 pub fn floor_orm(seed: u32) -> Image {
@@ -74,7 +74,7 @@ pub fn floor_orm(seed: u32) -> Image {
             let (_ix, _iy, lu, lv) = tile_cell(u, v);
             let grout = grout_mask(lu, lv);
             let dirt = fbm(40 ^ seed, 7.0, 3, u, v);
-            (0.78 + dirt * 0.18 + (1.0 - grout) * 0.07).clamp(0.62, 0.99)
+            (0.80 + dirt * 0.14 + (1.0 - grout) * 0.035).clamp(0.68, 0.98)
         },
         |_, _| 0.0,
     )
