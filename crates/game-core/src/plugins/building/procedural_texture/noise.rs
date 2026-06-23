@@ -42,6 +42,18 @@ pub fn cell_noise(seed: u32, ix: i32, iy: i32) -> f32 {
     ((n ^ (n >> 16)) & 0xffff) as f32 / 65_535.0
 }
 
+pub fn speckle(seed: u32, scale: f32, threshold: f32, u: f32, v: f32) -> f32 {
+    let ix = (u * scale).floor() as i32;
+    let iy = (v * scale).floor() as i32;
+    let n = cell_noise(seed, ix, iy);
+    ((n - threshold) / (1.0 - threshold).max(0.001)).clamp(0.0, 1.0)
+}
+
+pub fn hairline(seed: u32, frequency: f64, width: f32, u: f32, v: f32) -> f32 {
+    let n = fbm(seed, frequency, 2, u, v);
+    (1.0 - ((n - 0.5).abs() / width.max(0.001))).clamp(0.0, 1.0)
+}
+
 pub fn mortar_mask(coord: f32, mortar: f32) -> f32 {
     let f = coord.fract();
     if f < mortar || f > 1.0 - mortar {

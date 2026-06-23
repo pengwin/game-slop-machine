@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::layout::BuildingLayout;
-use building_gen::mesh::{BuildingMesh, MeshData, generate_building_mesh};
+use building_gen::mesh::{generate_building_mesh, BuildingMesh, MeshData};
 use building_gen::scene::{SceneMaterialKind, SceneMeshPart};
 
 use super::mesh_util::convert_mesh;
@@ -502,7 +502,7 @@ fn roof_material(
 
 fn floor_grout_material() -> StandardMaterial {
     StandardMaterial {
-        base_color: Color::srgba(0.44, 0.39, 0.31, 0.055),
+        base_color: Color::WHITE,
         alpha_mode: AlphaMode::Blend,
         perceptual_roughness: 1.0,
         cull_mode: None,

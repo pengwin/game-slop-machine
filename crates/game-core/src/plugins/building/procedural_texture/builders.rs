@@ -3,7 +3,13 @@ use bevy::image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerD
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
-pub const TEXTURE_SIZE: u32 = 256;
+pub const RENDER_TEXTURE_SIZE: u32 = 512;
+
+#[cfg(test)]
+pub const TEXTURE_SIZE: u32 = 128;
+
+#[cfg(not(test))]
+pub const TEXTURE_SIZE: u32 = RENDER_TEXTURE_SIZE;
 
 pub fn create_placeholder(is_normal: bool) -> Image {
     let data = if is_normal {

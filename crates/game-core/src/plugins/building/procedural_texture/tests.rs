@@ -1,5 +1,5 @@
 use super::brick::*;
-use super::builders::{TEXTURE_SIZE, create_placeholder};
+use super::builders::{RENDER_TEXTURE_SIZE, TEXTURE_SIZE, create_placeholder};
 use super::concrete::*;
 use super::floor::*;
 use super::plaster::*;
@@ -55,6 +55,12 @@ fn generated_images_have_expected_layout() {
             }
         );
     }
+}
+
+#[test]
+fn runtime_texture_size_is_high_resolution() {
+    assert_eq!(RENDER_TEXTURE_SIZE, 512);
+    assert!(TEXTURE_SIZE <= RENDER_TEXTURE_SIZE);
 }
 
 #[test]

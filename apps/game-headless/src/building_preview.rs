@@ -2,8 +2,8 @@ use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::Vec2;
-use building_gen::mesh::MeshData;
 use building_gen::mesh::generate_building_mesh;
+use building_gen::mesh::MeshData;
 use building_gen::scene::{SceneObject, SceneObjectKind};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
@@ -289,7 +289,7 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.floor_grout_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgba(0.44, 0.39, 0.31, 0.055),
+                base_color: Color::WHITE,
                 alpha_mode: AlphaMode::Blend,
                 perceptual_roughness: 1.0,
                 cull_mode: None,
