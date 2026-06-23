@@ -93,11 +93,13 @@ pub fn setup_screenshot(
         ));
     }
 
-    if fixtures::uses_studio_low_poly_render(&fixture.0) && !fixtures::is_texture_fixture(&fixture.0) {
+    if fixtures::uses_studio_low_poly_render(&fixture.0)
+        && !fixtures::is_texture_fixture(&fixture.0)
+    {
         camera.insert(EnvironmentMapLight {
             diffuse_map: asset_server.load("pisa_diffuse_rgb9e5_zstd.ktx2"),
             specular_map: asset_server.load("pisa_specular_rgb9e5_zstd.ktx2"),
-            intensity: 1_520.0,
+            intensity: 920.0,
             ..default()
         });
     }

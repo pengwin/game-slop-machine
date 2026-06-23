@@ -43,7 +43,7 @@ pub fn uses_studio_low_poly_render(fixture: &str) -> bool {
 }
 
 pub fn studio_ground_color() -> Color {
-    Color::srgb(0.82, 0.82, 0.79)
+    Color::srgb(0.55, 0.52, 0.48)
 }
 
 pub fn furniture_camera_for_fixture(fixture: &str) -> CameraConfig {
@@ -70,6 +70,11 @@ pub fn texture_camera_for_fixture(fixture: &str) -> CameraConfig {
             position: Vec3::new(1.7, 1.15, 2.0),
             target: Vec3::new(0.0, 0.45, 0.0),
             viewport_height: 1.8,
+        },
+        "texture-material-board" => CameraConfig {
+            position: Vec3::new(4.8, 3.2, 6.6),
+            target: Vec3::new(0.0, 0.58, 0.0),
+            viewport_height: 5.8,
         },
         _ => CameraConfig {
             position: Vec3::new(2.4, 1.8, 4.2),

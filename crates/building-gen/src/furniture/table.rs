@@ -1,5 +1,6 @@
 use crate::mesh::MeshData;
-use crate::mesh::colored_shapes::append_colored_box;
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::colored_shapes::append_material_box;
 
 #[derive(Debug, Clone)]
 pub struct TableConfig {
@@ -57,16 +58,18 @@ pub fn generate_table_mesh(w: f32, h: f32, d: f32, config: &TableConfig) -> Mesh
     let leg_x = (hw - leg_inset - leg_t / 2.0).max(0.0);
     let leg_z = (hd - leg_inset - leg_t / 2.0).max(0.0);
 
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, actual_h - top_thickness / 2.0, 0.0],
         [actual_w, top_thickness, actual_d],
         config.top_color,
+        SurfaceMaterial::Wood,
     );
+    append_tabletop_plank_detail(&mut mesh, actual_w, actual_h, actual_d);
 
     if support_h > 0.0 {
         let support_inset = config.support_plate_inset.max(0.0);
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, actual_h - top_thickness - support_h / 2.0, 0.0],
             [
@@ -75,6 +78,7 @@ pub fn generate_table_mesh(w: f32, h: f32, d: f32, config: &TableConfig) -> Mesh
                 (actual_d - support_inset * 2.0).max(leg_t),
             ],
             config.apron_color,
+            SurfaceMaterial::Wood,
         );
     }
 
@@ -84,11 +88,12 @@ pub fn generate_table_mesh(w: f32, h: f32, d: f32, config: &TableConfig) -> Mesh
         (-leg_x, leg_z),
         (leg_x, leg_z),
     ] {
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [lx, leg_h / 2.0, lz],
             [leg_t, leg_h, leg_t],
             config.leg_color,
+            SurfaceMaterial::Wood,
         );
     }
 
@@ -101,31 +106,53 @@ pub fn generate_table_mesh(w: f32, h: f32, d: f32, config: &TableConfig) -> Mesh
         let apron_w = (actual_w - leg_inset * 2.0).max(leg_t);
         let apron_d = (actual_d - leg_inset * 2.0).max(leg_t);
 
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, apron_y, -hd + leg_inset + apron_t / 2.0],
             [apron_w, apron_h, apron_t],
             config.apron_color,
+            SurfaceMaterial::Wood,
         );
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, apron_y, hd - leg_inset - apron_t / 2.0],
             [apron_w, apron_h, apron_t],
             config.apron_color,
+            SurfaceMaterial::Wood,
         );
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [-hw + leg_inset + apron_t / 2.0, apron_y, 0.0],
             [apron_t, apron_h, apron_d],
             config.apron_color,
+            SurfaceMaterial::Wood,
         );
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [hw - leg_inset - apron_t / 2.0, apron_y, 0.0],
             [apron_t, apron_h, apron_d],
             config.apron_color,
+            SurfaceMaterial::Wood,
         );
     }
 
     mesh
+}
+
+fn append_tabletop_plank_detail(mesh: &mut MeshData, width: f32, top_y: f32, depth: f32) {
+    let groove_color = [0.13, 0.075, 0.038, 1.0];
+    let groove_w = (width * 0.014).clamp(0.006, 0.012);
+    let groove_h = 0.006;
+    let groove_d = depth * 0.92;
+    let y = top_y + groove_h * 0.5 + 0.003;
+
+    for x in [-width * 0.25, 0.0, width * 0.25] {
+        append_material_box(
+            mesh,
+            [x, y, 0.0],
+            [groove_w, groove_h, groove_d],
+            groove_color,
+            SurfaceMaterial::Wood,
+        );
+    }
 }

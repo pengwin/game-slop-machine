@@ -1,5 +1,6 @@
 use crate::mesh::MeshData;
-use crate::mesh::colored_shapes::{append_colored_beveled_box, append_colored_box};
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::colored_shapes::{append_material_beveled_box, append_material_box};
 
 #[derive(Debug, Clone)]
 pub struct BedConfig {
@@ -42,72 +43,81 @@ pub fn generate_bed_mesh(w: f32, h: f32, d: f32, config: &BedConfig) -> MeshData
     let px = w / 2.0 - pt / 2.0;
     let pz = d / 2.0 - pt / 2.0;
 
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-px, front_h / 2.0, -pz],
         [pt, front_h, pt],
         frame_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [px, front_h / 2.0, -pz],
         [pt, front_h, pt],
         frame_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-px, back_h / 2.0, pz],
         [pt, back_h, pt],
         frame_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [px, back_h / 2.0, pz],
         [pt, back_h, pt],
         frame_color,
+        SurfaceMaterial::Wood,
     );
 
     let hb_h = back_h - config.frame_height;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, config.frame_height + hb_h / 2.0, pz],
         [w - pt * 2.0, hb_h, pt / 2.0],
         frame_color,
+        SurfaceMaterial::Wood,
     );
 
     let fb_h = front_h - config.frame_height;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, config.frame_height + fb_h / 2.0, -pz],
         [w - pt * 2.0, fb_h, pt / 2.0],
         frame_color,
+        SurfaceMaterial::Wood,
     );
 
     let rail_h = config.frame_height;
     let rail_y = 0.12 + rail_h / 2.0;
     let rail_len = d - pt * 2.0;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-px, rail_y, 0.0],
         [pt / 2.0, rail_h, rail_len],
         frame_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [px, rail_y, 0.0],
         [pt / 2.0, rail_h, rail_len],
         frame_color,
+        SurfaceMaterial::Wood,
     );
 
     let mattress_w = w - pt * 1.5;
     let mattress_d = d - pt * 1.5;
     let mattress_y = rail_y;
     let mattress_h = rail_h + 0.02;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, mattress_y, 0.0],
         [mattress_w, mattress_h, mattress_d],
         sheet_color,
+        SurfaceMaterial::Fabric,
     );
 
     let blanket_z_min = -pz + pt / 2.0;
@@ -117,11 +127,12 @@ pub fn generate_bed_mesh(w: f32, h: f32, d: f32, config: &BedConfig) -> MeshData
         let blanket_z = blanket_z_min + blanket_len / 2.0;
         let blanket_w = mattress_w + 0.02;
         let blanket_h = mattress_h + 0.02;
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, mattress_y + 0.01, blanket_z],
             [blanket_w, blanket_h, blanket_len],
             blanket_color,
+            SurfaceMaterial::Fabric,
         );
     }
 
@@ -146,12 +157,13 @@ pub fn generate_bed_mesh(w: f32, h: f32, d: f32, config: &BedConfig) -> MeshData
         for i in 0..config.num_pillows {
             let px = start_x + (config.pillow_size[0] + spacing) * i as f32;
             let bevel_amount = config.pillow_size[1] * 0.4;
-            append_colored_beveled_box(
+            append_material_beveled_box(
                 &mut mesh,
                 [px, pillow_y, pillow_z],
                 config.pillow_size,
                 bevel_amount,
                 sheet_color,
+                SurfaceMaterial::Fabric,
             );
         }
     }

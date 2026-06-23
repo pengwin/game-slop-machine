@@ -17,12 +17,14 @@ pub fn global_dirt_color(seed: u32, position: [f32; 3], normal: [f32; 3]) -> [f3
         (x, y)
     };
 
-    let dirt_mask = fbm(95 ^ seed, 0.25, 3, u, v);
-    let dirt = (dirt_mask * 1.6 - 0.2).clamp(0.0, 1.0);
+    let dirt_mask = fbm(95 ^ seed, 0.35, 4, u, v);
+    let fine_stain = fbm(96 ^ seed, 2.4, 3, u + 0.17, v - 0.11);
+    let dirt = (dirt_mask * 1.45 + fine_stain * 0.45 - 0.28).clamp(0.0, 1.0);
 
-    let bottom_dirt = (1.0 - (y * 0.6)).clamp(0.0, 1.0);
+    let bottom_dirt = (1.0 - (y * 0.78)).clamp(0.0, 1.0);
+    let corner_hint = (normal[1].abs() < 0.25) as i32 as f32 * fbm(97 ^ seed, 1.6, 2, x, z) * 0.18;
 
-    let total_dirt = (dirt + bottom_dirt * 0.7).clamp(0.0, 1.0);
+    let total_dirt = (dirt + bottom_dirt * 0.9 + corner_hint).clamp(0.0, 1.0);
 
     let r = 1.0 - total_dirt * 0.35;
     let g = 1.0 - total_dirt * 0.45;

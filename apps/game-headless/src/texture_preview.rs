@@ -1,12 +1,13 @@
 use crate::fixtures;
 use bevy::prelude::*;
 use building_gen::mesh::MeshData;
+use building_gen::mesh::colored_shapes::append_colored_box;
 use building_gen::mesh::math_util::{Quad, append_quad};
 use game_core::plugins::building::mesh_util::convert_mesh;
 use game_core::plugins::building::procedural_texture::ProceduralTextures;
 use game_core::plugins::building::render::{
-    brick_material, concrete_material, plaster_material, road_material, roof_tile_material,
-    spawn_building_layout, stone_material, wood_material,
+    brick_material, concrete_material, floor_tile_material, plaster_material, road_material,
+    roof_tile_material, spawn_building_layout, stone_material, wood_material,
 };
 
 pub fn spawn_texture_preview(
@@ -83,6 +84,18 @@ fn spawn_wood_table(
         Transform::default(),
         Name::new("Texture Wood Table"),
     ));
+
+    let detail = tabletop_plank_detail_mesh(1.25, 0.72, 0.78);
+    commands.spawn((
+        Mesh3d(meshes.add(convert_mesh(&detail))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            perceptual_roughness: 0.9,
+            ..default()
+        })),
+        Transform::default(),
+        Name::new("Texture Wood Table Plank Detail"),
+    ));
 }
 
 fn spawn_material_board(
@@ -100,6 +113,10 @@ fn spawn_material_board(
         (
             "Wood",
             wood_material(Color::srgb(0.78, 0.56, 0.34), textures, images, 0),
+        ),
+        (
+            "Floor",
+            floor_tile_material(Color::srgb(0.62, 0.57, 0.47), textures, images, 0),
         ),
         (
             "Brick",
@@ -132,6 +149,7 @@ fn spawn_material_board(
     for (i, (name, mut material)) in swatches.into_iter().enumerate() {
         let mesh = vertical_quad_mesh(width, height, 0.45, 0.0);
         material.cull_mode = None;
+        material.unlit = true;
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&mesh))),
             MeshMaterial3d(materials.add(material)),
@@ -192,6 +210,25 @@ fn textured_table_mesh() -> MeshData {
     }
 
     debug_assert_eq!(mesh.vertices.len(), mesh.uvs.len());
+    mesh
+}
+
+fn tabletop_plank_detail_mesh(width: f32, top_y: f32, depth: f32) -> MeshData {
+    let mut mesh = MeshData::default();
+    let groove_color = [0.12, 0.07, 0.035, 1.0];
+    let groove_w = (width * 0.014).clamp(0.006, 0.014);
+    let groove_h = 0.008;
+    let y = top_y + groove_h * 0.5 + 0.004;
+
+    for x in [-width * 0.25, 0.0, width * 0.25] {
+        append_colored_box(
+            &mut mesh,
+            [x, y, 0.0],
+            [groove_w, groove_h, depth * 0.90],
+            groove_color,
+        );
+    }
+
     mesh
 }
 

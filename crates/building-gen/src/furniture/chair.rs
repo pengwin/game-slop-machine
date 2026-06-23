@@ -1,5 +1,6 @@
 use crate::mesh::MeshData;
-use crate::mesh::colored_shapes::{append_colored_box, append_colored_cylinder};
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::colored_shapes::{append_material_box, append_material_cylinder};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ChairBackStyle {
@@ -85,15 +86,16 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
     let seat_y = seat_h + seat_t / 2.0;
     match config.seat_shape {
         ChairSeatShape::Rectangle => {
-            append_colored_box(
+            append_material_box(
                 &mut mesh,
                 [0.0, seat_y, 0.0],
                 [actual_w, seat_t, actual_d],
                 config.seat_color,
+                SurfaceMaterial::Wood,
             );
         }
         ChairSeatShape::Round => {
-            append_colored_cylinder(
+            append_material_cylinder(
                 &mut mesh,
                 [0.0, seat_y, 0.0],
                 actual_w / 2.0,
@@ -101,6 +103,7 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
                 seat_t,
                 16,
                 config.seat_color,
+                SurfaceMaterial::Wood,
             );
         }
     }
@@ -115,7 +118,7 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
     match config.leg_count {
         1 => {
             // One thick center leg
-            append_colored_cylinder(
+            append_material_cylinder(
                 &mut mesh,
                 [0.0, leg_h / 2.0, 0.0],
                 leg_t * 0.8,
@@ -123,6 +126,7 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
                 leg_h,
                 8,
                 config.frame_color,
+                SurfaceMaterial::Wood,
             );
         }
         2 => {
@@ -152,15 +156,16 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
     for (lx, lz) in leg_positions {
         match config.seat_shape {
             ChairSeatShape::Rectangle => {
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [lx, leg_h / 2.0, lz],
                     [leg_t, leg_h, leg_t],
                     config.frame_color,
+                    SurfaceMaterial::Wood,
                 );
             }
             ChairSeatShape::Round => {
-                append_colored_cylinder(
+                append_material_cylinder(
                     &mut mesh,
                     [lx, leg_h / 2.0, lz],
                     leg_t / 2.0,
@@ -168,6 +173,7 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
                     leg_h,
                     8,
                     config.frame_color,
+                    SurfaceMaterial::Wood,
                 );
             }
         }
@@ -184,11 +190,12 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
         let post_z = leg_z_rear;
 
         for lx in [-leg_x, leg_x] {
-            append_colored_box(
+            append_material_box(
                 &mut mesh,
                 [lx, post_y, post_z],
                 [leg_t, post_h, leg_t],
                 config.frame_color,
+                SurfaceMaterial::Wood,
             );
         }
 
@@ -201,20 +208,22 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
             ChairBackStyle::Solid => {
                 let solid_h = post_h;
                 let solid_center_y = post_y;
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [0.0, solid_center_y, post_z],
                     [back_w, solid_h, back_t],
                     config.back_color,
+                    SurfaceMaterial::Wood,
                 );
             }
             ChairBackStyle::Spikes(count) => {
                 // Top rail
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [0.0, back_center_y, post_z],
                     [back_w, back_h, back_t],
                     config.back_color,
+                    SurfaceMaterial::Wood,
                 );
 
                 if count > 0 {
@@ -231,11 +240,12 @@ pub fn generate_chair_mesh(w: f32, h: f32, d: f32, config: &ChairConfig) -> Mesh
 
                         for i in 0..count {
                             let x = start_x + spacing * (i as f32);
-                            append_colored_box(
+                            append_material_box(
                                 &mut mesh,
                                 [x, slat_center_y, post_z],
                                 [slat_w, slat_h, back_t],
                                 config.back_color,
+                                SurfaceMaterial::Wood,
                             );
                         }
                     }

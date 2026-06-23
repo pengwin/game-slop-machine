@@ -1,6 +1,6 @@
-use bevy::prelude::*;
 use super::builders::{build_albedo, build_normal};
 use super::noise::{cell_noise, fbm, mortar_mask};
+use bevy::prelude::*;
 
 pub fn brick_height(seed: u32, u: f32, v: f32) -> f32 {
     let rows = v * 7.0;

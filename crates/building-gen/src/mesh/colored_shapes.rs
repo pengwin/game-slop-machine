@@ -1,8 +1,18 @@
-use super::MeshData;
-use super::math_util::{Quad, append_colored_quad};
+use super::math_util::{Quad, append_colored_quad, append_colored_quad_with_material};
+use super::{MeshData, SurfaceMaterial};
 
 pub fn append_colored_box(mesh: &mut MeshData, center: [f32; 3], size: [f32; 3], color: [f32; 4]) {
-    append_colored_square_box(mesh, center, size, color);
+    append_material_box(mesh, center, size, color, SurfaceMaterial::Colored);
+}
+
+pub fn append_material_box(
+    mesh: &mut MeshData,
+    center: [f32; 3],
+    size: [f32; 3],
+    color: [f32; 4],
+    material: SurfaceMaterial,
+) {
+    append_colored_square_box(mesh, center, size, color, material);
 }
 
 fn append_colored_square_box(
@@ -10,6 +20,7 @@ fn append_colored_square_box(
     center: [f32; 3],
     size: [f32; 3],
     color: [f32; 4],
+    material: SurfaceMaterial,
 ) {
     let hw = size[0] / 2.0;
     let hh = size[1] / 2.0;
@@ -19,7 +30,7 @@ fn append_colored_square_box(
     let cz = center[2];
 
     // Top
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - hw, cy + hh, cz + hd],
@@ -31,9 +42,10 @@ fn append_colored_square_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
     // Bottom
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - hw, cy - hh, cz - hd],
@@ -45,9 +57,10 @@ fn append_colored_square_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
     // Front (-Z)
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - hw, cy + hh, cz - hd],
@@ -59,9 +72,10 @@ fn append_colored_square_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
     // Back (+Z)
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx + hw, cy + hh, cz + hd],
@@ -73,9 +87,10 @@ fn append_colored_square_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
     // Left (-X)
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - hw, cy + hh, cz + hd],
@@ -87,9 +102,10 @@ fn append_colored_square_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
     // Right (+X)
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx + hw, cy + hh, cz - hd],
@@ -101,9 +117,9 @@ fn append_colored_square_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
 }
-
 
 pub fn append_colored_rotated_box(
     mesh: &mut MeshData,
@@ -114,7 +130,13 @@ pub fn append_colored_rotated_box(
     color: [f32; 4],
 ) {
     let mut bmesh = MeshData::default();
-    append_colored_square_box(&mut bmesh, [0.0, 0.0, 0.0], size, color);
+    append_colored_square_box(
+        &mut bmesh,
+        [0.0, 0.0, 0.0],
+        size,
+        color,
+        SurfaceMaterial::Colored,
+    );
 
     let cy = rot_y.cos();
     let sy = rot_y.sin();
@@ -184,6 +206,17 @@ pub fn append_colored_beveled_box(
     bevel: f32,
     color: [f32; 4],
 ) {
+    append_material_beveled_box(mesh, center, size, bevel, color, SurfaceMaterial::Colored);
+}
+
+pub fn append_material_beveled_box(
+    mesh: &mut MeshData,
+    center: [f32; 3],
+    size: [f32; 3],
+    bevel: f32,
+    color: [f32; 4],
+    material: SurfaceMaterial,
+) {
     let hw = size[0] / 2.0;
     let hh = size[1] / 2.0;
     let hd = size[2] / 2.0;
@@ -195,7 +228,7 @@ pub fn append_colored_beveled_box(
     let thd = (hd - bevel).max(0.001);
 
     // Top
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - thw, cy + hh, cz + thd],
@@ -207,9 +240,10 @@ pub fn append_colored_beveled_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
     // Bottom
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - hw, cy - hh, cz - hd],
@@ -221,6 +255,7 @@ pub fn append_colored_beveled_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
 
     // Front (-Z)
@@ -228,7 +263,7 @@ pub fn append_colored_beveled_box(
     let nz_z = -2.0 * hh;
     let len_z = (ny_z * ny_z + nz_z * nz_z).sqrt();
     let norm_front = [0.0, ny_z / len_z, nz_z / len_z];
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - thw, cy + hh, cz - thd],
@@ -240,11 +275,12 @@ pub fn append_colored_beveled_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
 
     // Back (+Z)
     let norm_back = [0.0, ny_z / len_z, -nz_z / len_z];
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx + thw, cy + hh, cz + thd],
@@ -256,6 +292,7 @@ pub fn append_colored_beveled_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
 
     // Left (-X)
@@ -263,7 +300,7 @@ pub fn append_colored_beveled_box(
     let ny_x = bevel;
     let len_x = (nx_x * nx_x + ny_x * ny_x).sqrt();
     let norm_left = [nx_x / len_x, ny_x / len_x, 0.0];
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx - thw, cy + hh, cz + thd],
@@ -275,11 +312,12 @@ pub fn append_colored_beveled_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
 
     // Right (+X)
     let norm_right = [-nx_x / len_x, ny_x / len_x, 0.0];
-    append_colored_quad(
+    append_colored_quad_with_material(
         mesh,
         Quad {
             tl: [cx + thw, cy + hh, cz - thd],
@@ -291,6 +329,7 @@ pub fn append_colored_beveled_box(
             uv_max: [1.0, 1.0],
         },
         color,
+        material,
     );
 }
 
@@ -378,6 +417,28 @@ pub fn append_colored_cylinder(
     sides: u32,
     color: [f32; 4],
 ) {
+    append_material_cylinder(
+        mesh,
+        center,
+        radius_x,
+        radius_z,
+        height,
+        sides,
+        color,
+        SurfaceMaterial::Colored,
+    );
+}
+
+pub fn append_material_cylinder(
+    mesh: &mut MeshData,
+    center: [f32; 3],
+    radius_x: f32,
+    radius_z: f32,
+    height: f32,
+    sides: u32,
+    color: [f32; 4],
+    material: SurfaceMaterial,
+) {
     use std::f32::consts::TAU;
     let hh = height / 2.0;
 
@@ -397,7 +458,7 @@ pub fn append_colored_cylinder(
         let normal = [a_mid.cos(), 0.0, a_mid.sin()];
 
         // Side
-        super::math_util::append_colored_quad(
+        super::math_util::append_colored_quad_with_material(
             mesh,
             Quad {
                 tl: [center[0] + x0, center[1] + hh, center[2] + z0],
@@ -409,28 +470,31 @@ pub fn append_colored_cylinder(
                 uv_max: [1.0, 1.0],
             },
             color,
+            material,
         );
 
         // Top triangle (winding order: center -> point 1 -> point 0 for CCW normal UP)
         // Wait, for UP normal [0.0, 1.0, 0.0], we want right hand rule: center -> x1 -> x0 is CCW if looking from above.
         // Let's verify: a1 > a0, so x1 is "ahead" of x0 counter-clockwise.
-        super::math_util::append_colored_triangle(
+        super::math_util::append_colored_triangle_with_material(
             mesh,
             top_c,
             [center[0] + x1, center[1] + hh, center[2] + z1],
             [center[0] + x0, center[1] + hh, center[2] + z0],
             [0.0, 1.0, 0.0],
             color,
+            material,
         );
 
         // Bottom triangle (winding order: center -> point 0 -> point 1 for CCW normal DOWN)
-        super::math_util::append_colored_triangle(
+        super::math_util::append_colored_triangle_with_material(
             mesh,
             bot_c,
             [center[0] + x0, center[1] - hh, center[2] + z0],
             [center[0] + x1, center[1] - hh, center[2] + z1],
             [0.0, -1.0, 0.0],
             color,
+            material,
         );
     }
 }

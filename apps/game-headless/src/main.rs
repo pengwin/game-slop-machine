@@ -157,6 +157,8 @@ fn generate_building(
             &mut commands,
             &mut meshes,
             &mut materials,
+            &mut textures,
+            &mut images,
             &fixture.0,
         );
         return;
@@ -178,15 +180,15 @@ fn setup_studio_low_poly_render(commands: &mut Commands) {
     commands.insert_resource(ClearColor(Color::srgb(0.86, 0.86, 0.84)));
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
     commands.insert_resource(GlobalAmbientLight {
-        color: Color::srgb(1.0, 0.96, 0.90),
-        brightness: 1.62,
+        color: Color::srgb(0.94, 0.91, 0.86),
+        brightness: 1.02,
         ..default()
     });
     commands.spawn((
         Name::new("Studio Low Poly Key Light"),
         DirectionalLight {
             color: Color::srgb(1.0, 0.95, 0.85),
-            illuminance: 1_550.0,
+            illuminance: 2_650.0,
             shadow_maps_enabled: true,
             contact_shadows_enabled: true,
             ..default()
@@ -203,7 +205,7 @@ fn setup_studio_low_poly_render(commands: &mut Commands) {
         Name::new("Studio Low Poly Fill Light"),
         DirectionalLight {
             color: Color::srgb(0.95, 0.97, 1.0),
-            illuminance: 520.0,
+            illuminance: 320.0,
             shadow_maps_enabled: false,
             ..default()
         },

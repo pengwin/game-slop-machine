@@ -125,6 +125,8 @@ pub fn spawn_district_on_command(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
+                &mut textures,
+                &mut images,
                 &scene_objects,
                 Transform {
                     translation: Vec3::new(

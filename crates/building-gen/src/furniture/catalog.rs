@@ -5,6 +5,9 @@ use super::counter::CounterConfig;
 use super::shelf::ShelfConfig;
 use super::table::TableConfig;
 use super::{FurnitureItem, FurnitureType};
+use crate::mesh::MeshData;
+use crate::mesh::SurfaceMaterial;
+use crate::scene::SceneMeshPart;
 
 pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
     use crate::geometry::Vec3;
@@ -140,6 +143,8 @@ pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
         0.0
     };
 
+    let material_parts = material_parts_for_item(item_type, &mesh, color);
+
     FurnitureItem {
         position: Vec3::ZERO,
         rotation,
@@ -149,5 +154,176 @@ pub fn single_item(item_type: FurnitureType) -> FurnitureItem {
         depth: d,
         color,
         mesh,
+        material_parts,
+    }
+}
+
+fn material_parts_for_item(
+    _item_type: FurnitureType,
+    mesh: &MeshData,
+    fallback_color: [f32; 3],
+) -> Vec<SceneMeshPart> {
+    if mesh.is_empty() {
+        return Vec::new();
+    }
+
+    let has_colors = mesh.colors.len() == mesh.vertices.len();
+    let mut parts: Vec<SceneMeshPart> = Vec::new();
+    let mut part_vertex_maps: Vec<Vec<(usize, u32)>> = Vec::new();
+
+    for (tri_i, tri) in mesh.indices.chunks_exact(3).enumerate() {
+        let color = if has_colors {
+            mesh.colors[tri[0] as usize]
+        } else {
+            [fallback_color[0], fallback_color[1], fallback_color[2], 1.0]
+        };
+        let material = mesh
+            .surface_materials
+            .get(tri_i)
+            .copied()
+            .unwrap_or(SurfaceMaterial::Colored);
+        let rgb = [color[0], color[1], color[2]];
+        let part_index = parts
+            .iter()
+            .position(|part| part.material == material && close_rgb(part.color, rgb))
+            .unwrap_or_else(|| {
+                parts.push(SceneMeshPart {
+                    material,
+                    color: rgb,
+                    mesh: MeshData::default(),
+                });
+                part_vertex_maps.push(Vec::new());
+                parts.len() - 1
+            });
+        push_triangle(
+            &mut parts[part_index].mesh,
+            &mut part_vertex_maps[part_index],
+            mesh,
+            tri,
+            material,
+        );
+    }
+
+    parts
+}
+
+fn push_triangle(
+    out: &mut MeshData,
+    vertex_map: &mut Vec<(usize, u32)>,
+    source: &MeshData,
+    tri: &[u32],
+    material: SurfaceMaterial,
+) {
+    let mut out_indices = [0; 3];
+    for (out_slot, idx) in out_indices.iter_mut().zip(tri) {
+        let source_index = *idx as usize;
+        if let Some((_, mapped_index)) = vertex_map
+            .iter()
+            .find(|(mapped_source, _)| *mapped_source == source_index)
+        {
+            *out_slot = *mapped_index;
+            continue;
+        }
+
+        let new_index = out.vertices.len() as u32;
+        vertex_map.push((source_index, new_index));
+        out.vertices.push(source.vertices[source_index]);
+        out.normals.push(source.normals[source_index]);
+        out.uvs.push(source.uvs[source_index]);
+        *out_slot = new_index;
+    }
+    out.indices.extend(out_indices);
+    out.surface_materials.push(material);
+}
+
+fn close_rgb(a: [f32; 3], b: [f32; 3]) -> bool {
+    (a[0] - b[0]).abs() < 0.002 && (a[1] - b[1]).abs() < 0.002 && (a[2] - b[2]).abs() < 0.002
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn material_parts_merge_back_to_fallback_mesh_shape() {
+        for item_type in [
+            FurnitureType::Table,
+            FurnitureType::Chair,
+            FurnitureType::Bed,
+            FurnitureType::Shelf,
+            FurnitureType::Counter,
+            FurnitureType::Desk,
+            FurnitureType::Stove,
+            FurnitureType::Barrel,
+            FurnitureType::Crate,
+            FurnitureType::Bench,
+            FurnitureType::Stool,
+        ] {
+            let item = single_item(item_type);
+            assert!(
+                !item.material_parts.is_empty(),
+                "{item_type:?} should expose material-tagged parts"
+            );
+            assert!(
+                item.fallback_parts_match_mesh(),
+                "{item_type:?} material parts should preserve fallback mesh shape"
+            );
+        }
+    }
+
+    #[test]
+    fn bed_blanket_is_fabric_not_wood() {
+        let item = single_item(FurnitureType::Bed);
+        let blanket = item
+            .material_parts
+            .iter()
+            .find(|part| close_rgb(part.color, [0.65, 0.35, 0.25]))
+            .expect("bed should expose blanket color as a material part");
+
+        assert_eq!(blanket.material, SurfaceMaterial::Fabric);
+    }
+
+    #[test]
+    fn material_parts_use_surface_tags_not_color_guessing() {
+        let bed = single_item(FurnitureType::Bed);
+        assert!(
+            bed.material_parts
+                .iter()
+                .any(|part| part.material == SurfaceMaterial::Wood)
+        );
+        assert!(
+            bed.material_parts
+                .iter()
+                .any(|part| part.material == SurfaceMaterial::Fabric)
+        );
+        assert!(
+            bed.material_parts
+                .iter()
+                .filter(|part| part.material == SurfaceMaterial::Fabric)
+                .all(|part| part.material != SurfaceMaterial::Wood)
+        );
+
+        let table = single_item(FurnitureType::Table);
+        assert!(
+            table
+                .material_parts
+                .iter()
+                .all(|part| part.material == SurfaceMaterial::Wood)
+        );
+
+        let counter = single_item(FurnitureType::Counter);
+        for material in [
+            SurfaceMaterial::Wood,
+            SurfaceMaterial::Stone,
+            SurfaceMaterial::Metal,
+        ] {
+            assert!(
+                counter
+                    .material_parts
+                    .iter()
+                    .any(|part| part.material == material),
+                "counter should expose {material:?} material parts"
+            );
+        }
     }
 }

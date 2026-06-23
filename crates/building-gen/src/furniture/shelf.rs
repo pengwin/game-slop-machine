@@ -1,5 +1,6 @@
 use crate::mesh::MeshData;
-use crate::mesh::colored_shapes::{append_colored_beveled_box, append_colored_box};
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::colored_shapes::{append_material_beveled_box, append_material_box};
 
 #[derive(Debug, Clone)]
 pub struct ShelfConfig {
@@ -41,67 +42,76 @@ pub fn generate_shelf_mesh(w: f32, h: f32, d: f32, config: &ShelfConfig) -> Mesh
     let shelf_d = d - pt;
     let shelf_z = hd - shelf_d / 2.0;
 
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-hw + pt / 2.0, actual_h / 2.0, 0.0],
         [pt, actual_h, d],
         config.wood_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [hw - pt / 2.0, actual_h / 2.0, 0.0],
         [pt, actual_h, d],
         config.wood_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, actual_h - pt / 2.0, 0.0],
         [w - 2.0 * pt, pt, d],
         config.wood_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, actual_h / 2.0, -hd + pt / 2.0],
         [w - 2.0 * pt, actual_h, pt],
         config.wood_color,
+        SurfaceMaterial::Wood,
     );
 
     let base_h = actual_h * 0.35;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, base_h / 2.0, shelf_z],
         [w - 2.0 * pt, base_h, shelf_d],
         config.cabinet_color,
+        SurfaceMaterial::Wood,
     );
 
     let door_w = (w - 2.0 * pt) / 2.0 - 0.02;
     let door_h = base_h - 0.04;
     let door_z = hd - 0.01;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-door_w / 2.0 - 0.01, base_h / 2.0, door_z],
         [door_w, door_h, 0.02],
         config.wood_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [door_w / 2.0 + 0.01, base_h / 2.0, door_z],
         [door_w, door_h, 0.02],
         config.wood_color,
+        SurfaceMaterial::Wood,
     );
 
     let knob_color = [0.2, 0.2, 0.2, 1.0];
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-0.05, base_h / 2.0 + 0.05, door_z + 0.015],
         [0.02, 0.06, 0.02],
         knob_color,
+        SurfaceMaterial::Metal,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.05, base_h / 2.0 + 0.05, door_z + 0.015],
         [0.02, 0.06, 0.02],
         knob_color,
+        SurfaceMaterial::Metal,
     );
 
     let usable_h = actual_h - base_h - pt;
@@ -109,11 +119,12 @@ pub fn generate_shelf_mesh(w: f32, h: f32, d: f32, config: &ShelfConfig) -> Mesh
 
     for i in 1..rows {
         let sy = base_h + i as f32 * spacing;
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, sy + pt / 2.0, shelf_z],
             [w - 2.0 * pt, pt, shelf_d],
             config.wood_color,
+            SurfaceMaterial::Wood,
         );
     }
 
@@ -139,11 +150,12 @@ pub fn generate_shelf_mesh(w: f32, h: f32, d: f32, config: &ShelfConfig) -> Mesh
                 if book_idx < total_books {
                     let bx = start_x + (i as f32) * (book_w + 0.02) + book_w / 2.0;
 
-                    append_colored_box(
+                    append_material_box(
                         &mut mesh,
                         [bx, shelf_top_y + book_h / 2.0, shelf_z],
                         [book_w, book_h, book_d],
                         config.books[book_idx],
+                        SurfaceMaterial::Book,
                     );
                     book_idx += 1;
                 }
@@ -153,12 +165,13 @@ pub fn generate_shelf_mesh(w: f32, h: f32, d: f32, config: &ShelfConfig) -> Mesh
                 let vase_x = hw - pt - 0.15;
                 let vase_size = 0.1;
                 let vase_color = [0.8, 0.8, 0.8, 1.0];
-                append_colored_beveled_box(
+                append_material_beveled_box(
                     &mut mesh,
                     [vase_x, shelf_top_y + vase_size / 2.0, shelf_z],
                     [vase_size, vase_size, vase_size],
                     0.03,
                     vase_color,
+                    SurfaceMaterial::Colored,
                 );
             }
         }

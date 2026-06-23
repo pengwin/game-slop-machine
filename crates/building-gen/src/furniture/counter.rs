@@ -1,5 +1,6 @@
 use crate::mesh::MeshData;
-use crate::mesh::colored_shapes::append_colored_box;
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::colored_shapes::append_material_box;
 
 #[derive(Debug, Clone)]
 pub struct CounterConfig {
@@ -61,13 +62,14 @@ pub fn generate_counter_mesh(w: f32, h: f32, d: f32, config: &CounterConfig) -> 
     let handle_depth = config.handle_depth.max(0.001);
     let front_z = actual_d / 2.0 + front_detail_depth / 2.0;
 
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, (actual_h - top_h) / 2.0, 0.0],
         [actual_w, actual_h - top_h, actual_d],
         config.cabinet_color,
+        SurfaceMaterial::Wood,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, actual_h - top_h / 2.0, 0.0],
         [
@@ -76,8 +78,9 @@ pub fn generate_counter_mesh(w: f32, h: f32, d: f32, config: &CounterConfig) -> 
             actual_d + config.countertop_overhang * 2.0,
         ],
         config.countertop_color,
+        SurfaceMaterial::Stone,
     );
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, kick_h / 2.0, actual_d / 2.0 + front_detail_depth / 2.0],
         [
@@ -86,6 +89,7 @@ pub fn generate_counter_mesh(w: f32, h: f32, d: f32, config: &CounterConfig) -> 
             front_detail_depth,
         ],
         config.trim_color,
+        SurfaceMaterial::Wood,
     );
 
     let storage_h = (actual_h - top_h - kick_h).max(0.01);
@@ -103,20 +107,22 @@ pub fn generate_counter_mesh(w: f32, h: f32, d: f32, config: &CounterConfig) -> 
         } else {
             1.0
         };
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [x, drawer_y, front_z],
             [panel_w, drawer_h, front_detail_depth],
             config.panel_color,
+            SurfaceMaterial::Wood,
         );
         if door_h > 0.01 {
-            append_colored_box(
+            append_material_box(
                 &mut mesh,
                 [x, door_y, front_z],
                 [panel_w, door_h, front_detail_depth],
                 config.panel_color,
+                SurfaceMaterial::Wood,
             );
-            append_colored_box(
+            append_material_box(
                 &mut mesh,
                 [
                     x - handle_side * panel_w * 0.18,
@@ -125,10 +131,11 @@ pub fn generate_counter_mesh(w: f32, h: f32, d: f32, config: &CounterConfig) -> 
                 ],
                 [handle_depth, door_h * 0.28, handle_depth],
                 config.handle_color,
+                SurfaceMaterial::Metal,
             );
         }
         if drawer_h > 0.01 {
-            append_colored_box(
+            append_material_box(
                 &mut mesh,
                 [
                     x,
@@ -137,6 +144,7 @@ pub fn generate_counter_mesh(w: f32, h: f32, d: f32, config: &CounterConfig) -> 
                 ],
                 [panel_w * 0.46, handle_depth, handle_depth],
                 config.handle_color,
+                SurfaceMaterial::Metal,
             );
         }
     }

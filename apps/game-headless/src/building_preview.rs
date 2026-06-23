@@ -9,7 +9,9 @@ use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape
 use building_gen::tile_converter::classify_wall_tiles;
 use game_core::plugins::building::mesh_util::convert_mesh;
 use game_core::plugins::building::procedural_texture::ProceduralTextures;
-use game_core::plugins::building::render::{concrete_material, spawn_building_mesh};
+use game_core::plugins::building::render::{
+    concrete_material, floor_tile_material, scene_part_material, spawn_building_mesh, wood_material,
+};
 
 pub fn spawn_building_preview(
     commands: &mut Commands,
@@ -105,6 +107,11 @@ pub fn spawn_building_preview(
         "  floor:  {} verts, {} tris",
         bmesh.floor_mesh.vertices.len(),
         bmesh.floor_mesh.indices.len() / 3
+    );
+    println!(
+        "  floor grout: {} verts, {} tris",
+        bmesh.floor_grout_mesh.vertices.len(),
+        bmesh.floor_grout_mesh.indices.len() / 3
     );
     println!(
         "  roof:   {} verts, {} tris",
@@ -214,7 +221,8 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_wall_mesh.is_empty() {
-        let exterior_wall_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_wall_mesh);
+        let exterior_wall_mesh =
+            wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_wall_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&exterior_wall_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -231,7 +239,8 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_corner_mesh.is_empty() {
-        let exterior_corner_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_corner_mesh);
+        let exterior_corner_mesh =
+            wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_corner_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&exterior_corner_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -248,7 +257,8 @@ pub fn spawn_building_preview(
     }
 
     if !bmesh.exterior_t_junction_mesh.is_empty() {
-        let exterior_t_junction_mesh = wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_t_junction_mesh);
+        let exterior_t_junction_mesh =
+            wall_preview_mesh(fixture, config.seed as u32, &bmesh.exterior_t_junction_mesh);
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&exterior_t_junction_mesh))),
             MeshMaterial3d(materials.add(wall_preview_material(
@@ -267,11 +277,26 @@ pub fn spawn_building_preview(
     if !bmesh.floor_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.floor_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
-                config.visual_style.floor_color,
-            )))),
+            MeshMaterial3d(
+                materials.add(floor_preview_material(fixture, config, textures, images)),
+            ),
             Transform::default(),
             Name::new("Floor"),
+        ));
+    }
+
+    if !bmesh.floor_grout_mesh.is_empty() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&bmesh.floor_grout_mesh))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgba(0.22, 0.20, 0.17, 0.28),
+                alpha_mode: AlphaMode::Blend,
+                perceptual_roughness: 1.0,
+                cull_mode: None,
+                ..default()
+            })),
+            Transform::default(),
+            Name::new("Floor Grout"),
         ));
     }
 
@@ -316,21 +341,45 @@ pub fn spawn_building_preview(
     if !bmesh.door_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.door_mesh))),
-            MeshMaterial3d(materials.add(low_poly_cull_material(style_color(
+            MeshMaterial3d(materials.add(wood_preview_material(
+                fixture,
                 config.visual_style.door_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Doors"),
         ));
     }
 
+    if !bmesh.door_hardware_mesh.is_empty() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&bmesh.door_hardware_mesh))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::WHITE,
+                metallic: 0.25,
+                perceptual_roughness: 0.46,
+                cull_mode: None,
+                ..default()
+            })),
+            NotShadowCaster,
+            Transform::default(),
+            Name::new("Door Hardware"),
+        ));
+    }
+
     if !bmesh.opening_trim_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.opening_trim_mesh))),
-            MeshMaterial3d(materials.add(low_poly_cull_material(style_color(
+            MeshMaterial3d(materials.add(wood_preview_material(
+                fixture,
                 config.visual_style.trim_color,
-            )))),
+                textures,
+                images,
+                config.seed as u32,
+            ))),
             NotShadowCaster,
             Transform::default(),
             Name::new("Opening Trim"),
@@ -341,12 +390,12 @@ pub fn spawn_building_preview(
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.window_mesh))),
             MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgba(0.45, 0.7, 1.0, 0.45),
+                base_color: Color::srgba(0.58, 0.78, 0.95, 0.58),
                 alpha_mode: AlphaMode::Blend,
                 cull_mode: None,
                 metallic: 0.0,
-                perceptual_roughness: 0.9,
-                reflectance: 0.08,
+                perceptual_roughness: 0.24,
+                reflectance: 0.20,
                 ..default()
             })),
             NotShadowCaster,
@@ -363,26 +412,14 @@ pub fn spawn_building_preview(
             println!("Spawning {} scene objects", items.len());
             spawn_furniture_contact_shadows(commands, meshes, materials, &items);
             for item in items {
-                commands.spawn((
-                    Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-                    MeshMaterial3d(materials.add(low_poly_material(
-                        if item.mesh.colors.is_empty() {
-                            Color::srgb(item.color[0], item.color[1], item.color[2])
-                        } else {
-                            Color::WHITE
-                        },
-                    ))),
-                    Transform::from_translation(Vec3::new(
-                        item.position.x,
-                        item.position.y,
-                        item.position.z,
-                    ))
-                    .with_rotation(Quat::from_rotation_y(item.rotation)),
-                    Name::new(format!("{:?}", item.item_type)),
-                ));
+                spawn_preview_scene_object(
+                    commands, meshes, materials, textures, images, &item, 1.0, None,
+                );
             }
             if matches!(fixture, "picture-room" | "texture-plaster-wall") {
-                spawn_picture_room_staged_props(commands, meshes, materials, config);
+                spawn_picture_room_staged_props(
+                    commands, meshes, materials, textures, images, config,
+                );
             }
         }
     }
@@ -406,6 +443,40 @@ fn low_poly_cull_material(color: Color) -> StandardMaterial {
     StandardMaterial {
         cull_mode: None,
         ..low_poly_material(color)
+    }
+}
+
+fn floor_preview_material(
+    fixture: &str,
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+) -> StandardMaterial {
+    if fixture == "texture-plaster-wall" {
+        floor_tile_material(
+            style_color(config.visual_style.floor_color),
+            textures,
+            images,
+            config.seed as u32,
+        )
+    } else {
+        low_poly_material(style_color(config.visual_style.floor_color))
+    }
+}
+
+fn wood_preview_material(
+    fixture: &str,
+    rgb: [f32; 3],
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    if fixture == "texture-plaster-wall" {
+        let mut material = wood_material(style_color(rgb), textures, images, seed);
+        material.cull_mode = None;
+        material
+    } else {
+        low_poly_cull_material(style_color(rgb))
     }
 }
 
@@ -455,7 +526,11 @@ fn wall_preview_mesh(fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
             mesh.uvs[i] = [x * scale, y * scale];
         }
 
-        mesh.colors.push(game_core::plugins::building::procedural_texture::global_dirt_color(seed, position, normal));
+        mesh.colors.push(
+            game_core::plugins::building::procedural_texture::global_dirt_color(
+                seed, position, normal,
+            ),
+        );
     }
     mesh
 }
@@ -567,6 +642,8 @@ fn spawn_picture_room_staged_props(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     config: &BuildingConfig,
 ) {
     let floor_y = config.foundation_height.max(0.0);
@@ -608,20 +685,16 @@ fn spawn_picture_room_staged_props(
             floor_y + 0.027,
         );
 
-        commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-            MeshMaterial3d(
-                materials.add(low_poly_material(if item.mesh.colors.is_empty() {
-                    Color::srgb(item.color[0], item.color[1], item.color[2])
-                } else {
-                    Color::WHITE
-                })),
-            ),
-            Transform::from_translation(position)
-                .with_rotation(Quat::from_rotation_y(rotation))
-                .with_scale(Vec3::splat(scale)),
-            Name::new(name),
-        ));
+        spawn_preview_scene_object(
+            commands,
+            meshes,
+            materials,
+            textures,
+            images,
+            &item,
+            scale,
+            Some((position, rotation, name)),
+        );
     }
 
     if shadow_mesh.is_empty() {
@@ -640,6 +713,65 @@ fn spawn_picture_room_staged_props(
         Transform::default(),
         Name::new("Picture Room Staged Prop Contact Shadows"),
     ));
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_preview_scene_object(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    item: &SceneObject,
+    scale: f32,
+    override_transform: Option<(Vec3, f32, &str)>,
+) {
+    let (position, rotation, name) = override_transform.unwrap_or((
+        Vec3::new(item.position.x, item.position.y, item.position.z),
+        item.rotation,
+        "",
+    ));
+    let transform = Transform::from_translation(position)
+        .with_rotation(Quat::from_rotation_y(rotation))
+        .with_scale(Vec3::splat(scale));
+
+    if item.material_parts.is_empty() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&item.mesh))),
+            MeshMaterial3d(
+                materials.add(low_poly_material(if item.mesh.colors.is_empty() {
+                    Color::srgb(item.color[0], item.color[1], item.color[2])
+                } else {
+                    Color::WHITE
+                })),
+            ),
+            transform,
+            Name::new(if name.is_empty() {
+                format!("{:?}", item.item_type)
+            } else {
+                name.to_string()
+            }),
+        ));
+        return;
+    }
+
+    for (part_i, part) in item.material_parts.iter().enumerate() {
+        commands.spawn((
+            Mesh3d(meshes.add(convert_mesh(&part.mesh))),
+            MeshMaterial3d(materials.add(scene_part_material(
+                part,
+                textures,
+                images,
+                part_i as u32,
+            ))),
+            transform,
+            Name::new(if name.is_empty() {
+                format!("{:?} Part {}", item.item_type, part_i)
+            } else {
+                format!("{} Part {}", name, part_i)
+            }),
+        ));
+    }
 }
 
 fn build_two_room_grid(config: &BuildingConfig) -> TileGrid {

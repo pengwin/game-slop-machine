@@ -1,19 +1,31 @@
-use bevy::prelude::*;
 use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::fbm;
+use bevy::prelude::*;
 
 pub fn plaster_height(seed: u32, u: f32, v: f32) -> f32 {
-    fbm(11 ^ seed, 18.0, 5, u, v) * 0.7 + fbm(12 ^ seed, 58.0, 2, u, v) * 0.3
+    let broad = fbm(11 ^ seed, 7.0, 5, u, v) * 0.45;
+    let fine = fbm(12 ^ seed, 46.0, 3, u, v) * 0.28;
+    let patches = fbm(13 ^ seed, 2.2, 4, u + 0.19, v - 0.31) * 0.27;
+    (broad + fine + patches).clamp(0.0, 1.0)
 }
 
 pub fn plaster_albedo(seed: u32) -> Image {
     build_albedo(
         [0.95, 0.88, 0.70],
         |u, v| {
-            let base = 0.82 + plaster_height(seed, u, v) * 0.20;
-            base.clamp(0.4, 1.1)
+            let broad = fbm(14 ^ seed, 2.6, 5, u * 0.85 + 0.13, v * 0.85 - 0.07);
+            let stains = fbm(15 ^ seed, 10.0, 3, u + broad * 0.12, v);
+            let streaks = fbm(16 ^ seed, 22.0, 2, u * 0.35, v * 1.8);
+            let vertical = (1.0 - v.fract()).powf(1.4) * 0.10;
+            let base = 0.76 + plaster_height(seed, u, v) * 0.24 + broad * 0.08
+                - stains * 0.08
+                - streaks * vertical;
+            base.clamp(0.36, 1.12)
         },
-        |_, _| [1.0, 1.0, 1.0],
+        |u, v| {
+            let age = fbm(17 ^ seed, 4.2, 4, u - 0.23, v + 0.19);
+            [0.97 + age * 0.04, 0.94 + age * 0.025, 0.86 + age * 0.018]
+        },
     )
 }
 

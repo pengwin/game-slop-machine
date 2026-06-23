@@ -1,5 +1,8 @@
 use crate::mesh::MeshData;
-use crate::mesh::math_util::{Quad, append_colored_quad, append_colored_triangle};
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::math_util::{
+    Quad, append_colored_quad_with_material, append_colored_triangle_with_material,
+};
 
 #[derive(Debug, Clone)]
 pub struct BarrelConfig {
@@ -49,61 +52,102 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
     let mut profile = Vec::new();
 
     // Bottom recess and outer rim
-    profile.push((recess_depth, recess_r, wood_color));
-    profile.push((0.0, recess_r, wood_color));
-    profile.push((0.0, cap_r, wood_color));
-    profile.push((rim_h, r, wood_color));
+    profile.push((recess_depth, recess_r, wood_color, SurfaceMaterial::Wood));
+    profile.push((0.0, recess_r, wood_color, SurfaceMaterial::Wood));
+    profile.push((0.0, cap_r, wood_color, SurfaceMaterial::Wood));
+    profile.push((rim_h, r, wood_color, SurfaceMaterial::Wood));
 
     // Ring 1
     let y_r1 = h * 0.25;
-    profile.push((y_r1 - ring_h / 2.0, get_r(y_r1 - ring_h / 2.0), wood_color));
+    profile.push((
+        y_r1 - ring_h / 2.0,
+        get_r(y_r1 - ring_h / 2.0),
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
     profile.push((
         y_r1 - ring_h / 2.0,
         get_r(y_r1) + ring_extrusion,
         metal_color,
+        SurfaceMaterial::Metal,
     ));
     profile.push((
         y_r1 + ring_h / 2.0,
         get_r(y_r1) + ring_extrusion,
         metal_color,
+        SurfaceMaterial::Metal,
     ));
-    profile.push((y_r1 + ring_h / 2.0, get_r(y_r1 + ring_h / 2.0), wood_color));
+    profile.push((
+        y_r1 + ring_h / 2.0,
+        get_r(y_r1 + ring_h / 2.0),
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
 
     // Ring 2
     let y_r2 = h * 0.5;
-    profile.push((y_r2 - ring_h / 2.0, get_r(y_r2 - ring_h / 2.0), wood_color));
+    profile.push((
+        y_r2 - ring_h / 2.0,
+        get_r(y_r2 - ring_h / 2.0),
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
     profile.push((
         y_r2 - ring_h / 2.0,
         get_r(y_r2) + ring_extrusion,
         metal_color,
+        SurfaceMaterial::Metal,
     ));
     profile.push((
         y_r2 + ring_h / 2.0,
         get_r(y_r2) + ring_extrusion,
         metal_color,
+        SurfaceMaterial::Metal,
     ));
-    profile.push((y_r2 + ring_h / 2.0, get_r(y_r2 + ring_h / 2.0), wood_color));
+    profile.push((
+        y_r2 + ring_h / 2.0,
+        get_r(y_r2 + ring_h / 2.0),
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
 
     // Ring 3
     let y_r3 = h * 0.75;
-    profile.push((y_r3 - ring_h / 2.0, get_r(y_r3 - ring_h / 2.0), wood_color));
+    profile.push((
+        y_r3 - ring_h / 2.0,
+        get_r(y_r3 - ring_h / 2.0),
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
     profile.push((
         y_r3 - ring_h / 2.0,
         get_r(y_r3) + ring_extrusion,
         metal_color,
+        SurfaceMaterial::Metal,
     ));
     profile.push((
         y_r3 + ring_h / 2.0,
         get_r(y_r3) + ring_extrusion,
         metal_color,
+        SurfaceMaterial::Metal,
     ));
-    profile.push((y_r3 + ring_h / 2.0, get_r(y_r3 + ring_h / 2.0), wood_color));
+    profile.push((
+        y_r3 + ring_h / 2.0,
+        get_r(y_r3 + ring_h / 2.0),
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
 
     // Top rim and recess
-    profile.push((h - rim_h, r, wood_color));
-    profile.push((h, cap_r, wood_color));
-    profile.push((h, recess_r, wood_color));
-    profile.push((h - recess_depth, recess_r, wood_color));
+    profile.push((h - rim_h, r, wood_color, SurfaceMaterial::Wood));
+    profile.push((h, cap_r, wood_color, SurfaceMaterial::Wood));
+    profile.push((h, recess_r, wood_color, SurfaceMaterial::Wood));
+    profile.push((
+        h - recess_depth,
+        recess_r,
+        wood_color,
+        SurfaceMaterial::Wood,
+    ));
 
     for i in 0..sides {
         let angle0 = std::f32::consts::TAU * i as f32 / sides as f32;
@@ -113,8 +157,8 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
         let nz = ((angle0 + angle1) / 2.0).sin();
 
         for p in profile.windows(2) {
-            let (y0, r0, _) = p[0];
-            let (y1, r1, color1) = p[1];
+            let (y0, r0, _, _) = p[0];
+            let (y1, r1, color1, material) = p[1];
 
             if (y1 - y0).abs() < 1e-5 && (r1 - r0).abs() < 1e-5 {
                 continue;
@@ -146,7 +190,7 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
             let x1_top = angle1.cos() * r1;
             let z1_top = angle1.sin() * r1;
 
-            append_colored_quad(
+            append_colored_quad_with_material(
                 &mut mesh,
                 Quad {
                     tl: [x0_top, y1, z0_top],
@@ -158,6 +202,7 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
                     uv_max: [1.0, 1.0],
                 },
                 color1,
+                material,
             );
         }
 
@@ -166,21 +211,23 @@ pub fn generate_barrel_mesh(diameter: f32, h: f32, config: &BarrelConfig) -> Mes
         let tx1 = angle1.cos() * recess_r;
         let tz1 = angle1.sin() * recess_r;
 
-        append_colored_triangle(
+        append_colored_triangle_with_material(
             &mut mesh,
             [0.0, h - recess_depth, 0.0],
             [tx1, h - recess_depth, tz1],
             [tx0, h - recess_depth, tz0],
             [0.0, 1.0, 0.0],
             cap_color,
+            SurfaceMaterial::Wood,
         );
-        append_colored_triangle(
+        append_colored_triangle_with_material(
             &mut mesh,
             [0.0, recess_depth, 0.0],
             [tx0, recess_depth, tz0],
             [tx1, recess_depth, tz1],
             [0.0, -1.0, 0.0],
             cap_color,
+            SurfaceMaterial::Wood,
         );
     }
 

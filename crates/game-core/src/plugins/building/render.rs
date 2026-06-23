@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::layout::BuildingLayout;
 use building_gen::mesh::{BuildingMesh, MeshData, generate_building_mesh};
+use building_gen::scene::{SceneMaterialKind, SceneMeshPart};
 
 use super::mesh_util::convert_mesh;
 use super::procedural_texture::ProceduralTextures;
@@ -54,6 +55,17 @@ pub fn spawn_building_mesh(
         foundation_material(config, textures, images, config.seed as u32),
         transform,
         &name("Foundation"),
+        None,
+    );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.door_hardware_mesh,
+        door_hardware_material(),
+        transform,
+        &name("Door Hardware"),
         None,
     );
     spawn_part(
@@ -122,6 +134,17 @@ pub fn spawn_building_mesh(
         &name("Floor"),
         None,
     );
+    spawn_part(
+        commands,
+        meshes,
+        materials,
+        &mut entities,
+        &bmesh.floor_grout_mesh,
+        floor_grout_material(),
+        transform,
+        &name("Floor Grout"),
+        None,
+    );
 
     if config.render_roof {
         spawn_part(
@@ -165,7 +188,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.opening_trim_mesh,
-        opening_trim_material(config),
+        opening_trim_material(config, textures, images, config.seed as u32),
         transform,
         &name("Opening Trim"),
         None,
@@ -260,17 +283,17 @@ pub fn plaster_material(
 }
 
 pub fn wood_material(
-    base_color: Color,
+    _base_color: Color,
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    textured_material(
-        base_color,
-        textures.get_wood_albedo(seed, images),
-        textures.get_wood_normal(seed, images),
-        0.68,
-    )
+    StandardMaterial {
+        base_color: Color::WHITE,
+        base_color_texture: Some(textures.get_wood_albedo_now(seed, images)),
+        perceptual_roughness: 0.76,
+        ..default()
+    }
 }
 
 pub fn brick_material(
@@ -347,6 +370,24 @@ pub fn concrete_material(
     }
 }
 
+pub fn floor_tile_material(
+    _base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    let orm = textures.get_floor_orm(seed, images);
+    StandardMaterial {
+        base_color: Color::WHITE,
+        base_color_texture: Some(textures.get_floor_albedo(seed, images)),
+        normal_map_texture: Some(textures.get_floor_normal(seed, images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
+        perceptual_roughness: 0.92,
+        ..default()
+    }
+}
+
 fn foundation_material(
     config: &BuildingConfig,
     textures: &mut ProceduralTextures,
@@ -395,7 +436,7 @@ fn exterior_wall_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    brick_material(
+    plaster_material(
         color(config.visual_style.exterior_wall_color),
         textures,
         images,
@@ -409,7 +450,7 @@ fn exterior_corner_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    brick_material(
+    plaster_material(
         color(config.visual_style.corner_color),
         textures,
         images,
@@ -423,7 +464,7 @@ fn exterior_t_junction_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    brick_material(
+    plaster_material(
         color(config.visual_style.t_junction_color),
         textures,
         images,
@@ -437,7 +478,7 @@ fn floor_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    wood_material(
+    floor_tile_material(
         color(config.visual_style.floor_color),
         textures,
         images,
@@ -459,25 +500,52 @@ fn roof_material(
     )
 }
 
+fn floor_grout_material() -> StandardMaterial {
+    StandardMaterial {
+        base_color: Color::srgba(0.22, 0.20, 0.17, 0.28),
+        alpha_mode: AlphaMode::Blend,
+        perceptual_roughness: 1.0,
+        cull_mode: None,
+        ..default()
+    }
+}
+
 fn door_material(
-    config: &BuildingConfig,
+    _config: &BuildingConfig,
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
     StandardMaterial {
-        base_color: color(config.visual_style.door_color),
+        base_color: Color::WHITE,
         base_color_texture: Some(textures.get_wood_albedo(seed, images)),
-        normal_map_texture: Some(textures.get_wood_normal(seed, images)),
         cull_mode: None,
         perceptual_roughness: 0.72,
         ..default()
     }
 }
 
-fn opening_trim_material(config: &BuildingConfig) -> StandardMaterial {
+fn opening_trim_material(
+    config: &BuildingConfig,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    let mut material = wood_material(
+        color(config.visual_style.trim_color),
+        textures,
+        images,
+        seed,
+    );
+    material.cull_mode = None;
+    material
+}
+
+fn door_hardware_material() -> StandardMaterial {
     StandardMaterial {
-        base_color: color(config.visual_style.trim_color),
+        base_color: Color::WHITE,
+        metallic: 0.25,
+        perceptual_roughness: 0.46,
         cull_mode: None,
         ..default()
     }
@@ -485,9 +553,11 @@ fn opening_trim_material(config: &BuildingConfig) -> StandardMaterial {
 
 fn window_material() -> StandardMaterial {
     StandardMaterial {
-        base_color: Color::srgba(0.45, 0.7, 1.0, 0.45),
+        base_color: Color::srgba(0.58, 0.78, 0.95, 0.58),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None,
+        perceptual_roughness: 0.22,
+        reflectance: 0.20,
         ..default()
     }
 }
@@ -497,6 +567,8 @@ pub fn spawn_furniture(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
     items: &[building_gen::scene::SceneObject],
     transform: Transform,
     name_prefix: &str,
@@ -516,25 +588,88 @@ pub fn spawn_furniture(
 
         let world_transform = transform * local_transform;
 
-        entities.push(
-            commands
-                .spawn((
-                    Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-                    MeshMaterial3d(materials.add(StandardMaterial {
-                        base_color: if item.mesh.colors.is_empty() {
-                            Color::srgb(item.color[0], item.color[1], item.color[2])
-                        } else {
-                            Color::WHITE
-                        },
-                        perceptual_roughness: 0.85,
-                        ..default()
-                    })),
-                    world_transform,
-                    Name::new(format!("{} {:?} {}", name_prefix, item.item_type, i)),
-                ))
-                .id(),
-        );
+        if item.material_parts.is_empty() {
+            entities.push(
+                commands
+                    .spawn((
+                        Mesh3d(meshes.add(convert_mesh(&item.mesh))),
+                        MeshMaterial3d(materials.add(StandardMaterial {
+                            base_color: if item.mesh.colors.is_empty() {
+                                Color::srgb(item.color[0], item.color[1], item.color[2])
+                            } else {
+                                Color::WHITE
+                            },
+                            perceptual_roughness: 0.85,
+                            ..default()
+                        })),
+                        world_transform,
+                        Name::new(format!("{} {:?} {}", name_prefix, item.item_type, i)),
+                    ))
+                    .id(),
+            );
+            continue;
+        }
+
+        for (part_i, part) in item.material_parts.iter().enumerate() {
+            entities.push(
+                commands
+                    .spawn((
+                        Mesh3d(meshes.add(convert_mesh(&part.mesh))),
+                        MeshMaterial3d(materials.add(scene_part_material(
+                            part,
+                            textures,
+                            images,
+                            i as u32 + part_i as u32,
+                        ))),
+                        world_transform,
+                        Name::new(format!(
+                            "{} {:?} {} Part {}",
+                            name_prefix, item.item_type, i, part_i
+                        )),
+                    ))
+                    .id(),
+            );
+        }
     }
 
     entities
+}
+
+pub fn scene_part_material(
+    part: &SceneMeshPart,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    seed: u32,
+) -> StandardMaterial {
+    let color = Color::srgb(part.color[0], part.color[1], part.color[2]);
+    match part.material {
+        SceneMaterialKind::Wood => wood_material(color, textures, images, seed),
+        SceneMaterialKind::Fabric => StandardMaterial {
+            base_color: color,
+            perceptual_roughness: 0.96,
+            ..default()
+        },
+        SceneMaterialKind::Book => StandardMaterial {
+            base_color: color,
+            perceptual_roughness: 0.72,
+            ..default()
+        },
+        SceneMaterialKind::Metal => StandardMaterial {
+            base_color: color,
+            metallic: 0.25,
+            perceptual_roughness: 0.52,
+            ..default()
+        },
+        SceneMaterialKind::Stone => StandardMaterial {
+            base_color: color,
+            perceptual_roughness: 0.94,
+            reflectance: 0.04,
+            ..default()
+        },
+        SceneMaterialKind::Colored => StandardMaterial {
+            base_color: color,
+            perceptual_roughness: 0.86,
+            ..default()
+        },
+    }
 }

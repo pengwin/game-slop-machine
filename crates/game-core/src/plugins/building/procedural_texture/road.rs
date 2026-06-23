@@ -1,6 +1,6 @@
-use bevy::prelude::*;
 use super::builders::{build_albedo, build_normal};
 use super::noise::fbm;
+use bevy::prelude::*;
 
 pub fn road_height(seed: u32, u: f32, v: f32) -> f32 {
     fbm(61 ^ seed, 24.0, 4, u, v) * 0.65 + fbm(62 ^ seed, 95.0, 2, u, v) * 0.35

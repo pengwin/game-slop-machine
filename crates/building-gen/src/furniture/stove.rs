@@ -1,5 +1,6 @@
 use crate::mesh::MeshData;
-use crate::mesh::colored_shapes::append_colored_box;
+use crate::mesh::SurfaceMaterial;
+use crate::mesh::colored_shapes::append_material_box;
 
 #[derive(Debug, Clone, Copy)]
 pub struct StoveConfig {
@@ -43,11 +44,12 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
     let back_z = d / 2.0;
 
     // 1. Base (hearth)
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, base_h / 2.0, 0.0],
         [w, base_h, d],
         base_color,
+        SurfaceMaterial::Stone,
     );
 
     // 2. Main Body (walls forming the fireplace opening)
@@ -58,25 +60,28 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
     let main_z = back_z - main_d / 2.0;
 
     // Left wall
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [-main_w / 2.0 + wall_t / 2.0, main_y, main_z],
         [wall_t, main_h, main_d],
         base_color,
+        SurfaceMaterial::Stone,
     );
     // Right wall
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [main_w / 2.0 - wall_t / 2.0, main_y, main_z],
         [wall_t, main_h, main_d],
         base_color,
+        SurfaceMaterial::Stone,
     );
     // Back wall
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, main_y, back_z - wall_t / 2.0],
         [main_w - 2.0 * wall_t, main_h, wall_t],
         base_color,
+        SurfaceMaterial::Stone,
     );
 
     // 3. Fire and Wood inside
@@ -86,32 +91,36 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
         let wood_len = 0.45;
 
         // Log 1 left
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [-0.15, wood_y, main_z],
             [wood_w, wood_w, wood_len],
             wood_color,
+            SurfaceMaterial::Wood,
         );
         // Log 2 right
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.15, wood_y, main_z],
             [wood_w, wood_w, wood_len],
             wood_color,
+            SurfaceMaterial::Wood,
         );
         // Log 3 across
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, wood_y + wood_w, main_z],
             [wood_len, wood_w, wood_w],
             wood_color,
+            SurfaceMaterial::Wood,
         );
         // Fire block
-        append_colored_box(
+        append_material_box(
             &mut mesh,
             [0.0, wood_y + wood_w / 2.0, main_z - 0.05],
             [0.25, 0.2, 0.25],
             fire_color,
+            SurfaceMaterial::Colored,
         );
     }
 
@@ -119,11 +128,12 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
     let mantel_d = main_d + 0.1;
     let mantel_z = back_z - mantel_d / 2.0;
     let mantel_y = base_h + main_h + mantel_h / 2.0;
-    append_colored_box(
+    append_material_box(
         &mut mesh,
         [0.0, mantel_y, mantel_z],
         [main_w + 0.15, mantel_h, mantel_d],
         mantel_color,
+        SurfaceMaterial::Wood,
     );
 
     // 5. Chimney (stepped, tapering to the ceiling)
@@ -140,47 +150,53 @@ pub fn generate_stove_mesh(w: f32, _h: f32, d: f32, config: &StoveConfig) -> Mes
             if i == steps - 1 {
                 let wall_th = config.chimney_wall_thickness;
                 // Left
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [-cur_w / 2.0 + wall_th / 2.0, cur_y, cur_z],
                     [wall_th, step_h, cur_d],
                     base_color,
+                    SurfaceMaterial::Stone,
                 );
                 // Right
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [cur_w / 2.0 - wall_th / 2.0, cur_y, cur_z],
                     [wall_th, step_h, cur_d],
                     base_color,
+                    SurfaceMaterial::Stone,
                 );
                 // Back
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [0.0, cur_y, cur_z + cur_d / 2.0 - wall_th / 2.0],
                     [cur_w - 2.0 * wall_th, step_h, wall_th],
                     base_color,
+                    SurfaceMaterial::Stone,
                 );
                 // Front
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [0.0, cur_y, cur_z - cur_d / 2.0 + wall_th / 2.0],
                     [cur_w - 2.0 * wall_th, step_h, wall_th],
                     base_color,
+                    SurfaceMaterial::Stone,
                 );
 
                 // Dark hole interior
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [0.0, cur_y + 0.01, cur_z], // slightly raised so it's clearly above the solid block below
                     [cur_w - 2.0 * wall_th, step_h, cur_d - 2.0 * wall_th],
                     [0.15, 0.15, 0.15, 1.0], // Dark charcoal color
+                    SurfaceMaterial::Stone,
                 );
             } else {
-                append_colored_box(
+                append_material_box(
                     &mut mesh,
                     [0.0, cur_y, cur_z],
                     [cur_w, step_h, cur_d],
                     base_color,
+                    SurfaceMaterial::Stone,
                 );
             }
         }

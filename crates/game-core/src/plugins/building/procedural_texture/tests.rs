@@ -1,6 +1,7 @@
 use super::brick::*;
 use super::builders::{TEXTURE_SIZE, create_placeholder};
 use super::concrete::*;
+use super::floor::*;
 use super::plaster::*;
 use super::road::*;
 use super::roof::*;
@@ -35,6 +36,9 @@ fn generated_images_have_expected_layout() {
         (concrete_albedo(7), false),
         (concrete_normal(7), true),
         (concrete_orm(7), true),
+        (floor_albedo(7), false),
+        (floor_normal(7), true),
+        (floor_orm(7), true),
     ] {
         assert_eq!(image.texture_descriptor.size.width, TEXTURE_SIZE);
         assert_eq!(image.texture_descriptor.size.height, TEXTURE_SIZE);
@@ -78,6 +82,7 @@ fn albedo_images_are_not_flat_fills() {
         stone_albedo(11),
         road_albedo(11),
         concrete_albedo(11),
+        floor_albedo(11),
     ] {
         let bytes = image_bytes(&image);
         assert!(
@@ -94,4 +99,5 @@ fn generation_is_deterministic_per_seed() {
         image_bytes(&plaster_normal(5)),
         image_bytes(&plaster_normal(5))
     );
+    assert_eq!(image_bytes(&floor_albedo(5)), image_bytes(&floor_albedo(5)));
 }

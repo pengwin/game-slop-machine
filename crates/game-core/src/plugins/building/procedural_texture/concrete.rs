@@ -11,7 +11,7 @@ pub fn concrete_height(seed: u32, u: f32, v: f32) -> f32 {
 
 pub fn concrete_albedo(seed: u32) -> Image {
     build_albedo(
-        [0.57, 0.57, 0.55],
+        [0.66, 0.65, 0.61],
         |u, v| {
             let h = concrete_height(seed, u, v);
             let broad_shade = fbm(80 ^ seed, 3.5, 4, u, v);
@@ -19,9 +19,9 @@ pub fn concrete_albedo(seed: u32) -> Image {
             let crack = fbm(82 ^ seed, 14.0, 3, u * 1.4, v * 0.8);
             let crack_line = ((crack - 0.52).abs() * 18.0).clamp(0.0, 1.0);
 
-            let base = 0.70 + h * 0.40;
-            let shade = base + broad_shade * 0.12 - pitting * 0.08 - (1.0 - crack_line) * 0.18;
-            shade.clamp(0.35, 1.15)
+            let base = 0.82 + h * 0.28;
+            let shade = base + broad_shade * 0.10 - pitting * 0.06 - (1.0 - crack_line) * 0.10;
+            shade.clamp(0.50, 1.16)
         },
         |u, v| {
             let stain = fbm(83 ^ seed, 4.0, 3, u + 0.11, v - 0.07);

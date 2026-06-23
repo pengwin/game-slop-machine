@@ -26,6 +26,17 @@ pub use primitives::{tile_color, tile_scale};
 pub use primitives::{unit_cube, unit_cube_indices, unit_cube_normals, unit_cube_uvs};
 pub use wall::building_base_y;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SurfaceMaterial {
+    Wood,
+    Fabric,
+    Book,
+    Metal,
+    Stone,
+    #[default]
+    Colored,
+}
+
 /// Raw mesh data (vertices, normals, UVs, indices).
 #[derive(Debug, Clone, Default)]
 pub struct MeshData {
@@ -33,6 +44,7 @@ pub struct MeshData {
     pub normals: Vec<[f32; 3]>,
     pub uvs: Vec<[f32; 2]>,
     pub colors: Vec<[f32; 4]>,
+    pub surface_materials: Vec<SurfaceMaterial>,
     pub indices: Vec<u32>,
 }
 
@@ -47,6 +59,8 @@ impl MeshData {
         self.normals.extend_from_slice(&other.normals);
         self.uvs.extend_from_slice(&other.uvs);
         self.colors.extend_from_slice(&other.colors);
+        self.surface_materials
+            .extend_from_slice(&other.surface_materials);
         self.indices
             .extend(other.indices.iter().map(|&idx| idx + base_idx));
     }
@@ -62,10 +76,12 @@ pub struct BuildingMesh {
     pub exterior_corner_mesh: MeshData,
     pub exterior_t_junction_mesh: MeshData,
     pub floor_mesh: MeshData,
+    pub floor_grout_mesh: MeshData,
     pub roof_mesh: MeshData,
     pub gable_mesh: MeshData,
     pub opening_trim_mesh: MeshData,
     pub door_mesh: MeshData,
+    pub door_hardware_mesh: MeshData,
     pub window_mesh: MeshData,
 }
 
@@ -88,10 +104,12 @@ pub fn generate_building_mesh(
         exterior_corner_mesh: wall_meshes.exterior_corner,
         exterior_t_junction_mesh: wall_meshes.exterior_t_junction,
         floor_mesh: floor::generate_floor_mesh(grid, config),
+        floor_grout_mesh: floor::generate_floor_grout_mesh(grid, config),
         roof_mesh: roof::generate_roof_mesh(config.footprint, roof, config),
         gable_mesh: roof::generate_gable_mesh(config.footprint, roof, config),
         opening_trim_mesh: opening::generate_opening_trim_mesh(grid, config),
         door_mesh: opening::generate_door_mesh(grid, config),
+        door_hardware_mesh: opening::generate_door_hardware_mesh(grid, config),
         window_mesh: opening::generate_window_mesh(grid, config),
     }
 }
@@ -161,10 +179,12 @@ mod tests {
             ("exterior_corner", &bmesh.exterior_corner_mesh),
             ("exterior_t_junction", &bmesh.exterior_t_junction_mesh),
             ("floor", &bmesh.floor_mesh),
+            ("floor_grout", &bmesh.floor_grout_mesh),
             ("roof", &bmesh.roof_mesh),
             ("gable", &bmesh.gable_mesh),
             ("opening_trim", &bmesh.opening_trim_mesh),
             ("door", &bmesh.door_mesh),
+            ("door_hardware", &bmesh.door_hardware_mesh),
             ("window", &bmesh.window_mesh),
         ] {
             if data.is_empty() {

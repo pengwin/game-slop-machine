@@ -1,6 +1,7 @@
 mod brick;
 mod builders;
 mod concrete;
+mod floor;
 mod noise;
 mod plaster;
 mod road;
@@ -166,6 +167,17 @@ impl ProceduralTextures {
         })
     }
 
+    pub fn get_wood_albedo_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        let key = format!("wood_albedo_{}", seed);
+        if let Some(handle) = self.cache.get(&key) {
+            return handle.clone();
+        }
+
+        let handle = images.add(wood::wood_albedo(seed));
+        self.cache.insert(key, handle.clone());
+        handle
+    }
+
     pub fn get_wood_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("wood_normal_{}", seed), images, move || {
             wood::wood_normal(seed)
@@ -235,6 +247,24 @@ impl ProceduralTextures {
     pub fn get_concrete_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("concrete_orm_{}", seed), images, move || {
             concrete::concrete_orm(seed)
+        })
+    }
+
+    pub fn get_floor_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("floor_albedo_{}", seed), images, move || {
+            floor::floor_albedo(seed)
+        })
+    }
+
+    pub fn get_floor_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("floor_normal_{}", seed), images, move || {
+            floor::floor_normal(seed)
+        })
+    }
+
+    pub fn get_floor_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("floor_orm_{}", seed), images, move || {
+            floor::floor_orm(seed)
         })
     }
 }
