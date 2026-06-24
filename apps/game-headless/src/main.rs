@@ -218,7 +218,7 @@ fn setup_texture_fixture_render(commands: &mut Commands) {
     commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
     commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.96, 0.97, 1.0),
-        brightness: 1.55,
+        brightness: 1.15,
         ..default()
     });
     commands.spawn((
@@ -227,6 +227,7 @@ fn setup_texture_fixture_render(commands: &mut Commands) {
             color: Color::srgb(1.0, 0.98, 0.94),
             illuminance: 2_050.0,
             shadow_maps_enabled: true,
+            soft_shadow_size: Some(40.0),
             contact_shadows_enabled: true,
             ..default()
         },

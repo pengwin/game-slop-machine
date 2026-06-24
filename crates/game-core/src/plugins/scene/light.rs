@@ -4,9 +4,9 @@ pub fn spawn_light(mut commands: Commands) {
     commands.spawn((
         Name::new("Directional Light"),
         DirectionalLight {
-            illuminance: 3_200.0,
+            illuminance: 2_000.0,
             shadow_maps_enabled: true,
-            soft_shadow_size: Some(24.0),
+            soft_shadow_size: Some(40.0),
             contact_shadows_enabled: true,
             ..default()
         },
@@ -35,7 +35,7 @@ pub fn spawn_light(mut commands: Commands) {
 
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
-        brightness: 0.75,
+        brightness: 0.3,
         ..default()
     });
 }

@@ -74,24 +74,23 @@ pub fn setup_screenshot(
             .looking_at(camera_config.target, Vec3::Y),
     ));
 
-    if !fixtures::is_texture_fixture(&fixture.0) {
-        camera.insert((
-            TemporalJitter::default(),
-            TemporalAntiAliasing::default(),
-            (DepthPrepass, NormalPrepass, MotionVectorPrepass),
-            ContactShadows {
-                linear_steps: 16,
-                thickness: 0.1,
-                length: 0.3,
-            },
-            DepthOfField {
-                mode: DepthOfFieldMode::Bokeh,
-                focal_distance: 15.0,
-                aperture_f_stops: 1.2,
-                ..default()
-            },
-        ));
-    }
+    camera.insert((
+        TemporalJitter::default(),
+        TemporalAntiAliasing::default(),
+        (DepthPrepass, NormalPrepass, MotionVectorPrepass),
+        ContactShadows {
+            linear_steps: 16,
+            thickness: 0.1,
+            length: 0.3,
+        },
+        //ScreenSpaceAmbientOcclusion::default(),
+        DepthOfField {
+            mode: DepthOfFieldMode::Bokeh,
+            focal_distance: 15.0,
+            aperture_f_stops: 1.2,
+            ..default()
+        },
+    ));
 
     if fixtures::uses_studio_low_poly_render(&fixture.0)
         && !fixtures::is_texture_fixture(&fixture.0)

@@ -13,9 +13,9 @@ pub const TEXTURE_SIZE: u32 = RENDER_TEXTURE_SIZE;
 
 pub fn create_placeholder(is_normal: bool) -> Image {
     let data = if is_normal {
-        vec![128, 128, 255, 255]
+        [128, 128, 255, 255].repeat(512 * 512)
     } else {
-        vec![128, 128, 128, 255]
+        [128, 128, 128, 255].repeat(512 * 512)
     };
     let format = if is_normal {
         TextureFormat::Rgba8Unorm
@@ -24,8 +24,8 @@ pub fn create_placeholder(is_normal: bool) -> Image {
     };
     Image::new(
         Extent3d {
-            width: 1,
-            height: 1,
+            width: 512,
+            height: 512,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,

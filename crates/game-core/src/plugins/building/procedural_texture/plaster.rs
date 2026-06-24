@@ -3,11 +3,11 @@ use super::noise::{fbm, hairline, speckle};
 use bevy::prelude::*;
 
 pub fn plaster_height(seed: u32, u: f32, v: f32) -> f32 {
-    let broad = fbm(11 ^ seed, 7.0, 5, u, v) * 0.45;
-    let fine = fbm(12 ^ seed, 46.0, 3, u, v) * 0.28;
-    let patches = fbm(13 ^ seed, 2.2, 4, u + 0.19, v - 0.31) * 0.27;
-    let pits = speckle(18 ^ seed, 82.0, 0.74, u, v) * 0.14;
-    let hair = hairline(19 ^ seed, 22.0, 0.026, u * 0.55, v * 1.4) * 0.12;
+    let broad = fbm(11 ^ seed, 5.0, 5, u, v) * 0.38;
+    let fine = fbm(12 ^ seed, 38.0, 3, u, v) * 0.22;
+    let patches = fbm(13 ^ seed, 2.2, 4, u + 0.19, v - 0.31) * 0.22;
+    let pits = speckle(18 ^ seed, 82.0, 0.76, u, v) * 0.10;
+    let hair = hairline(19 ^ seed, 18.0, 0.018, u + broad * 0.04, v - broad * 0.04) * 0.06;
     (broad + fine + patches + pits + hair).clamp(0.0, 1.0)
 }
 
@@ -42,15 +42,15 @@ pub fn plaster_preview_albedo(seed: u32) -> Image {
         [0.95, 0.88, 0.70],
         |u, v| {
             let broad = fbm(90 ^ seed, 2.3, 5, u * 0.82 + 0.13, v * 0.82 - 0.07);
-            let cloudy = fbm(91 ^ seed, 6.5, 4, u + broad * 0.10, v - broad * 0.08);
-            let fine = fbm(92 ^ seed, 30.0, 2, u, v);
-            let pores = speckle(98 ^ seed, 88.0, 0.74, u, v);
-            let scratches = hairline(99 ^ seed, 22.0, 0.024, u * 0.5, v * 1.5);
+            let cloudy = fbm(91 ^ seed, 5.4, 4, u + broad * 0.08, v - broad * 0.06);
+            let fine = fbm(92 ^ seed, 24.0, 2, u, v);
+            let pores = speckle(98 ^ seed, 82.0, 0.78, u, v);
+            let scratches = hairline(99 ^ seed, 15.0, 0.016, u + broad * 0.03, v - broad * 0.03);
 
-            let base_shade = 0.90 + broad * 0.10 + cloudy * 0.07 + fine * 0.020
-                - pores * 0.070
-                - scratches.powf(2.0) * 0.070;
-            base_shade.clamp(0.6, 1.1)
+            let base_shade = 0.98 + broad * 0.055 + cloudy * 0.040 + fine * 0.014
+                - pores * 0.040
+                - scratches.powf(2.0) * 0.030;
+            base_shade.clamp(0.78, 1.12)
         },
         |u, v| {
             let stain = fbm(93 ^ seed, 3.4, 4, u + 0.17, v - 0.11);
@@ -66,18 +66,18 @@ pub fn plaster_preview_albedo(seed: u32) -> Image {
 }
 
 pub fn plaster_normal(seed: u32) -> Image {
-    build_normal(|u, v| plaster_height(seed, u, v), 1.4)
+    build_normal(|u, v| plaster_height(seed, u, v), 0.65)
 }
 
 pub fn plaster_orm(seed: u32) -> Image {
     build_orm(
         |u, v| {
             let h = plaster_height(seed, u, v);
-            0.6 + h * 0.4
+            0.94 - h * 0.04
         },
         |u, v| {
             let h = plaster_height(seed, u, v);
-            0.98 - h * 0.15
+            0.98 - h * 0.08
         },
         |_, _| 0.0,
     )

@@ -141,7 +141,7 @@ pub fn convert_mesh(data: &MeshData) -> Mesh {
     }
     mesh.insert_indices(Indices::U32(data.indices.clone()));
 
-    mesh
+    mesh.with_generated_tangents().unwrap()
 }
 
 /// Applies procedural dirt colors to vertices of a converted wall mesh

@@ -5,7 +5,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::ecs::message::MessageReader;
 use bevy::input::mouse::MouseWheel;
 use bevy::light::ShadowFilteringMethod;
-use bevy::pbr::ContactShadows;
+use bevy::pbr::{ContactShadows, ScreenSpaceAmbientOcclusion};
 use bevy::post_process::dof::{DepthOfField, DepthOfFieldMode};
 use bevy::prelude::*;
 use bevy::render::camera::TemporalJitter;
@@ -34,6 +34,7 @@ pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
             thickness: 0.1,
             length: 0.3,
         },
+        ScreenSpaceAmbientOcclusion::default(),
         (DepthPrepass, NormalPrepass, MotionVectorPrepass),
         DepthOfField {
             mode: DepthOfFieldMode::Bokeh,

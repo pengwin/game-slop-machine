@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::layout::BuildingLayout;
-use building_gen::mesh::{generate_building_mesh, BuildingMesh, MeshData};
+use building_gen::mesh::{BuildingMesh, MeshData, generate_building_mesh};
 use building_gen::scene::{SceneMaterialKind, SceneMeshPart};
 
 use super::mesh_util::convert_mesh;
@@ -290,8 +290,9 @@ pub fn wood_material(
 ) -> StandardMaterial {
     StandardMaterial {
         base_color: Color::WHITE,
-        base_color_texture: Some(textures.get_wood_albedo_now(seed, images)),
-        perceptual_roughness: 0.76,
+        base_color_texture: Some(textures.get_wood_albedo(seed, images)),
+        normal_map_texture: Some(textures.get_wood_normal(seed, images)),
+        perceptual_roughness: 0.85,
         ..default()
     }
 }
@@ -556,8 +557,9 @@ fn window_material() -> StandardMaterial {
         base_color: Color::srgba(0.58, 0.78, 0.95, 0.58),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None,
-        perceptual_roughness: 0.22,
-        reflectance: 0.20,
+        perceptual_roughness: 0.1,
+        reflectance: 0.8,
+        metallic: 0.8,
         ..default()
     }
 }

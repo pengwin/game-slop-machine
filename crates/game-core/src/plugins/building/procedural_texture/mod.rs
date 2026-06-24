@@ -48,8 +48,10 @@ pub fn update_procedural_textures(
 ) {
     let receiver = textures.receiver.lock().unwrap();
     while let Ok((handle, image)) = receiver.try_recv() {
-        if images.insert(&handle, image).is_err() {
-            warn!("Generated procedural texture for a dropped handle");
+        if let Some(mut existing) = images.get_mut(&handle) {
+            *existing = image;
+        } else {
+            let _ = images.insert(&handle, image);
         }
         textures.pending.fetch_sub(1, Ordering::Relaxed);
         info!("Async procedural texture generated and updated");
@@ -76,9 +78,33 @@ impl ProceduralTextures {
 
         let sender = self.sender.clone();
         let handle_clone = handle.clone();
+        let key_clone = key.to_string();
+        let is_normal = key.contains("_normal_");
         AsyncComputeTaskPool::get()
             .spawn(async move {
-                let image = generator();
+                let path = format!("assets/generated/textures/{}.png", key_clone);
+                let image = if let Ok(img) = image::open(&path) {
+                    let rgba = img.to_rgba8();
+                    builders::create_image(
+                        builders::TEXTURE_SIZE,
+                        builders::TEXTURE_SIZE,
+                        rgba.into_raw(),
+                        is_normal,
+                    )
+                } else {
+                    let generated = generator();
+                    if let Some(parent) = std::path::Path::new(&path).parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                    if let Some(img) = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
+                        builders::TEXTURE_SIZE,
+                        builders::TEXTURE_SIZE,
+                        generated.data.clone().unwrap(),
+                    ) {
+                        let _ = image::DynamicImage::ImageRgba8(img).save(&path);
+                    }
+                    generated
+                };
                 let _ = sender.send((handle_clone, image));
             })
             .detach();
@@ -182,6 +208,17 @@ impl ProceduralTextures {
         self.get_or_generate(&format!("wood_normal_{}", seed), images, move || {
             wood::wood_normal(seed)
         })
+    }
+
+    pub fn get_wood_normal_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        let key = format!("wood_normal_{}", seed);
+        if let Some(handle) = self.cache.get(&key) {
+            return handle.clone();
+        }
+
+        let handle = images.add(wood::wood_normal(seed));
+        self.cache.insert(key, handle.clone());
+        handle
     }
 
     pub fn get_brick_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {

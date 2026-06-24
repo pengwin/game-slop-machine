@@ -2,8 +2,8 @@ use bevy::light::NotShadowCaster;
 use bevy::prelude::*;
 use building_gen::config::BuildingConfig;
 use building_gen::geometry::Vec2;
-use building_gen::mesh::generate_building_mesh;
 use building_gen::mesh::MeshData;
+use building_gen::mesh::generate_building_mesh;
 use building_gen::scene::{SceneObject, SceneObjectKind};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallOpening, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
@@ -526,13 +526,24 @@ fn wall_preview_mesh(fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
             mesh.uvs[i] = [x * scale, y * scale];
         }
 
-        mesh.colors.push(
-            game_core::plugins::building::procedural_texture::global_dirt_color(
-                seed, position, normal,
-            ),
-        );
+        mesh.colors
+            .push(plaster_preview_vertex_color(seed, position, normal));
     }
     mesh
+}
+
+fn plaster_preview_vertex_color(seed: u32, position: [f32; 3], normal: [f32; 3]) -> [f32; 4] {
+    let dirt =
+        game_core::plugins::building::procedural_texture::global_dirt_color(seed, position, normal);
+    let vertical = 1.0 - normal[1].abs().clamp(0.0, 1.0);
+    let strength = if vertical > 0.75 { 0.28 } else { 0.12 };
+
+    [
+        1.0 - (1.0 - dirt[0]) * strength,
+        1.0 - (1.0 - dirt[1]) * strength,
+        1.0 - (1.0 - dirt[2]) * strength,
+        1.0,
+    ]
 }
 
 fn building_wall_bevel_mesh(config: &BuildingConfig) -> MeshData {

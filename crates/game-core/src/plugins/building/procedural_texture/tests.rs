@@ -23,6 +23,7 @@ fn generated_images_have_expected_layout() {
         (plaster_albedo(7), false),
         (plaster_preview_albedo(7), false),
         (plaster_normal(7), true),
+        (plaster_orm(7), true),
         (wood_albedo(7), false),
         (wood_normal(7), true),
         (brick_albedo(7), false),
@@ -68,12 +69,20 @@ fn placeholders_match_texture_kind() {
     let albedo = create_placeholder(false);
     let normal = create_placeholder(true);
 
-    assert_eq!(image_bytes(&albedo), &[128, 128, 128, 255]);
+    assert!(
+        image_bytes(&albedo)
+            .chunks_exact(4)
+            .all(|px| px == [128, 128, 128, 255])
+    );
     assert_eq!(
         albedo.texture_descriptor.format,
         TextureFormat::Rgba8UnormSrgb
     );
-    assert_eq!(image_bytes(&normal), &[128, 128, 255, 255]);
+    assert!(
+        image_bytes(&normal)
+            .chunks_exact(4)
+            .all(|px| px == [128, 128, 255, 255])
+    );
     assert_eq!(normal.texture_descriptor.format, TextureFormat::Rgba8Unorm);
 }
 
