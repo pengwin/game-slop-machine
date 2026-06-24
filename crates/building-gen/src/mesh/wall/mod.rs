@@ -36,6 +36,9 @@ pub fn generate_wall_meshes(grid: &TileGrid, config: &BuildingConfig) -> WallMes
                     &exterior_faces,
                     config,
                     wall_box.cutout,
+                    grid,
+                    x,
+                    y,
                 );
             }
         }

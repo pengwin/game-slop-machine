@@ -438,6 +438,7 @@ fn visual_style(wall: [f32; 3], roof: [f32; 3], trim: [f32; 3]) -> BuildingVisua
         trim_color: trim,
         foundation_color: [0.38, 0.38, 0.34],
         floor_color: [0.55, 0.54, 0.50],
+        dirt_intensity: 1.2,
     }
 }
 

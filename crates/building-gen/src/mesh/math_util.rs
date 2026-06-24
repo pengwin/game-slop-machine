@@ -11,6 +11,27 @@ pub struct Quad {
     pub uv_max: [f32; 2],
 }
 
+/// Calculates continuous world-space UV coordinates based on normal direction
+/// preserving winding to ensure correct tangent generation.
+pub fn get_uv(pos: [f32; 3], normal: [f32; 3]) -> [f32; 2] {
+    let [x, y, z] = pos;
+    if normal[0].abs() > 0.5 {
+        if normal[0] > 0.0 {
+            [z, y] // PosX
+        } else {
+            [-z, y] // NegX
+        }
+    } else if normal[2].abs() > 0.5 {
+        if normal[2] > 0.0 {
+            [-x, y] // PosZ
+        } else {
+            [x, y] // NegZ
+        }
+    } else {
+        [x, z] // PosY or NegY
+    }
+}
+
 /// Appends a quad (two triangles) defined by four corners.
 ///
 /// Vertices are expected in winding order such that the cross product of
@@ -57,11 +78,17 @@ pub fn append_colored_quad_with_material(
     color: [f32; 4],
     material: SurfaceMaterial,
 ) {
+    append_colored_quad_vertices(mesh, quad, [color; 4], material);
+}
+
+pub fn append_colored_quad_vertices(
+    mesh: &mut MeshData,
+    quad: Quad,
+    colors: [[f32; 4]; 4],
+    material: SurfaceMaterial,
+) {
     append_quad_with_material(mesh, quad, material);
-    mesh.colors.push(color);
-    mesh.colors.push(color);
-    mesh.colors.push(color);
-    mesh.colors.push(color);
+    mesh.colors.extend(colors);
 }
 
 pub fn append_colored_triangle(

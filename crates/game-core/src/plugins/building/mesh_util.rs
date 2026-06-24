@@ -149,16 +149,28 @@ pub fn convert_mesh(data: &MeshData) -> Mesh {
 }
 
 /// Applies procedural dirt colors to vertices of a converted wall mesh
-pub fn apply_dirt_vertex_colors(mesh: &mut Mesh, seed: u32) {
+pub fn apply_dirt_vertex_colors(mesh: &mut Mesh, seed: u32, intensity: f32) {
     if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(positions)) =
         mesh.attribute(Mesh::ATTRIBUTE_POSITION)
     {
         if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(normals)) =
             mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
         {
+            let existing_colors = match mesh.attribute(Mesh::ATTRIBUTE_COLOR) {
+                Some(bevy::render::mesh::VertexAttributeValues::Float32x4(c)) => Some(c),
+                _ => None,
+            };
+
             let mut colors = Vec::with_capacity(positions.len());
-            for (p, n) in positions.iter().zip(normals.iter()) {
-                colors.push(super::procedural_texture::global_dirt_color(seed, *p, *n));
+            for (i, (p, n)) in positions.iter().zip(normals.iter()).enumerate() {
+                let dirt = super::procedural_texture::global_dirt_color(seed, *p, *n, intensity);
+                let base = existing_colors.map_or([1.0, 1.0, 1.0, 1.0], |c| c[i]);
+                colors.push([
+                    base[0] * dirt[0],
+                    base[1] * dirt[1],
+                    base[2] * dirt[2],
+                    base[3] * dirt[3],
+                ]);
             }
             mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
         }

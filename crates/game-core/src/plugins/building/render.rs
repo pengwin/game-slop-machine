@@ -56,6 +56,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Foundation"),
         None,
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -67,6 +68,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Door Hardware"),
         None,
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -76,8 +78,9 @@ pub fn spawn_building_mesh(
         &bmesh.wall_mesh,
         wall_material(config, textures, images, config.seed as u32),
         transform,
-        &name("Walls"),
+        &name("Wall Faces"),
         Some(config.seed as u32),
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -89,6 +92,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Wall Top Faces"),
         Some(config.seed as u32),
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -100,6 +104,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Exterior Wall Faces"),
         Some(config.seed as u32),
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -111,6 +116,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Exterior Corner Faces"),
         Some(config.seed as u32),
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -122,6 +128,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Exterior T-Junction Faces"),
         Some(config.seed as u32),
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -133,6 +140,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Floor"),
         None,
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -144,6 +152,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Floor Grout"),
         None,
+        config.visual_style.dirt_intensity,
     );
 
     if config.render_roof {
@@ -157,6 +166,7 @@ pub fn spawn_building_mesh(
             transform,
             &name("Roof"),
             None,
+            config.visual_style.dirt_intensity,
         );
         spawn_part(
             commands,
@@ -168,6 +178,7 @@ pub fn spawn_building_mesh(
             transform,
             &name("Gables"),
             Some(config.seed as u32),
+            config.visual_style.dirt_intensity,
         );
     }
 
@@ -181,6 +192,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Doors"),
         None,
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -192,6 +204,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Opening Trim"),
         None,
+        config.visual_style.dirt_intensity,
     );
     spawn_part(
         commands,
@@ -203,6 +216,7 @@ pub fn spawn_building_mesh(
         transform,
         &name("Windows"),
         None,
+        config.visual_style.dirt_intensity,
     );
 
     entities
@@ -219,6 +233,7 @@ fn spawn_part(
     transform: Transform,
     name: &str,
     dirt_seed: Option<u32>,
+    dirt_intensity: f32,
 ) {
     if mesh_data.is_empty() {
         return;
@@ -227,7 +242,7 @@ fn spawn_part(
     let mesh = if let Some(seed) = dirt_seed {
         let subdivided = super::mesh_util::subdivide_mesh_data(mesh_data, 0.5); // Subdivide to 0.5m chunks for high vertex color density
         let mut m = convert_mesh(&subdivided);
-        super::mesh_util::apply_dirt_vertex_colors(&mut m, seed);
+        super::mesh_util::apply_dirt_vertex_colors(&mut m, seed, dirt_intensity);
         m
     } else {
         convert_mesh(mesh_data)

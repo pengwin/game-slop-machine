@@ -7,28 +7,16 @@ pub fn fbm(seed: u32, frequency: f64, octaves: usize, u: f32, v: f32) -> f32 {
     (noise.get([u as f64, v as f64]) as f32 * 0.5 + 0.5).clamp(0.0, 1.0)
 }
 
-pub fn global_dirt_color(seed: u32, position: [f32; 3], normal: [f32; 3]) -> [f32; 4] {
-    let [x, y, z] = position;
-    let (u, v) = if normal[1].abs() > 0.75 {
-        (x, z)
-    } else if normal[0].abs() > normal[2].abs() {
-        (z, y)
-    } else {
-        (x, y)
-    };
-
-    let dirt_mask = fbm(95 ^ seed, 0.35, 4, u, v);
-    let fine_stain = fbm(96 ^ seed, 2.4, 3, u + 0.17, v - 0.11);
-    let dirt = (dirt_mask * 1.45 + fine_stain * 0.45 - 0.28).clamp(0.0, 1.0);
+pub fn global_dirt_color(_seed: u32, position: [f32; 3], _normal: [f32; 3], intensity: f32) -> [f32; 4] {
+    let [_, y, _] = position;
 
     let bottom_dirt = (1.0 - (y * 0.78)).clamp(0.0, 1.0);
-    let corner_hint = (normal[1].abs() < 0.25) as i32 as f32 * fbm(97 ^ seed, 1.6, 2, x, z) * 0.18;
 
-    let total_dirt = (dirt + bottom_dirt * 0.9 + corner_hint).clamp(0.0, 1.0);
+    let total_dirt = (bottom_dirt * 0.9).clamp(0.0, 1.0);
 
-    let r = 1.0 - total_dirt * 0.35;
-    let g = 1.0 - total_dirt * 0.45;
-    let b = 1.0 - total_dirt * 0.55;
+    let r = 1.0 - total_dirt * 0.35 * intensity;
+    let g = 1.0 - total_dirt * 0.45 * intensity;
+    let b = 1.0 - total_dirt * 0.55 * intensity;
 
     [r, g, b, 1.0]
 }

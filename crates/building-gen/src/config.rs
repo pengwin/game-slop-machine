@@ -127,6 +127,8 @@ pub struct BuildingVisualStyle {
     pub foundation_color: [f32; 3],
     /// Color for floor tiles.
     pub floor_color: [f32; 3],
+    /// Multiplier for procedural dirt/wear mapping (default 1.0).
+    pub dirt_intensity: f32,
 }
 
 impl Default for BuildingVisualStyle {
@@ -142,6 +144,7 @@ impl Default for BuildingVisualStyle {
             trim_color: [0.18, 0.16, 0.13],
             foundation_color: [0.42, 0.42, 0.38],
             floor_color: [0.6, 0.6, 0.6],
+            dirt_intensity: 1.2,
         }
     }
 }
