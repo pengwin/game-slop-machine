@@ -141,7 +141,11 @@ pub fn convert_mesh(data: &MeshData) -> Mesh {
     }
     mesh.insert_indices(Indices::U32(data.indices.clone()));
 
-    mesh.with_generated_tangents().unwrap()
+    if let Err(err) = mesh.generate_tangents() {
+        warn!("Failed to generate tangents for procedural mesh: {err:?}");
+    }
+
+    mesh
 }
 
 /// Applies procedural dirt colors to vertices of a converted wall mesh

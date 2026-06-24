@@ -423,12 +423,12 @@ fn wall_top_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    StandardMaterial {
-        base_color: color(config.visual_style.wall_top_color),
-        base_color_texture: Some(textures.get_plaster_albedo(seed, images)),
-        unlit: true,
-        ..default()
-    }
+    plaster_material(
+        color(config.visual_style.wall_top_color),
+        textures,
+        images,
+        seed,
+    )
 }
 
 fn exterior_wall_material(
@@ -648,7 +648,8 @@ pub fn scene_part_material(
         SceneMaterialKind::Wood => wood_material(color, textures, images, seed),
         SceneMaterialKind::Fabric => StandardMaterial {
             base_color: color,
-            perceptual_roughness: 0.96,
+            perceptual_roughness: 0.90,
+            reflectance: 0.02,
             ..default()
         },
         SceneMaterialKind::Book => StandardMaterial {
@@ -658,8 +659,8 @@ pub fn scene_part_material(
         },
         SceneMaterialKind::Metal => StandardMaterial {
             base_color: color,
-            metallic: 0.25,
-            perceptual_roughness: 0.52,
+            metallic: 0.85,
+            perceptual_roughness: 0.30,
             ..default()
         },
         SceneMaterialKind::Stone => StandardMaterial {

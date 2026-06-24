@@ -439,75 +439,54 @@ fn low_poly_material(color: Color) -> StandardMaterial {
     }
 }
 
-fn low_poly_cull_material(color: Color) -> StandardMaterial {
-    StandardMaterial {
-        cull_mode: None,
-        ..low_poly_material(color)
-    }
-}
+
 
 fn floor_preview_material(
-    fixture: &str,
+    _fixture: &str,
     config: &BuildingConfig,
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
 ) -> StandardMaterial {
-    if fixture == "texture-plaster-wall" {
-        floor_tile_material(
-            style_color(config.visual_style.floor_color),
-            textures,
-            images,
-            config.seed as u32,
-        )
-    } else {
-        low_poly_material(style_color(config.visual_style.floor_color))
-    }
+    floor_tile_material(
+        style_color(config.visual_style.floor_color),
+        textures,
+        images,
+        config.seed as u32,
+    )
 }
 
 fn wood_preview_material(
-    fixture: &str,
+    _fixture: &str,
     rgb: [f32; 3],
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    if fixture == "texture-plaster-wall" {
-        let mut material = wood_material(style_color(rgb), textures, images, seed);
-        material.cull_mode = None;
-        material
-    } else {
-        low_poly_cull_material(style_color(rgb))
-    }
+    let mut material = wood_material(style_color(rgb), textures, images, seed);
+    material.cull_mode = None;
+    material
 }
 
 fn wall_preview_material(
-    fixture: &str,
-    rgb: [f32; 3],
+    _fixture: &str,
+    _rgb: [f32; 3],
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    if fixture == "texture-plaster-wall" {
-        let _ = rgb;
-        let orm = textures.get_plaster_orm_now(seed, images);
-        StandardMaterial {
-            base_color: Color::WHITE,
-            base_color_texture: Some(textures.get_plaster_preview_albedo_now(seed, images)),
-            normal_map_texture: Some(textures.get_plaster_normal_now(seed, images)),
-            metallic_roughness_texture: Some(orm.clone()),
-            occlusion_texture: Some(orm),
-            perceptual_roughness: 1.0,
-            ..default()
-        }
-    } else {
-        low_poly_material(style_color(rgb))
+    let orm = textures.get_plaster_orm_now(seed, images);
+    StandardMaterial {
+        base_color: Color::WHITE,
+        base_color_texture: Some(textures.get_plaster_preview_albedo_now(seed, images)),
+        normal_map_texture: Some(textures.get_plaster_normal_now(seed, images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
+        perceptual_roughness: 1.0,
+        ..default()
     }
 }
 
-fn wall_preview_mesh(fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
-    if fixture != "texture-plaster-wall" {
-        return mesh.clone();
-    }
+fn wall_preview_mesh(_fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
 
     let mut mesh = game_core::plugins::building::mesh_util::subdivide_mesh_data(mesh, 0.5);
     let scale = 0.62;
@@ -749,13 +728,15 @@ fn spawn_preview_scene_object(
     if item.material_parts.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-            MeshMaterial3d(
-                materials.add(low_poly_material(if item.mesh.colors.is_empty() {
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: if item.mesh.colors.is_empty() {
                     Color::srgb(item.color[0], item.color[1], item.color[2])
                 } else {
                     Color::WHITE
-                })),
-            ),
+                },
+                perceptual_roughness: 0.85,
+                ..default()
+            })),
             transform,
             Name::new(if name.is_empty() {
                 format!("{:?}", item.item_type)

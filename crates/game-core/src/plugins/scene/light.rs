@@ -21,7 +21,7 @@ pub fn spawn_light(mut commands: Commands) {
     commands.spawn((
         Name::new("Soft Fill Light"),
         DirectionalLight {
-            illuminance: 900.0,
+            illuminance: 200.0,
             shadow_maps_enabled: false,
             ..default()
         },
@@ -35,7 +35,7 @@ pub fn spawn_light(mut commands: Commands) {
 
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
-        brightness: 0.3,
+        brightness: 0.05,
         ..default()
     });
 }

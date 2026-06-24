@@ -181,7 +181,7 @@ fn setup_studio_low_poly_render(commands: &mut Commands) {
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
     commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.94, 0.91, 0.86),
-        brightness: 1.02,
+        brightness: 0.1,
         ..default()
     });
     commands.spawn((
@@ -218,7 +218,7 @@ fn setup_texture_fixture_render(commands: &mut Commands) {
     commands.insert_resource(DirectionalLightShadowMap { size: 2048 });
     commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.96, 0.97, 1.0),
-        brightness: 1.15,
+        brightness: 0.1,
         ..default()
     });
     commands.spawn((
@@ -237,7 +237,7 @@ fn setup_texture_fixture_render(commands: &mut Commands) {
         Name::new("Texture Fixture Cool Fill"),
         DirectionalLight {
             color: Color::srgb(0.78, 0.84, 1.0),
-            illuminance: 2_400.0,
+            illuminance: 500.0,
             shadow_maps_enabled: false,
             ..default()
         },

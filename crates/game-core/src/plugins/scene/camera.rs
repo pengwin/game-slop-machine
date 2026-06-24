@@ -20,7 +20,7 @@ const ZOOM_SPEED: f32 = 1.5;
 const MIN_ZOOM: f32 = 3.0;
 const MAX_ZOOM: f32 = 200.0;
 
-pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
+pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>, asset_server: Res<AssetServer>) {
     commands.spawn((
         MainCamera,
         Name::new("Main Camera"),
@@ -50,6 +50,12 @@ pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>) {
             ..OrthographicProjection::default_3d()
         }),
         Transform::from_translation(config.position).looking_at(config.target, Vec3::Y),
+        EnvironmentMapLight {
+            diffuse_map: asset_server.load("pisa_diffuse_rgb9e5_zstd.ktx2"),
+            specular_map: asset_server.load("pisa_specular_rgb9e5_zstd.ktx2"),
+            intensity: 920.0,
+            ..default()
+        },
     ));
 }
 
