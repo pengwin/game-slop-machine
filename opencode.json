@@ -5,6 +5,10 @@
       "*": "ask",
       "cargo *": "allow",
       "just *": "allow",
+      "grep *": "allow",
+      "rg *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
       "git push *": "deny"
     }
   }

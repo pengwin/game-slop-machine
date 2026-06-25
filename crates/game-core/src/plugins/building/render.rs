@@ -288,11 +288,24 @@ pub fn plaster_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let orm = textures.get_plaster_orm(seed, images);
+    let params = super::procedural_texture::PlasterParams {
+        seed,
+        ..default()
+    };
+    plaster_material_with_params(base_color, textures, images, &params)
+}
+
+pub fn plaster_material_with_params(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::PlasterParams,
+) -> StandardMaterial {
+    let orm = textures.get_plaster_orm(params, images);
     StandardMaterial {
         base_color,
-        base_color_texture: Some(textures.get_plaster_albedo(seed, images)),
-        normal_map_texture: Some(textures.get_plaster_normal(seed, images)),
+        base_color_texture: Some(textures.get_plaster_albedo(params, images)),
+        normal_map_texture: Some(textures.get_plaster_normal(params, images)),
         metallic_roughness_texture: Some(orm.clone()),
         occlusion_texture: Some(orm),
         perceptual_roughness: 1.0,
@@ -306,11 +319,24 @@ pub fn wood_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let orm = textures.get_wood_orm(seed, images);
+    let params = super::procedural_texture::WoodParams {
+        seed,
+        ..default()
+    };
+    wood_material_with_params(_base_color, textures, images, &params)
+}
+
+pub fn wood_material_with_params(
+    _base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::WoodParams,
+) -> StandardMaterial {
+    let orm = textures.get_wood_orm(params, images);
     StandardMaterial {
         base_color: Color::WHITE,
-        base_color_texture: Some(textures.get_wood_albedo(seed, images)),
-        normal_map_texture: Some(textures.get_wood_normal(seed, images)),
+        base_color_texture: Some(textures.get_wood_albedo(params, images)),
+        normal_map_texture: Some(textures.get_wood_normal(params, images)),
         metallic_roughness_texture: Some(orm.clone()),
         occlusion_texture: Some(orm),
         perceptual_roughness: 0.85,
@@ -324,11 +350,24 @@ pub fn brick_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
+    let params = super::procedural_texture::BrickParams {
+        seed,
+        ..default()
+    };
+    brick_material_with_params(base_color, textures, images, &params)
+}
+
+pub fn brick_material_with_params(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::BrickParams,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.get_brick_albedo(seed, images),
-        textures.get_brick_normal(seed, images),
-        textures.get_brick_orm(seed, images),
+        textures.get_brick_albedo(params, images),
+        textures.get_brick_normal(params, images),
+        textures.get_brick_orm(params, images),
         0.84,
     )
 }
@@ -339,11 +378,24 @@ pub fn roof_tile_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
+    let params = super::procedural_texture::RoofParams {
+        seed,
+        ..default()
+    };
+    roof_tile_material_with_params(base_color, textures, images, &params)
+}
+
+pub fn roof_tile_material_with_params(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::RoofParams,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.get_roof_albedo(seed, images),
-        textures.get_roof_normal(seed, images),
-        textures.get_roof_orm(seed, images),
+        textures.get_roof_albedo(params, images),
+        textures.get_roof_normal(params, images),
+        textures.get_roof_orm(params, images),
         0.78,
     )
 }
@@ -354,11 +406,24 @@ pub fn stone_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
+    let params = super::procedural_texture::StoneParams {
+        seed,
+        ..default()
+    };
+    stone_material_with_params(base_color, textures, images, &params)
+}
+
+pub fn stone_material_with_params(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::StoneParams,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.get_stone_albedo(seed, images),
-        textures.get_stone_normal(seed, images),
-        textures.get_stone_orm(seed, images),
+        textures.get_stone_albedo(params, images),
+        textures.get_stone_normal(params, images),
+        textures.get_stone_orm(params, images),
         0.95,
     )
 }
@@ -369,11 +434,24 @@ pub fn road_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
+    let params = super::procedural_texture::RoadParams {
+        seed,
+        ..default()
+    };
+    road_material_with_params(base_color, textures, images, &params)
+}
+
+pub fn road_material_with_params(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::RoadParams,
+) -> StandardMaterial {
     textured_material(
         base_color,
-        textures.get_road_albedo(seed, images),
-        textures.get_road_normal(seed, images),
-        textures.get_road_orm(seed, images),
+        textures.get_road_albedo(params, images),
+        textures.get_road_normal(params, images),
+        textures.get_road_orm(params, images),
         0.98,
     )
 }
@@ -384,11 +462,24 @@ pub fn concrete_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let orm = textures.get_concrete_orm(seed, images);
+    let params = super::procedural_texture::ConcreteParams {
+        seed,
+        ..default()
+    };
+    concrete_material_with_params(base_color, textures, images, &params)
+}
+
+pub fn concrete_material_with_params(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::ConcreteParams,
+) -> StandardMaterial {
+    let orm = textures.get_concrete_orm(params, images);
     StandardMaterial {
         base_color,
-        base_color_texture: Some(textures.get_concrete_albedo(seed, images)),
-        normal_map_texture: Some(textures.get_concrete_normal(seed, images)),
+        base_color_texture: Some(textures.get_concrete_albedo(params, images)),
+        normal_map_texture: Some(textures.get_concrete_normal(params, images)),
         metallic_roughness_texture: Some(orm.clone()),
         occlusion_texture: Some(orm),
         perceptual_roughness: 1.0,
@@ -402,11 +493,24 @@ pub fn floor_tile_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let orm = textures.get_floor_orm(seed, images);
+    let params = super::procedural_texture::FloorParams {
+        seed,
+        ..default()
+    };
+    floor_tile_material_with_params(_base_color, textures, images, &params)
+}
+
+pub fn floor_tile_material_with_params(
+    _base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    params: &super::procedural_texture::FloorParams,
+) -> StandardMaterial {
+    let orm = textures.get_floor_orm(params, images);
     StandardMaterial {
         base_color: Color::WHITE,
-        base_color_texture: Some(textures.get_floor_albedo(seed, images)),
-        normal_map_texture: Some(textures.get_floor_normal(seed, images)),
+        base_color_texture: Some(textures.get_floor_albedo(params, images)),
+        normal_map_texture: Some(textures.get_floor_normal(params, images)),
         metallic_roughness_texture: Some(orm.clone()),
         occlusion_texture: Some(orm),
         perceptual_roughness: 0.92,

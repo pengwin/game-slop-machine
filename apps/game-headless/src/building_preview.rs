@@ -502,11 +502,15 @@ fn wall_preview_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let orm = textures.get_plaster_orm_now(seed, images);
+    let params = game_core::plugins::building::procedural_texture::PlasterParams {
+        seed,
+        ..default()
+    };
+    let orm = textures.get_plaster_orm_now(&params, images);
     StandardMaterial {
         base_color: Color::WHITE,
-        base_color_texture: Some(textures.get_plaster_preview_albedo_now(seed, images)),
-        normal_map_texture: Some(textures.get_plaster_normal_now(seed, images)),
+        base_color_texture: Some(textures.get_plaster_preview_albedo_now(&params, images)),
+        normal_map_texture: Some(textures.get_plaster_normal_now(&params, images)),
         metallic_roughness_texture: Some(orm.clone()),
         occlusion_texture: Some(orm),
         perceptual_roughness: 1.0,

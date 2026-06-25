@@ -14,6 +14,7 @@ mod wood;
 use bevy::prelude::*;
 use bevy::tasks::AsyncComputeTaskPool;
 use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicUsize, Ordering},
@@ -21,6 +22,21 @@ use std::sync::{
 };
 
 pub use noise::{fbm, global_dirt_color};
+
+pub use brick::{BrickParams, brick_albedo, brick_normal, brick_orm};
+pub use concrete::{ConcreteParams, concrete_albedo, concrete_normal, concrete_orm};
+pub use floor::{FloorParams, floor_albedo, floor_normal, floor_orm};
+pub use plaster::{PlasterParams, plaster_albedo, plaster_normal, plaster_orm, plaster_preview_albedo};
+pub use road::{RoadParams, road_albedo, road_normal, road_orm};
+pub use roof::{RoofParams, roof_albedo, roof_normal, roof_orm};
+pub use stone::{StoneParams, stone_albedo, stone_normal, stone_orm};
+pub use wood::{WoodParams, wood_albedo, wood_normal, wood_orm};
+
+fn hash_params(params: &impl Hash) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    params.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[derive(Resource)]
 pub struct ProceduralTextures {
@@ -150,222 +166,371 @@ impl ProceduralTextures {
         })
     }
 
-    pub fn get_plaster_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("plaster_albedo_{}", seed), images, move || {
-            plaster::plaster_albedo(seed)
-        })
+    // --- Plaster ---
+
+    pub fn get_plaster_albedo(
+        &mut self,
+        params: &PlasterParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("plaster_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || plaster::plaster_albedo(&p))
     }
 
     pub fn get_plaster_preview_albedo(
         &mut self,
-        seed: u32,
+        params: &PlasterParams,
         images: &mut Assets<Image>,
     ) -> Handle<Image> {
-        self.get_or_generate(
-            &format!("plaster_preview_albedo_{}", seed),
-            images,
-            move || plaster::plaster_preview_albedo(seed),
-        )
+        let h = hash_params(params);
+        let key = format!("plaster_preview_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || {
+            plaster::plaster_preview_albedo(&p)
+        })
     }
 
     pub fn get_plaster_preview_albedo_now(
         &mut self,
-        seed: u32,
+        params: &PlasterParams,
         images: &mut Assets<Image>,
     ) -> Handle<Image> {
-        let key = format!("plaster_preview_albedo_{}", seed);
+        let h = hash_params(params);
+        let key = format!("plaster_preview_albedo_{:016x}", h);
         if let Some(handle) = self.cache.get(&key) {
             return handle.clone();
         }
-
-        let handle = images.add(plaster::plaster_preview_albedo(seed));
+        let handle = images.add(plaster::plaster_preview_albedo(params));
         self.cache.insert(key, handle.clone());
         handle
     }
 
     pub fn get_plaster_normal_now(
         &mut self,
-        seed: u32,
+        params: &PlasterParams,
         images: &mut Assets<Image>,
     ) -> Handle<Image> {
-        let key = format!("plaster_normal_{}", seed);
+        let h = hash_params(params);
+        let key = format!("plaster_normal_{:016x}", h);
         if let Some(handle) = self.cache.get(&key) {
             return handle.clone();
         }
-
-        let handle = images.add(plaster::plaster_normal(seed));
+        let handle = images.add(plaster::plaster_normal(params));
         self.cache.insert(key, handle.clone());
         handle
     }
 
-    pub fn get_plaster_orm_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        let key = format!("plaster_orm_{}", seed);
+    pub fn get_plaster_orm_now(
+        &mut self,
+        params: &PlasterParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("plaster_orm_{:016x}", h);
         if let Some(handle) = self.cache.get(&key) {
             return handle.clone();
         }
-
-        let handle = images.add(plaster::plaster_orm(seed));
+        let handle = images.add(plaster::plaster_orm(params));
         self.cache.insert(key, handle.clone());
         handle
     }
 
-    pub fn get_plaster_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("plaster_normal_{}", seed), images, move || {
-            plaster::plaster_normal(seed)
-        })
+    pub fn get_plaster_normal(
+        &mut self,
+        params: &PlasterParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("plaster_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || plaster::plaster_normal(&p))
     }
 
-    pub fn get_plaster_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("plaster_orm_{}", seed), images, move || {
-            plaster::plaster_orm(seed)
-        })
+    pub fn get_plaster_orm(
+        &mut self,
+        params: &PlasterParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("plaster_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || plaster::plaster_orm(&p))
     }
 
-    pub fn get_wood_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("wood_albedo_{}", seed), images, move || {
-            wood::wood_albedo(seed)
-        })
+    // --- Wood ---
+
+    pub fn get_wood_albedo(
+        &mut self,
+        params: &WoodParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("wood_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || wood::wood_albedo(&p))
     }
 
-    pub fn get_wood_albedo_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        let key = format!("wood_albedo_{}", seed);
+    pub fn get_wood_albedo_now(
+        &mut self,
+        params: &WoodParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("wood_albedo_{:016x}", h);
         if let Some(handle) = self.cache.get(&key) {
             return handle.clone();
         }
-
-        let handle = images.add(wood::wood_albedo(seed));
+        let handle = images.add(wood::wood_albedo(params));
         self.cache.insert(key, handle.clone());
         handle
     }
 
-    pub fn get_wood_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("wood_normal_{}", seed), images, move || {
-            wood::wood_normal(seed)
-        })
+    pub fn get_wood_normal(
+        &mut self,
+        params: &WoodParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("wood_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || wood::wood_normal(&p))
     }
 
-    pub fn get_wood_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("wood_orm_{}", seed), images, move || {
-            wood::wood_orm(seed)
-        })
+    pub fn get_wood_orm(
+        &mut self,
+        params: &WoodParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("wood_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || wood::wood_orm(&p))
     }
 
-    pub fn get_wood_normal_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        let key = format!("wood_normal_{}", seed);
+    pub fn get_wood_normal_now(
+        &mut self,
+        params: &WoodParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("wood_normal_{:016x}", h);
         if let Some(handle) = self.cache.get(&key) {
             return handle.clone();
         }
-
-        let handle = images.add(wood::wood_normal(seed));
+        let handle = images.add(wood::wood_normal(params));
         self.cache.insert(key, handle.clone());
         handle
     }
 
-    pub fn get_brick_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("brick_albedo_{}", seed), images, move || {
-            brick::brick_albedo(seed)
-        })
+    // --- Brick ---
+
+    pub fn get_brick_albedo(
+        &mut self,
+        params: &BrickParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("brick_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || brick::brick_albedo(&p))
     }
 
-    pub fn get_brick_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("brick_normal_{}", seed), images, move || {
-            brick::brick_normal(seed)
-        })
+    pub fn get_brick_normal(
+        &mut self,
+        params: &BrickParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("brick_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || brick::brick_normal(&p))
     }
 
-    pub fn get_brick_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("brick_orm_{}", seed), images, move || {
-            brick::brick_orm(seed)
-        })
+    pub fn get_brick_orm(
+        &mut self,
+        params: &BrickParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("brick_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || brick::brick_orm(&p))
     }
 
-    pub fn get_roof_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("roof_albedo_{}", seed), images, move || {
-            roof::roof_albedo(seed)
-        })
+    // --- Roof ---
+
+    pub fn get_roof_albedo(
+        &mut self,
+        params: &RoofParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("roof_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || roof::roof_albedo(&p))
     }
 
-    pub fn get_roof_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("roof_normal_{}", seed), images, move || {
-            roof::roof_normal(seed)
-        })
+    pub fn get_roof_normal(
+        &mut self,
+        params: &RoofParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("roof_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || roof::roof_normal(&p))
     }
 
-    pub fn get_roof_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("roof_orm_{}", seed), images, move || {
-            roof::roof_orm(seed)
-        })
+    pub fn get_roof_orm(
+        &mut self,
+        params: &RoofParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("roof_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || roof::roof_orm(&p))
     }
 
-    pub fn get_stone_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("stone_albedo_{}", seed), images, move || {
-            stone::stone_albedo(seed)
-        })
+    // --- Stone ---
+
+    pub fn get_stone_albedo(
+        &mut self,
+        params: &StoneParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("stone_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || stone::stone_albedo(&p))
     }
 
-    pub fn get_stone_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("stone_normal_{}", seed), images, move || {
-            stone::stone_normal(seed)
-        })
+    pub fn get_stone_normal(
+        &mut self,
+        params: &StoneParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("stone_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || stone::stone_normal(&p))
     }
 
-    pub fn get_stone_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("stone_orm_{}", seed), images, move || {
-            stone::stone_orm(seed)
-        })
+    pub fn get_stone_orm(
+        &mut self,
+        params: &StoneParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("stone_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || stone::stone_orm(&p))
     }
 
-    pub fn get_road_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("road_albedo_{}", seed), images, move || {
-            road::road_albedo(seed)
-        })
+    // --- Road ---
+
+    pub fn get_road_albedo(
+        &mut self,
+        params: &RoadParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("road_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || road::road_albedo(&p))
     }
 
-    pub fn get_road_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("road_normal_{}", seed), images, move || {
-            road::road_normal(seed)
-        })
+    pub fn get_road_normal(
+        &mut self,
+        params: &RoadParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("road_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || road::road_normal(&p))
     }
 
-    pub fn get_road_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("road_orm_{}", seed), images, move || {
-            road::road_orm(seed)
-        })
+    pub fn get_road_orm(
+        &mut self,
+        params: &RoadParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("road_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || road::road_orm(&p))
     }
 
-    pub fn get_concrete_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("concrete_albedo_{}", seed), images, move || {
-            concrete::concrete_albedo(seed)
-        })
+    // --- Concrete ---
+
+    pub fn get_concrete_albedo(
+        &mut self,
+        params: &ConcreteParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("concrete_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || concrete::concrete_albedo(&p))
     }
 
-    pub fn get_concrete_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("concrete_normal_{}", seed), images, move || {
-            concrete::concrete_normal(seed)
-        })
+    pub fn get_concrete_normal(
+        &mut self,
+        params: &ConcreteParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("concrete_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || concrete::concrete_normal(&p))
     }
 
-    pub fn get_concrete_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("concrete_orm_{}", seed), images, move || {
-            concrete::concrete_orm(seed)
-        })
+    pub fn get_concrete_orm(
+        &mut self,
+        params: &ConcreteParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("concrete_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || concrete::concrete_orm(&p))
     }
 
-    pub fn get_floor_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("floor_albedo_{}", seed), images, move || {
-            floor::floor_albedo(seed)
-        })
+    // --- Floor ---
+
+    pub fn get_floor_albedo(
+        &mut self,
+        params: &FloorParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("floor_albedo_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || floor::floor_albedo(&p))
     }
 
-    pub fn get_floor_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("floor_normal_{}", seed), images, move || {
-            floor::floor_normal(seed)
-        })
+    pub fn get_floor_normal(
+        &mut self,
+        params: &FloorParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("floor_normal_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || floor::floor_normal(&p))
     }
 
-    pub fn get_floor_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
-        self.get_or_generate(&format!("floor_orm_{}", seed), images, move || {
-            floor::floor_orm(seed)
-        })
+    pub fn get_floor_orm(
+        &mut self,
+        params: &FloorParams,
+        images: &mut Assets<Image>,
+    ) -> Handle<Image> {
+        let h = hash_params(params);
+        let key = format!("floor_orm_{:016x}", h);
+        let p = params.clone();
+        self.get_or_generate(&key, images, move || floor::floor_orm(&p))
     }
 }
