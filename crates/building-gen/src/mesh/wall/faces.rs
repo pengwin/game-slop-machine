@@ -160,6 +160,7 @@ fn compute_vertex_color(
     grid: &TileGrid,
     gx: usize,
     gy: usize,
+    config: &BuildingConfig,
 ) -> [f32; 4] {
     let mut tint = 1.0;
 
@@ -203,11 +204,103 @@ fn compute_vertex_color(
             }
         }
 
+        ao += interior_corner_ao(pos, dir, grid, gx, gy, config);
         tint -= ao;
     }
 
     let c = tint.clamp(0.0, 1.0);
     [c, c, c, 1.0]
+}
+
+fn interior_corner_ao(
+    pos: [f32; 3],
+    dir: WallFaceDir,
+    grid: &TileGrid,
+    gx: usize,
+    gy: usize,
+    config: &BuildingConfig,
+) -> f32 {
+    let Some((room_x, room_y)) = face_room_tile(dir, grid, gx, gy) else {
+        return 0.0;
+    };
+    if !grid.get(room_x, room_y).is_room_adjacent() {
+        return 0.0;
+    }
+
+    let ts = config.tile_size;
+    let tile_min_x = grid.origin.x + gx as f32 * ts;
+    let tile_max_x = tile_min_x + ts;
+    let tile_min_z = grid.origin.y + gy as f32 * ts;
+    let tile_max_z = tile_min_z + ts;
+    let eps = ts * 0.02;
+
+    let corner_side = match dir {
+        WallFaceDir::NegX | WallFaceDir::PosX => {
+            if (pos[2] - tile_min_z).abs() <= eps {
+                has_wall_neighbor_at(grid, room_x, room_y, 0, -1) as u8 as f32
+            } else if (pos[2] - tile_max_z).abs() <= eps {
+                has_wall_neighbor_at(grid, room_x, room_y, 0, 1) as u8 as f32
+            } else {
+                0.0
+            }
+        }
+        WallFaceDir::NegZ | WallFaceDir::PosZ => {
+            if (pos[0] - tile_min_x).abs() <= eps {
+                has_wall_neighbor_at(grid, room_x, room_y, -1, 0) as u8 as f32
+            } else if (pos[0] - tile_max_x).abs() <= eps {
+                has_wall_neighbor_at(grid, room_x, room_y, 1, 0) as u8 as f32
+            } else {
+                0.0
+            }
+        }
+        WallFaceDir::PosY => 0.0,
+    };
+
+    if corner_side == 0.0 {
+        return 0.0;
+    }
+
+    let base_y = super::bounds::building_base_y(config);
+    let top_y = super::bounds::building_top_y(config);
+    let height_t = ((pos[1] - base_y) / (top_y - base_y).max(f32::EPSILON)).clamp(0.0, 1.0);
+    let vertical_fade = (1.0 - height_t).powf(1.2);
+    0.075 * corner_side * vertical_fade
+}
+
+fn face_room_tile(
+    dir: WallFaceDir,
+    grid: &TileGrid,
+    gx: usize,
+    gy: usize,
+) -> Option<(usize, usize)> {
+    let (dx, dy) = match dir {
+        WallFaceDir::NegX => (-1, 0),
+        WallFaceDir::PosX => (1, 0),
+        WallFaceDir::NegZ => (0, -1),
+        WallFaceDir::PosZ => (0, 1),
+        WallFaceDir::PosY => return None,
+    };
+    offset_coord(grid, gx, gy, dx, dy)
+}
+
+fn has_wall_neighbor_at(grid: &TileGrid, x: usize, y: usize, dx: isize, dy: isize) -> bool {
+    offset_coord(grid, x, y, dx, dy).is_some_and(|(nx, ny)| grid.get(nx, ny).is_wall())
+}
+
+fn offset_coord(
+    grid: &TileGrid,
+    x: usize,
+    y: usize,
+    dx: isize,
+    dy: isize,
+) -> Option<(usize, usize)> {
+    let nx = x as isize + dx;
+    let ny = y as isize + dy;
+    if nx >= 0 && ny >= 0 && (nx as usize) < grid.width && (ny as usize) < grid.height {
+        Some((nx as usize, ny as usize))
+    } else {
+        None
+    }
 }
 
 fn append_wall_face(
@@ -234,10 +327,10 @@ fn append_wall_face(
     let u_len = math_util::vec3_length(u_axis);
     let v_len = math_util::vec3_length(v_axis);
 
-    let c_tl = compute_vertex_color(tl, normal, dir, grid, grid_x, grid_y);
-    let c_tr = compute_vertex_color(tr, normal, dir, grid, grid_x, grid_y);
-    let c_bl = compute_vertex_color(bl, normal, dir, grid, grid_x, grid_y);
-    let c_br = compute_vertex_color(br, normal, dir, grid, grid_x, grid_y);
+    let c_tl = compute_vertex_color(tl, normal, dir, grid, grid_x, grid_y, config);
+    let c_tr = compute_vertex_color(tr, normal, dir, grid, grid_x, grid_y, config);
+    let c_bl = compute_vertex_color(bl, normal, dir, grid, grid_x, grid_y, config);
+    let c_br = compute_vertex_color(br, normal, dir, grid, grid_x, grid_y, config);
 
     match cutout {
         Some(WallCutout::Door) => {
