@@ -7,7 +7,12 @@ pub fn fbm(seed: u32, frequency: f64, octaves: usize, u: f32, v: f32) -> f32 {
     (noise.get([u as f64, v as f64]) as f32 * 0.5 + 0.5).clamp(0.0, 1.0)
 }
 
-pub fn global_dirt_color(_seed: u32, position: [f32; 3], _normal: [f32; 3], intensity: f32) -> [f32; 4] {
+pub fn global_dirt_color(
+    _seed: u32,
+    position: [f32; 3],
+    _normal: [f32; 3],
+    intensity: f32,
+) -> [f32; 4] {
     let [_, y, _] = position;
 
     let bottom_dirt = (1.0 - (y * 0.78)).clamp(0.0, 1.0);

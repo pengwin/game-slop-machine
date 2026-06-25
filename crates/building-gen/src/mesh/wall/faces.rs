@@ -28,12 +28,7 @@ pub fn append_wall_box(
         ],
     };
 
-    for dir in [
-        WallFaceDir::NegX,
-        WallFaceDir::PosX,
-        WallFaceDir::NegZ,
-        WallFaceDir::PosZ,
-    ] {
+    for dir in visible_side_faces(axis, grid, grid_x, grid_y) {
         let face_cutout = if cutout_dirs.contains(&dir) {
             cutout
         } else {
@@ -49,7 +44,63 @@ pub fn append_wall_box(
         };
         append_wall_face(mesh, bounds, dir, config, face_cutout, grid, grid_x, grid_y);
     }
-    append_wall_face(&mut meshes.top, bounds, WallFaceDir::PosY, config, None, grid, grid_x, grid_y);
+    append_wall_face(
+        &mut meshes.top,
+        bounds,
+        WallFaceDir::PosY,
+        config,
+        None,
+        grid,
+        grid_x,
+        grid_y,
+    );
+}
+
+fn visible_side_faces(
+    axis: WallAxis,
+    grid: &TileGrid,
+    grid_x: usize,
+    grid_y: usize,
+) -> Vec<WallFaceDir> {
+    match axis {
+        WallAxis::X => {
+            let mut dirs = vec![WallFaceDir::NegZ, WallFaceDir::PosZ];
+            if !has_wall_neighbor(grid, grid_x, grid_y, -1, 0) {
+                dirs.push(WallFaceDir::NegX);
+            }
+            if !has_wall_neighbor(grid, grid_x, grid_y, 1, 0) {
+                dirs.push(WallFaceDir::PosX);
+            }
+            dirs
+        }
+        WallAxis::Z => {
+            let mut dirs = vec![WallFaceDir::NegX, WallFaceDir::PosX];
+            if !has_wall_neighbor(grid, grid_x, grid_y, 0, -1) {
+                dirs.push(WallFaceDir::NegZ);
+            }
+            if !has_wall_neighbor(grid, grid_x, grid_y, 0, 1) {
+                dirs.push(WallFaceDir::PosZ);
+            }
+            dirs
+        }
+        WallAxis::Both => [
+            (WallFaceDir::NegX, -1, 0),
+            (WallFaceDir::PosX, 1, 0),
+            (WallFaceDir::NegZ, 0, -1),
+            (WallFaceDir::PosZ, 0, 1),
+        ]
+        .into_iter()
+        .filter_map(|(dir, dx, dy)| {
+            (!has_wall_neighbor(grid, grid_x, grid_y, dx, dy)).then_some(dir)
+        })
+        .collect(),
+    }
+}
+
+fn has_wall_neighbor(grid: &TileGrid, grid_x: usize, grid_y: usize, dx: isize, dy: isize) -> bool {
+    let x = grid_x as isize + dx;
+    let y = grid_y as isize + dy;
+    x >= 0 && y >= 0 && matches!(grid.get(x as usize, y as usize), TileType::Wall(_))
 }
 
 struct FaceCorners {
@@ -109,7 +160,6 @@ fn compute_vertex_color(
     grid: &TileGrid,
     gx: usize,
     gy: usize,
-    config: &BuildingConfig,
 ) -> [f32; 4] {
     let mut tint = 1.0;
 
@@ -152,15 +202,6 @@ fn compute_vertex_color(
                 ao += 0.2;
             }
         }
-        
-        // Darken corners of the tile itself
-        let tile_center_x = (gx as f32) * config.tile_size;
-        let tile_center_z = (gy as f32) * config.tile_size;
-        let dx = (pos[0] - tile_center_x).abs();
-        let dz = (pos[2] - tile_center_z).abs();
-        if dx > config.tile_size * 0.4 && dz > config.tile_size * 0.4 {
-            ao += 0.15; // Vertical edge AO
-        }
 
         tint -= ao;
     }
@@ -193,10 +234,10 @@ fn append_wall_face(
     let u_len = math_util::vec3_length(u_axis);
     let v_len = math_util::vec3_length(v_axis);
 
-    let c_tl = compute_vertex_color(tl, normal, dir, grid, grid_x, grid_y, config);
-    let c_tr = compute_vertex_color(tr, normal, dir, grid, grid_x, grid_y, config);
-    let c_bl = compute_vertex_color(bl, normal, dir, grid, grid_x, grid_y, config);
-    let c_br = compute_vertex_color(br, normal, dir, grid, grid_x, grid_y, config);
+    let c_tl = compute_vertex_color(tl, normal, dir, grid, grid_x, grid_y);
+    let c_tr = compute_vertex_color(tr, normal, dir, grid, grid_x, grid_y);
+    let c_bl = compute_vertex_color(bl, normal, dir, grid, grid_x, grid_y);
+    let c_br = compute_vertex_color(br, normal, dir, grid, grid_x, grid_y);
 
     match cutout {
         Some(WallCutout::Door) => {
@@ -205,7 +246,8 @@ fn append_wall_face(
             let door_end = door_start + door_width;
             let door_h = config.door_height.min(max_y - min_y);
             append_wall_sub_faces(
-                mesh, tl, tr, bl, br, c_tl, c_tr, c_bl, c_br, normal, u_len, v_len, door_start, door_end, 0.0, door_h,
+                mesh, tl, tr, bl, br, c_tl, c_tr, c_bl, c_br, normal, u_len, v_len, door_start,
+                door_end, 0.0, door_h,
             );
         }
         Some(WallCutout::Window) => {
@@ -215,7 +257,8 @@ fn append_wall_face(
             let sill = config.window_sill_height;
             let win_top = (sill + config.window_height).min(max_y - min_y);
             append_wall_sub_faces(
-                mesh, tl, tr, bl, br, c_tl, c_tr, c_bl, c_br, normal, u_len, v_len, win_start, win_end, sill, win_top,
+                mesh, tl, tr, bl, br, c_tl, c_tr, c_bl, c_br, normal, u_len, v_len, win_start,
+                win_end, sill, win_top,
             );
         }
         None => {
@@ -227,8 +270,14 @@ fn append_wall_face(
                     bl,
                     br,
                     normal,
-                    uv_min: [crate::mesh::math_util::get_uv(tl, normal)[0], crate::mesh::math_util::get_uv(bl, normal)[1]],
-                    uv_max: [crate::mesh::math_util::get_uv(tr, normal)[0], crate::mesh::math_util::get_uv(tl, normal)[1]],
+                    uv_min: [
+                        crate::mesh::math_util::get_uv(tl, normal)[0],
+                        crate::mesh::math_util::get_uv(bl, normal)[1],
+                    ],
+                    uv_max: [
+                        crate::mesh::math_util::get_uv(tr, normal)[0],
+                        crate::mesh::math_util::get_uv(tl, normal)[1],
+                    ],
                 },
                 [c_tl, c_tr, c_bl, c_br],
                 crate::mesh::SurfaceMaterial::Colored,
@@ -309,8 +358,14 @@ fn append_wall_sub_faces(
                 bl: a,
                 br: b,
                 normal,
-                uv_min: [crate::mesh::math_util::get_uv(d, normal)[0], crate::mesh::math_util::get_uv(a, normal)[1]],
-                uv_max: [crate::mesh::math_util::get_uv(c, normal)[0], crate::mesh::math_util::get_uv(d, normal)[1]],
+                uv_min: [
+                    crate::mesh::math_util::get_uv(d, normal)[0],
+                    crate::mesh::math_util::get_uv(a, normal)[1],
+                ],
+                uv_max: [
+                    crate::mesh::math_util::get_uv(c, normal)[0],
+                    crate::mesh::math_util::get_uv(d, normal)[1],
+                ],
             },
             [cd, cc, ca, cb],
             crate::mesh::SurfaceMaterial::Colored,
@@ -334,8 +389,14 @@ fn append_wall_sub_faces(
                 bl: a,
                 br: b,
                 normal,
-                uv_min: [crate::mesh::math_util::get_uv(d, normal)[0], crate::mesh::math_util::get_uv(a, normal)[1]],
-                uv_max: [crate::mesh::math_util::get_uv(c, normal)[0], crate::mesh::math_util::get_uv(d, normal)[1]],
+                uv_min: [
+                    crate::mesh::math_util::get_uv(d, normal)[0],
+                    crate::mesh::math_util::get_uv(a, normal)[1],
+                ],
+                uv_max: [
+                    crate::mesh::math_util::get_uv(c, normal)[0],
+                    crate::mesh::math_util::get_uv(d, normal)[1],
+                ],
             },
             [cd, cc, ca, cb],
             crate::mesh::SurfaceMaterial::Colored,
@@ -359,8 +420,14 @@ fn append_wall_sub_faces(
                 bl: a,
                 br: b,
                 normal,
-                uv_min: [crate::mesh::math_util::get_uv(d, normal)[0], crate::mesh::math_util::get_uv(a, normal)[1]],
-                uv_max: [crate::mesh::math_util::get_uv(c, normal)[0], crate::mesh::math_util::get_uv(d, normal)[1]],
+                uv_min: [
+                    crate::mesh::math_util::get_uv(d, normal)[0],
+                    crate::mesh::math_util::get_uv(a, normal)[1],
+                ],
+                uv_max: [
+                    crate::mesh::math_util::get_uv(c, normal)[0],
+                    crate::mesh::math_util::get_uv(d, normal)[1],
+                ],
             },
             [cd, cc, ca, cb_color],
             crate::mesh::SurfaceMaterial::Colored,
@@ -384,8 +451,14 @@ fn append_wall_sub_faces(
                 bl: a,
                 br: b,
                 normal,
-                uv_min: [crate::mesh::math_util::get_uv(d, normal)[0], crate::mesh::math_util::get_uv(a, normal)[1]],
-                uv_max: [crate::mesh::math_util::get_uv(c, normal)[0], crate::mesh::math_util::get_uv(d, normal)[1]],
+                uv_min: [
+                    crate::mesh::math_util::get_uv(d, normal)[0],
+                    crate::mesh::math_util::get_uv(a, normal)[1],
+                ],
+                uv_max: [
+                    crate::mesh::math_util::get_uv(c, normal)[0],
+                    crate::mesh::math_util::get_uv(d, normal)[1],
+                ],
             },
             [cd, cc, ca, cb],
             crate::mesh::SurfaceMaterial::Colored,

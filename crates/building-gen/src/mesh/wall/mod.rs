@@ -105,6 +105,54 @@ mod tests {
     }
 
     #[test]
+    fn test_straight_z_wall_culls_caps_between_connected_tiles() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 1.0, 3.0),
+            tile_size: 1.0,
+            wall_thickness: 0.25,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(1, 3, config.tile_size, Vec2::ZERO);
+        let wall = WallTile::exterior(WallShape::Straight(CardinalDir::Left));
+        for y in 0..3 {
+            grid.set(0, y, TileType::Wall(wall));
+        }
+
+        let meshes = generate_wall_meshes(&grid, &config);
+
+        assert_eq!(normal_count(&meshes.exterior, [-1.0, 0.0, 0.0]), 12);
+        assert_eq!(normal_count(&meshes.wall, [1.0, 0.0, 0.0]), 12);
+        assert_eq!(normal_count(&meshes.wall, [0.0, 0.0, -1.0]), 4);
+        assert_eq!(normal_count(&meshes.wall, [0.0, 0.0, 1.0]), 4);
+    }
+
+    #[test]
+    fn test_straight_x_wall_culls_caps_between_connected_tiles() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 3.0, 1.0),
+            tile_size: 1.0,
+            wall_thickness: 0.25,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(3, 1, config.tile_size, Vec2::ZERO);
+        let wall = WallTile::exterior(WallShape::Straight(CardinalDir::Top));
+        for x in 0..3 {
+            grid.set(x, 0, TileType::Wall(wall));
+        }
+
+        let meshes = generate_wall_meshes(&grid, &config);
+
+        assert_eq!(normal_count(&meshes.exterior, [0.0, 0.0, 1.0]), 12);
+        assert_eq!(normal_count(&meshes.wall, [0.0, 0.0, -1.0]), 12);
+        assert_eq!(normal_count(&meshes.wall, [-1.0, 0.0, 0.0]), 4);
+        assert_eq!(normal_count(&meshes.wall, [1.0, 0.0, 0.0]), 4);
+    }
+
+    fn normal_count(mesh: &MeshData, normal: [f32; 3]) -> usize {
+        mesh.normals.iter().filter(|&&n| n == normal).count()
+    }
+
+    #[test]
     fn test_interior_wall_uses_interior_thickness() {
         let config = BuildingConfig {
             footprint: Rect::new(0.0, 0.0, 3.0, 3.0),

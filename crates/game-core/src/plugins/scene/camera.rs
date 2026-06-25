@@ -20,7 +20,11 @@ const ZOOM_SPEED: f32 = 1.5;
 const MIN_ZOOM: f32 = 3.0;
 const MAX_ZOOM: f32 = 200.0;
 
-pub fn spawn_camera(mut commands: Commands, config: Res<CameraConfig>, asset_server: Res<AssetServer>) {
+pub fn spawn_camera(
+    mut commands: Commands,
+    config: Res<CameraConfig>,
+    asset_server: Res<AssetServer>,
+) {
     commands.spawn((
         MainCamera,
         Name::new("Main Camera"),

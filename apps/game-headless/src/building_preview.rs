@@ -439,8 +439,6 @@ fn low_poly_material(color: Color) -> StandardMaterial {
     }
 }
 
-
-
 fn floor_preview_material(
     _fixture: &str,
     config: &BuildingConfig,
@@ -487,11 +485,10 @@ fn wall_preview_material(
 }
 
 fn wall_preview_mesh(_fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
-
     let mut mesh = game_core::plugins::building::mesh_util::subdivide_mesh_data(mesh, 0.5);
     let scale = 0.62;
     let mut new_colors = Vec::with_capacity(mesh.vertices.len());
-    
+
     for i in 0..mesh.vertices.len() {
         let position = mesh.vertices[i];
         let normal = mesh.normals[i];
@@ -499,8 +496,14 @@ fn wall_preview_mesh(_fixture: &str, seed: u32, mesh: &MeshData) -> MeshData {
         mesh.uvs[i][0] *= scale;
         mesh.uvs[i][1] *= scale;
 
-        let dirt = game_core::plugins::building::procedural_texture::global_dirt_color(seed, position, normal, 1.2);
-        let base = if mesh.colors.is_empty() { [1.0, 1.0, 1.0, 1.0] } else { mesh.colors[i] };
+        let dirt = game_core::plugins::building::procedural_texture::global_dirt_color(
+            seed, position, normal, 1.2,
+        );
+        let base = if mesh.colors.is_empty() {
+            [1.0, 1.0, 1.0, 1.0]
+        } else {
+            mesh.colors[i]
+        };
         new_colors.push([
             base[0] * dirt[0],
             base[1] * dirt[1],
