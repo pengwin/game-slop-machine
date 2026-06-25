@@ -206,6 +206,10 @@ pub fn make_ground_quad(center: Vec3, width: f32, depth: f32) -> Mesh {
     );
     mesh.insert_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]));
 
+    if let Err(err) = mesh.generate_tangents() {
+        warn!("Failed to generate tangents for ground quad mesh: {err:?}");
+    }
+
     mesh
 }
 
@@ -217,4 +221,40 @@ pub fn local_to_world(origin: BVec2, rotation: f32, local: BVec2) -> BVec2 {
         origin.x + local.x * cos + local.y * sin,
         origin.y - local.x * sin + local.y * cos,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use building_gen::mesh::{MeshData, SurfaceMaterial};
+
+    fn quad_mesh_data() -> MeshData {
+        MeshData {
+            vertices: vec![
+                [-0.5, 0.0, -0.5],
+                [0.5, 0.0, -0.5],
+                [0.5, 0.0, 0.5],
+                [-0.5, 0.0, 0.5],
+            ],
+            normals: vec![[0.0, 1.0, 0.0]; 4],
+            uvs: vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
+            colors: Vec::new(),
+            surface_materials: vec![SurfaceMaterial::Colored; 2],
+            indices: vec![0, 2, 1, 0, 3, 2],
+        }
+    }
+
+    #[test]
+    fn converted_mesh_data_has_tangents() {
+        let mesh = convert_mesh(&quad_mesh_data());
+
+        assert!(mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_some());
+    }
+
+    #[test]
+    fn ground_quad_has_tangents() {
+        let mesh = make_ground_quad(Vec3::ZERO, 1.0, 1.0);
+
+        assert!(mesh.attribute(Mesh::ATTRIBUTE_TANGENT).is_some());
+    }
 }

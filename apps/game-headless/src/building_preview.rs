@@ -288,12 +288,12 @@ pub fn spawn_building_preview(
     if !bmesh.floor_grout_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.floor_grout_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::WHITE,
-                alpha_mode: AlphaMode::Blend,
-                perceptual_roughness: 1.0,
-                cull_mode: None,
-                ..default()
+            MeshMaterial3d(materials.add({
+                let mut material =
+                    flat_preview_material(Color::WHITE, textures, images, "floor_grout", 1.0, 0.0);
+                material.alpha_mode = AlphaMode::Blend;
+                material.cull_mode = None;
+                material
             })),
             Transform::default(),
             Name::new("Floor Grout"),
@@ -319,9 +319,14 @@ pub fn spawn_building_preview(
     if config.render_roof && !bmesh.roof_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.roof_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
-                config.visual_style.roof_color,
-            )))),
+            MeshMaterial3d(materials.add(flat_preview_material(
+                style_color(config.visual_style.roof_color),
+                textures,
+                images,
+                "preview_roof",
+                0.9,
+                0.0,
+            ))),
             Transform::default(),
             Name::new("Roof"),
         ));
@@ -330,9 +335,14 @@ pub fn spawn_building_preview(
     if config.render_roof && !bmesh.gable_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.gable_mesh))),
-            MeshMaterial3d(materials.add(low_poly_material(style_color(
-                config.visual_style.exterior_wall_color,
-            )))),
+            MeshMaterial3d(materials.add(flat_preview_material(
+                style_color(config.visual_style.exterior_wall_color),
+                textures,
+                images,
+                "preview_gable",
+                0.9,
+                0.0,
+            ))),
             Transform::default(),
             Name::new("Gables"),
         ));
@@ -357,12 +367,17 @@ pub fn spawn_building_preview(
     if !bmesh.door_hardware_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.door_hardware_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::WHITE,
-                metallic: 0.25,
-                perceptual_roughness: 0.46,
-                cull_mode: None,
-                ..default()
+            MeshMaterial3d(materials.add({
+                let mut material = flat_preview_material(
+                    Color::WHITE,
+                    textures,
+                    images,
+                    "door_hardware",
+                    0.46,
+                    0.25,
+                );
+                material.cull_mode = None;
+                material
             })),
             NotShadowCaster,
             Transform::default(),
@@ -389,14 +404,19 @@ pub fn spawn_building_preview(
     if !bmesh.window_mesh.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&bmesh.window_mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgba(0.58, 0.78, 0.95, 0.58),
-                alpha_mode: AlphaMode::Blend,
-                cull_mode: None,
-                metallic: 0.0,
-                perceptual_roughness: 0.24,
-                reflectance: 0.20,
-                ..default()
+            MeshMaterial3d(materials.add({
+                let mut material = flat_preview_material(
+                    Color::srgba(0.58, 0.78, 0.95, 0.58),
+                    textures,
+                    images,
+                    "window_glass",
+                    0.24,
+                    0.0,
+                );
+                material.alpha_mode = AlphaMode::Blend;
+                material.cull_mode = None;
+                material.reflectance = 0.20;
+                material
             })),
             NotShadowCaster,
             Transform::default(),
@@ -429,12 +449,22 @@ fn style_color(rgb: [f32; 3]) -> Color {
     Color::srgb(rgb[0], rgb[1], rgb[2])
 }
 
-fn low_poly_material(color: Color) -> StandardMaterial {
+fn flat_preview_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    label: &str,
+    perceptual_roughness: f32,
+    metallic: f32,
+) -> StandardMaterial {
+    let orm = textures.get_flat_orm(label, images, 1.0, perceptual_roughness, metallic);
     StandardMaterial {
-        base_color: color,
-        metallic: 0.0,
-        perceptual_roughness: 0.9,
-        reflectance: 0.08,
+        base_color,
+        normal_map_texture: Some(textures.get_flat_normal(images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
+        metallic,
+        perceptual_roughness,
         ..default()
     }
 }
@@ -718,15 +748,18 @@ fn spawn_preview_scene_object(
     if item.material_parts.is_empty() {
         commands.spawn((
             Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: if item.mesh.colors.is_empty() {
+            MeshMaterial3d(materials.add(flat_preview_material(
+                if item.mesh.colors.is_empty() {
                     Color::srgb(item.color[0], item.color[1], item.color[2])
                 } else {
                     Color::WHITE
                 },
-                perceptual_roughness: 0.85,
-                ..default()
-            })),
+                textures,
+                images,
+                "scene_fallback",
+                0.85,
+                0.0,
+            ))),
             transform,
             Name::new(if name.is_empty() {
                 format!("{:?}", item.item_type)

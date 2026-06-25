@@ -1,5 +1,7 @@
 use super::brick::*;
-use super::builders::{RENDER_TEXTURE_SIZE, TEXTURE_SIZE, create_placeholder};
+use super::builders::{
+    RENDER_TEXTURE_SIZE, TEXTURE_SIZE, create_placeholder, flat_normal, flat_orm,
+};
 use super::concrete::*;
 use super::floor::*;
 use super::plaster::*;
@@ -26,20 +28,27 @@ fn generated_images_have_expected_layout() {
         (plaster_orm(7), true),
         (wood_albedo(7), false),
         (wood_normal(7), true),
+        (wood_orm(7), true),
         (brick_albedo(7), false),
         (brick_normal(7), true),
+        (brick_orm(7), true),
         (roof_albedo(7), false),
         (roof_normal(7), true),
+        (roof_orm(7), true),
         (stone_albedo(7), false),
         (stone_normal(7), true),
+        (stone_orm(7), true),
         (road_albedo(7), false),
         (road_normal(7), true),
+        (road_orm(7), true),
         (concrete_albedo(7), false),
         (concrete_normal(7), true),
         (concrete_orm(7), true),
         (floor_albedo(7), false),
         (floor_normal(7), true),
         (floor_orm(7), true),
+        (flat_normal(), true),
+        (flat_orm(1.0, 0.5, 0.0), true),
     ] {
         assert_eq!(image.texture_descriptor.size.width, TEXTURE_SIZE);
         assert_eq!(image.texture_descriptor.size.height, TEXTURE_SIZE);

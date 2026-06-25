@@ -30,6 +30,10 @@ pub struct ProceduralTextures {
     pending: Arc<AtomicUsize>,
 }
 
+fn texture_key_value(value: f32) -> i32 {
+    (value.clamp(0.0, 1.0) * 1000.0).round() as i32
+}
+
 impl Default for ProceduralTextures {
     fn default() -> Self {
         let (sender, receiver) = channel();
@@ -71,7 +75,13 @@ impl ProceduralTextures {
 
         info!("Queueing async generation for texture: {}", key);
 
-        let placeholder = builders::create_placeholder(key.contains("_normal_"));
+        let is_normal = key.contains("_normal_");
+        let is_orm = key.contains("_orm_");
+        let placeholder = if is_orm {
+            builders::flat_orm(1.0, 0.8, 0.0)
+        } else {
+            builders::create_placeholder(is_normal)
+        };
         let handle = images.add(placeholder);
         self.cache.insert(key.to_string(), handle.clone());
         self.pending.fetch_add(1, Ordering::Relaxed);
@@ -79,7 +89,7 @@ impl ProceduralTextures {
         let sender = self.sender.clone();
         let handle_clone = handle.clone();
         let key_clone = key.to_string();
-        let is_normal = key.contains("_normal_");
+        let is_linear = is_normal || is_orm;
         AsyncComputeTaskPool::get()
             .spawn(async move {
                 let path = format!("assets/generated/textures/{}.png", key_clone);
@@ -89,7 +99,7 @@ impl ProceduralTextures {
                         builders::TEXTURE_SIZE,
                         builders::TEXTURE_SIZE,
                         rgba.into_raw(),
-                        is_normal,
+                        is_linear,
                     )
                 } else {
                     let generated = generator();
@@ -114,6 +124,30 @@ impl ProceduralTextures {
 
     pub fn pending_count(&self) -> usize {
         self.pending.load(Ordering::Relaxed)
+    }
+
+    pub fn get_flat_normal(&mut self, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate("flat_normal_default", images, builders::flat_normal)
+    }
+
+    pub fn get_flat_orm(
+        &mut self,
+        label: &str,
+        images: &mut Assets<Image>,
+        occlusion: f32,
+        roughness: f32,
+        metallic: f32,
+    ) -> Handle<Image> {
+        let key = format!(
+            "flat_orm_{}_{}_{}_{}",
+            label,
+            texture_key_value(occlusion),
+            texture_key_value(roughness),
+            texture_key_value(metallic)
+        );
+        self.get_or_generate(&key, images, move || {
+            builders::flat_orm(occlusion, roughness, metallic)
+        })
     }
 
     pub fn get_plaster_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
@@ -210,6 +244,12 @@ impl ProceduralTextures {
         })
     }
 
+    pub fn get_wood_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("wood_orm_{}", seed), images, move || {
+            wood::wood_orm(seed)
+        })
+    }
+
     pub fn get_wood_normal_now(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         let key = format!("wood_normal_{}", seed);
         if let Some(handle) = self.cache.get(&key) {
@@ -233,6 +273,12 @@ impl ProceduralTextures {
         })
     }
 
+    pub fn get_brick_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("brick_orm_{}", seed), images, move || {
+            brick::brick_orm(seed)
+        })
+    }
+
     pub fn get_roof_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("roof_albedo_{}", seed), images, move || {
             roof::roof_albedo(seed)
@@ -242,6 +288,12 @@ impl ProceduralTextures {
     pub fn get_roof_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("roof_normal_{}", seed), images, move || {
             roof::roof_normal(seed)
+        })
+    }
+
+    pub fn get_roof_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("roof_orm_{}", seed), images, move || {
+            roof::roof_orm(seed)
         })
     }
 
@@ -257,6 +309,12 @@ impl ProceduralTextures {
         })
     }
 
+    pub fn get_stone_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("stone_orm_{}", seed), images, move || {
+            stone::stone_orm(seed)
+        })
+    }
+
     pub fn get_road_albedo(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("road_albedo_{}", seed), images, move || {
             road::road_albedo(seed)
@@ -266,6 +324,12 @@ impl ProceduralTextures {
     pub fn get_road_normal(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
         self.get_or_generate(&format!("road_normal_{}", seed), images, move || {
             road::road_normal(seed)
+        })
+    }
+
+    pub fn get_road_orm(&mut self, seed: u32, images: &mut Assets<Image>) -> Handle<Image> {
+        self.get_or_generate(&format!("road_orm_{}", seed), images, move || {
+            road::road_orm(seed)
         })
     }
 

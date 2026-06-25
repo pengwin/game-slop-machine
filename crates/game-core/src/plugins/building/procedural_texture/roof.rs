@@ -1,4 +1,4 @@
-use super::builders::{build_albedo, build_normal};
+use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::{cell_noise, fbm, mortar_mask};
 use bevy::prelude::*;
 
@@ -32,4 +32,19 @@ pub fn roof_albedo(seed: u32) -> Image {
 
 pub fn roof_normal(seed: u32) -> Image {
     build_normal(|u, v| roof_height(seed, u, v), 4.4)
+}
+
+pub fn roof_orm(seed: u32) -> Image {
+    build_orm(
+        |u, v| {
+            let h = roof_height(seed, u, v);
+            (0.70 + h * 0.22).clamp(0.0, 1.0)
+        },
+        |u, v| {
+            let h = roof_height(seed, u, v);
+            let dust = fbm(43 ^ seed, 18.0, 2, u, v);
+            (0.82 - h * 0.10 + dust * 0.10).clamp(0.58, 0.95)
+        },
+        |_, _| 0.0,
+    )
 }

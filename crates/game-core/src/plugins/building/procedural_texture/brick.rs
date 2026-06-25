@@ -1,4 +1,4 @@
-use super::builders::{build_albedo, build_normal};
+use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::{cell_noise, fbm, mortar_mask};
 use bevy::prelude::*;
 
@@ -38,4 +38,19 @@ pub fn brick_albedo(seed: u32) -> Image {
 
 pub fn brick_normal(seed: u32) -> Image {
     build_normal(|u, v| brick_height(seed, u, v), 5.0)
+}
+
+pub fn brick_orm(seed: u32) -> Image {
+    build_orm(
+        |u, v| {
+            let h = brick_height(seed, u, v);
+            (0.66 + h * 0.28).clamp(0.0, 1.0)
+        },
+        |u, v| {
+            let h = brick_height(seed, u, v);
+            let grit = fbm(34 ^ seed, 55.0, 2, u, v);
+            (0.86 - h * 0.12 + grit * 0.08).clamp(0.62, 0.96)
+        },
+        |_, _| 0.0,
+    )
 }

@@ -1,4 +1,4 @@
-use super::builders::{build_albedo, build_normal};
+use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::fbm;
 use bevy::prelude::*;
 
@@ -23,4 +23,19 @@ pub fn road_albedo(seed: u32) -> Image {
 
 pub fn road_normal(seed: u32) -> Image {
     build_normal(|u, v| road_height(seed, u, v), 1.8)
+}
+
+pub fn road_orm(seed: u32) -> Image {
+    build_orm(
+        |u, v| {
+            let h = road_height(seed, u, v);
+            (0.54 + h * 0.36).clamp(0.0, 1.0)
+        },
+        |u, v| {
+            let h = road_height(seed, u, v);
+            let dust = fbm(64 ^ seed, 38.0, 2, u, v);
+            (0.94 - h * 0.10 + dust * 0.04).clamp(0.78, 0.99)
+        },
+        |_, _| 0.0,
+    )
 }

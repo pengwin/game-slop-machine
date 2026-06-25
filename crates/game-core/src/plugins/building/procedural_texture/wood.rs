@@ -1,4 +1,4 @@
-use super::builders::{build_albedo, build_normal};
+use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::{cell_noise, fbm, speckle};
 use bevy::prelude::*;
 
@@ -32,4 +32,19 @@ pub fn wood_albedo(seed: u32) -> Image {
 
 pub fn wood_normal(seed: u32) -> Image {
     build_normal(|u, v| wood_height(seed, u, v), 2.1)
+}
+
+pub fn wood_orm(seed: u32) -> Image {
+    build_orm(
+        |u, v| {
+            let h = wood_height(seed, u, v);
+            (0.74 + h * 0.18).clamp(0.0, 1.0)
+        },
+        |u, v| {
+            let h = wood_height(seed, u, v);
+            let pores = speckle(28 ^ seed, 150.0, 0.82, u * 0.4, v * 2.0);
+            (0.82 - h * 0.10 + pores * 0.08).clamp(0.56, 0.95)
+        },
+        |_, _| 0.0,
+    )
 }

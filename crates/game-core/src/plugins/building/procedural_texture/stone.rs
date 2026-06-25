@@ -1,4 +1,4 @@
-use super::builders::{build_albedo, build_normal};
+use super::builders::{build_albedo, build_normal, build_orm};
 use super::noise::{cell_noise, fbm, mortar_mask};
 use bevy::prelude::*;
 
@@ -30,4 +30,19 @@ pub fn stone_albedo(seed: u32) -> Image {
 
 pub fn stone_normal(seed: u32) -> Image {
     build_normal(|u, v| stone_height(seed, u, v), 3.0)
+}
+
+pub fn stone_orm(seed: u32) -> Image {
+    build_orm(
+        |u, v| {
+            let h = stone_height(seed, u, v);
+            (0.62 + h * 0.30).clamp(0.0, 1.0)
+        },
+        |u, v| {
+            let h = stone_height(seed, u, v);
+            let mineral = fbm(53 ^ seed, 24.0, 2, u, v);
+            (0.90 - h * 0.08 + mineral * 0.06).clamp(0.70, 0.98)
+        },
+        |_, _| 0.0,
+    )
 }

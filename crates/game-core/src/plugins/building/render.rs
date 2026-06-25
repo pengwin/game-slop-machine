@@ -64,7 +64,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.door_hardware_mesh,
-        door_hardware_material(),
+        door_hardware_material(textures, images),
         transform,
         &name("Door Hardware"),
         None,
@@ -148,7 +148,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.floor_grout_mesh,
-        floor_grout_material(),
+        floor_grout_material(textures, images),
         transform,
         &name("Floor Grout"),
         None,
@@ -212,7 +212,7 @@ pub fn spawn_building_mesh(
         materials,
         &mut entities,
         &bmesh.window_mesh,
-        window_material(),
+        window_material(textures, images),
         transform,
         &name("Windows"),
         None,
@@ -268,12 +268,15 @@ pub fn textured_material(
     base_color: Color,
     albedo: Handle<Image>,
     normal: Handle<Image>,
+    orm: Handle<Image>,
     perceptual_roughness: f32,
 ) -> StandardMaterial {
     StandardMaterial {
         base_color,
         base_color_texture: Some(albedo),
         normal_map_texture: Some(normal),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
         perceptual_roughness,
         ..default()
     }
@@ -303,10 +306,13 @@ pub fn wood_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
+    let orm = textures.get_wood_orm(seed, images);
     StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(textures.get_wood_albedo(seed, images)),
         normal_map_texture: Some(textures.get_wood_normal(seed, images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
         perceptual_roughness: 0.85,
         ..default()
     }
@@ -322,6 +328,7 @@ pub fn brick_material(
         base_color,
         textures.get_brick_albedo(seed, images),
         textures.get_brick_normal(seed, images),
+        textures.get_brick_orm(seed, images),
         0.84,
     )
 }
@@ -336,6 +343,7 @@ pub fn roof_tile_material(
         base_color,
         textures.get_roof_albedo(seed, images),
         textures.get_roof_normal(seed, images),
+        textures.get_roof_orm(seed, images),
         0.78,
     )
 }
@@ -350,6 +358,7 @@ pub fn stone_material(
         base_color,
         textures.get_stone_albedo(seed, images),
         textures.get_stone_normal(seed, images),
+        textures.get_stone_orm(seed, images),
         0.95,
     )
 }
@@ -364,6 +373,7 @@ pub fn road_material(
         base_color,
         textures.get_road_albedo(seed, images),
         textures.get_road_normal(seed, images),
+        textures.get_road_orm(seed, images),
         0.98,
     )
 }
@@ -516,9 +526,16 @@ fn roof_material(
     )
 }
 
-fn floor_grout_material() -> StandardMaterial {
+fn floor_grout_material(
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+) -> StandardMaterial {
+    let orm = textures.get_flat_orm("floor_grout", images, 1.0, 1.0, 0.0);
     StandardMaterial {
         base_color: Color::WHITE,
+        normal_map_texture: Some(textures.get_flat_normal(images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
         alpha_mode: AlphaMode::Blend,
         perceptual_roughness: 1.0,
         cull_mode: None,
@@ -532,13 +549,10 @@ fn door_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    StandardMaterial {
-        base_color: Color::WHITE,
-        base_color_texture: Some(textures.get_wood_albedo(seed, images)),
-        cull_mode: None,
-        perceptual_roughness: 0.72,
-        ..default()
-    }
+    let mut material = wood_material(Color::WHITE, textures, images, seed);
+    material.cull_mode = None;
+    material.perceptual_roughness = 0.72;
+    material
 }
 
 fn opening_trim_material(
@@ -557,9 +571,16 @@ fn opening_trim_material(
     material
 }
 
-fn door_hardware_material() -> StandardMaterial {
+fn door_hardware_material(
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+) -> StandardMaterial {
+    let orm = textures.get_flat_orm("door_hardware", images, 1.0, 0.46, 0.25);
     StandardMaterial {
         base_color: Color::WHITE,
+        normal_map_texture: Some(textures.get_flat_normal(images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
         metallic: 0.25,
         perceptual_roughness: 0.46,
         cull_mode: None,
@@ -567,9 +588,16 @@ fn door_hardware_material() -> StandardMaterial {
     }
 }
 
-fn window_material() -> StandardMaterial {
+fn window_material(
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+) -> StandardMaterial {
+    let orm = textures.get_flat_orm("window_glass", images, 1.0, 0.10, 0.8);
     StandardMaterial {
         base_color: Color::srgba(0.58, 0.78, 0.95, 0.58),
+        normal_map_texture: Some(textures.get_flat_normal(images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None,
         perceptual_roughness: 0.1,
@@ -610,15 +638,19 @@ pub fn spawn_furniture(
                 commands
                     .spawn((
                         Mesh3d(meshes.add(convert_mesh(&item.mesh))),
-                        MeshMaterial3d(materials.add(StandardMaterial {
-                            base_color: if item.mesh.colors.is_empty() {
+                        MeshMaterial3d(materials.add(flat_mapped_material(
+                            if item.mesh.colors.is_empty() {
                                 Color::srgb(item.color[0], item.color[1], item.color[2])
                             } else {
                                 Color::WHITE
                             },
-                            perceptual_roughness: 0.85,
-                            ..default()
-                        })),
+                            textures,
+                            images,
+                            "scene_fallback",
+                            0.85,
+                            0.0,
+                            0.5,
+                        ))),
                         world_transform,
                         Name::new(format!("{} {:?} {}", name_prefix, item.item_type, i)),
                     ))
@@ -661,33 +693,47 @@ pub fn scene_part_material(
     let color = Color::srgb(part.color[0], part.color[1], part.color[2]);
     match part.material {
         SceneMaterialKind::Wood => wood_material(color, textures, images, seed),
-        SceneMaterialKind::Fabric => StandardMaterial {
-            base_color: color,
-            perceptual_roughness: 0.90,
-            reflectance: 0.02,
-            ..default()
-        },
-        SceneMaterialKind::Book => StandardMaterial {
-            base_color: color,
-            perceptual_roughness: 0.72,
-            ..default()
-        },
-        SceneMaterialKind::Metal => StandardMaterial {
-            base_color: color,
-            metallic: 0.85,
-            perceptual_roughness: 0.30,
-            ..default()
-        },
-        SceneMaterialKind::Stone => StandardMaterial {
-            base_color: color,
-            perceptual_roughness: 0.94,
-            reflectance: 0.04,
-            ..default()
-        },
-        SceneMaterialKind::Colored => StandardMaterial {
-            base_color: color,
-            perceptual_roughness: 0.86,
-            ..default()
-        },
+        SceneMaterialKind::Fabric => {
+            let mut material =
+                flat_mapped_material(color, textures, images, "fabric", 0.90, 0.0, 0.5);
+            material.reflectance = 0.02;
+            material
+        }
+        SceneMaterialKind::Book => {
+            flat_mapped_material(color, textures, images, "book", 0.72, 0.0, 0.5)
+        }
+        SceneMaterialKind::Metal => {
+            flat_mapped_material(color, textures, images, "metal", 0.30, 0.85, 0.5)
+        }
+        SceneMaterialKind::Stone => {
+            let mut material =
+                flat_mapped_material(color, textures, images, "scene_stone", 0.94, 0.0, 0.5);
+            material.reflectance = 0.04;
+            material
+        }
+        SceneMaterialKind::Colored => {
+            flat_mapped_material(color, textures, images, "colored", 0.86, 0.0, 0.5)
+        }
+    }
+}
+
+fn flat_mapped_material(
+    base_color: Color,
+    textures: &mut ProceduralTextures,
+    images: &mut Assets<Image>,
+    label: &str,
+    perceptual_roughness: f32,
+    metallic: f32,
+    occlusion: f32,
+) -> StandardMaterial {
+    let orm = textures.get_flat_orm(label, images, occlusion, perceptual_roughness, metallic);
+    StandardMaterial {
+        base_color,
+        normal_map_texture: Some(textures.get_flat_normal(images)),
+        metallic_roughness_texture: Some(orm.clone()),
+        occlusion_texture: Some(orm),
+        metallic,
+        perceptual_roughness,
+        ..default()
     }
 }

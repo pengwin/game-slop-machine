@@ -35,6 +35,14 @@ pub fn create_placeholder(is_normal: bool) -> Image {
     )
 }
 
+pub fn flat_normal() -> Image {
+    build_normal(|_, _| 0.5, 1.0)
+}
+
+pub fn flat_orm(occlusion: f32, roughness: f32, metallic: f32) -> Image {
+    build_orm(|_, _| occlusion, |_, _| roughness, |_, _| metallic)
+}
+
 pub fn create_image(width: u32, height: u32, data: Vec<u8>, is_normal: bool) -> Image {
     let mut image = Image::new(
         Extent3d {
