@@ -162,24 +162,27 @@ fn compute_vertex_color(
     gy: usize,
     config: &BuildingConfig,
 ) -> [f32; 4] {
+    let shading = config.visual_style.wall_shading;
     let mut tint = 1.0;
 
     // Height gradient (darker at bottom)
     let bottom_y = 0.0; // Assume wall base is 0.0 or close
     let height = (pos[1] - bottom_y).max(0.0);
-    let bottom_dirt = (1.0 - height * 0.78).clamp(0.0, 1.0);
-    tint -= bottom_dirt * 0.15;
+    let bottom_dirt = (1.0 - height * shading.bottom_falloff).clamp(0.0, 1.0);
+    tint -= bottom_dirt * shading.bottom_strength;
 
     // Directional tint
     if normal[1] > 0.5 {
         // Top faces
-        tint *= 1.15;
+        tint *= shading.top_face_multiplier;
     } else if normal[1] < -0.5 {
         // Bottom faces
-        tint *= 0.7;
+        tint *= shading.bottom_face_multiplier;
     } else {
         // Side faces
-        let side_tint = 1.0 - (normal[0].abs() * 0.04 + normal[2].abs() * 0.12);
+        let side_tint = 1.0
+            - (normal[0].abs() * shading.side_x_strength
+                + normal[2].abs() * shading.side_z_strength);
         tint *= side_tint;
     }
 
@@ -200,7 +203,7 @@ fn compute_vertex_color(
         if check_x >= 0 && check_y >= 0 {
             if let TileType::Wall(_) = grid.get(check_x as usize, check_y as usize) {
                 // If facing an adjacent wall, darken heavily (inner corner AO)
-                ao += 0.2;
+                ao += shading.adjacent_wall_strength;
             }
         }
 
@@ -263,8 +266,9 @@ fn interior_corner_ao(
     let base_y = super::bounds::building_base_y(config);
     let top_y = super::bounds::building_top_y(config);
     let height_t = ((pos[1] - base_y) / (top_y - base_y).max(f32::EPSILON)).clamp(0.0, 1.0);
-    let vertical_fade = (1.0 - height_t).powf(1.2);
-    0.075 * corner_side * vertical_fade
+    let shading = config.visual_style.wall_shading;
+    let vertical_fade = (1.0 - height_t).powf(shading.interior_corner_vertical_falloff);
+    shading.interior_corner_strength * corner_side * vertical_fade
 }
 
 fn face_room_tile(

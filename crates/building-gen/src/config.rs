@@ -109,6 +109,8 @@ impl RoomDefaults {
 pub struct BuildingVisualStyle {
     /// Color for interior wall faces.
     pub wall_color: [f32; 3],
+    /// Vertex shading settings for wall faces.
+    pub wall_shading: WallVertexShadingSettings,
     /// Color for the top face of walls (slightly darker for depth).
     pub wall_top_color: [f32; 3],
     /// Color for exterior wall faces.
@@ -127,14 +129,127 @@ pub struct BuildingVisualStyle {
     pub foundation_color: [f32; 3],
     /// Color for floor tiles.
     pub floor_color: [f32; 3],
+    /// Vertex ambient-occlusion settings for floor shading near walls.
+    pub floor_ao: FloorAmbientOcclusionSettings,
+    /// Overlay grout-line settings for floor tile seams.
+    pub floor_grout: FloorGroutSettings,
     /// Multiplier for procedural dirt/wear mapping (default 1.0).
     pub dirt_intensity: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct WallVertexShadingSettings {
+    /// Strength of the vertical bottom darkening on wall faces.
+    pub bottom_strength: f32,
+    /// World-space falloff rate for bottom darkening.
+    pub bottom_falloff: f32,
+    /// Brightness multiplier for upward-facing wall-top geometry.
+    pub top_face_multiplier: f32,
+    /// Brightness multiplier for downward-facing wall geometry.
+    pub bottom_face_multiplier: f32,
+    /// Directional darkening applied to X-facing side walls.
+    pub side_x_strength: f32,
+    /// Directional darkening applied to Z-facing side walls.
+    pub side_z_strength: f32,
+    /// Darkening for a face that points directly into an adjacent wall tile.
+    pub adjacent_wall_strength: f32,
+    /// Extra bottom-heavy darkening for interior room corners.
+    pub interior_corner_strength: f32,
+    /// Vertical fade exponent for interior corner darkening.
+    pub interior_corner_vertical_falloff: f32,
+}
+
+impl Default for WallVertexShadingSettings {
+    fn default() -> Self {
+        Self {
+            bottom_strength: 0.15,
+            bottom_falloff: 0.78,
+            top_face_multiplier: 1.15,
+            bottom_face_multiplier: 0.7,
+            side_x_strength: 0.04,
+            side_z_strength: 0.12,
+            adjacent_wall_strength: 0.2,
+            interior_corner_strength: 0.075,
+            interior_corner_vertical_falloff: 1.2,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FloorAmbientOcclusionSettings {
+    /// Darkening strength along wall edges, 0.0 disables edge AO.
+    pub edge_strength: f32,
+    /// Additional darkening where floor vertices are near two wall directions.
+    pub corner_strength: f32,
+    /// Width of the floor AO falloff, expressed in tile sizes.
+    pub width_tiles: f32,
+    /// Curve exponent for the fade. Higher values keep the darkest part closer to the wall.
+    pub falloff: f32,
+    /// Number of subdivisions per floor tile used for vertex-color interpolation.
+    pub subdivisions: usize,
+}
+
+impl Default for FloorAmbientOcclusionSettings {
+    fn default() -> Self {
+        Self {
+            edge_strength: 0.18,
+            corner_strength: 0.12,
+            width_tiles: 1.0,
+            falloff: 1.8,
+            subdivisions: 8,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FloorGroutSettings {
+    /// Grout line width as a multiplier of tile size.
+    pub line_width_factor: f32,
+    /// Minimum grout line width in world units.
+    pub min_line_width: f32,
+    /// Maximum grout line width in world units.
+    pub max_line_width: f32,
+    /// Width multiplier for center seam lines inside each tile.
+    pub center_line_scale: f32,
+    /// Height offset above the floor mesh to avoid z-fighting.
+    pub height_offset: f32,
+    /// Number of segments per grout strip for alpha/noise variation.
+    pub strip_subdivisions: usize,
+    /// Base grout RGB color before warmth variation.
+    pub color: [f32; 3],
+    /// Base warmth multiplier for grout color.
+    pub warmth_base: f32,
+    /// Additional warmth variation multiplied by strip noise.
+    pub warmth_noise: f32,
+    /// Base alpha for grout strips.
+    pub alpha_base: f32,
+    /// Additional alpha variation multiplied by strip noise.
+    pub alpha_noise: f32,
+}
+
+impl Default for FloorGroutSettings {
+    fn default() -> Self {
+        Self {
+            line_width_factor: 0.0025,
+            min_line_width: 0.0010,
+            max_line_width: 0.0022,
+            center_line_scale: 1.0,
+            height_offset: 0.004,
+            strip_subdivisions: 4,
+            color: [0.40, 0.36, 0.29],
+            warmth_base: 0.88,
+            warmth_noise: 0.18,
+            alpha_base: 0.004,
+            alpha_noise: 0.012,
+        }
+    }
 }
 
 impl Default for BuildingVisualStyle {
     fn default() -> Self {
         Self {
             wall_color: [0.8, 0.8, 0.8],
+            wall_shading: WallVertexShadingSettings::default(),
             wall_top_color: [0.34, 0.34, 0.34],
             exterior_wall_color: [0.92, 0.88, 0.68],
             corner_color: [0.96, 0.9, 0.62],
@@ -144,6 +259,8 @@ impl Default for BuildingVisualStyle {
             trim_color: [0.18, 0.16, 0.13],
             foundation_color: [0.42, 0.42, 0.38],
             floor_color: [0.6, 0.6, 0.6],
+            floor_ao: FloorAmbientOcclusionSettings::default(),
+            floor_grout: FloorGroutSettings::default(),
             dirt_intensity: 1.2,
         }
     }
@@ -300,6 +417,22 @@ mod tests {
         assert_eq!(config.corridor_width_world(), 1.0);
         assert_eq!(config.room_specs.len(), 1);
         assert_eq!(config.room_specs[0].name, "room");
+        assert_eq!(config.visual_style.wall_shading.bottom_strength, 0.15);
+        assert_eq!(config.visual_style.wall_shading.bottom_falloff, 0.78);
+        assert_eq!(config.visual_style.wall_shading.adjacent_wall_strength, 0.2);
+        assert_eq!(
+            config.visual_style.wall_shading.interior_corner_strength,
+            0.075
+        );
+        assert_eq!(config.visual_style.floor_ao.edge_strength, 0.18);
+        assert_eq!(config.visual_style.floor_ao.corner_strength, 0.12);
+        assert_eq!(config.visual_style.floor_ao.width_tiles, 1.0);
+        assert_eq!(config.visual_style.floor_ao.subdivisions, 8);
+        assert_eq!(config.visual_style.floor_grout.line_width_factor, 0.0025);
+        assert_eq!(config.visual_style.floor_grout.height_offset, 0.004);
+        assert_eq!(config.visual_style.floor_grout.color, [0.40, 0.36, 0.29]);
+        assert_eq!(config.visual_style.floor_grout.alpha_base, 0.004);
+        assert_eq!(config.visual_style.floor_grout.alpha_noise, 0.012);
     }
 
     #[test]
