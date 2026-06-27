@@ -2,7 +2,7 @@
 
 mod camera;
 mod geometry;
-mod layout;
+mod boxes;
 mod lighting;
 mod plugin;
 mod root;

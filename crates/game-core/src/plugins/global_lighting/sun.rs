@@ -13,23 +13,25 @@ pub fn plugin(app: &mut App) {
 #[derive(Component, Clone, Default)]
 pub struct GlobalSunLight;
 
+#[allow(clippy::needless_pass_by_value)]
 fn spawn_global_sun(
     mut commands: Commands<'_, '_>,
     preset: Res<'_, LightingPreset>,
     mut ambient_light: ResMut<'_, GlobalAmbientLight>,
 ) {
-    let lighting = preset.into_inner().settings();
+    let lighting = preset.settings();
     apply_ambient_lighting(&lighting, &mut ambient_light);
 
     commands.queue_spawn_scene(sun_scene(&lighting));
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn apply_lighting_preset(
     preset: Res<'_, LightingPreset>,
     mut ambient_light: ResMut<'_, GlobalAmbientLight>,
     mut sun: Query<'_, '_, (&mut DirectionalLight, &mut Transform), With<GlobalSunLight>>,
 ) {
-    let lighting = preset.into_inner().settings();
+    let lighting = preset.settings();
     apply_ambient_lighting(&lighting, &mut ambient_light);
 
     let Ok((mut sun, mut transform)) = sun.single_mut() else {

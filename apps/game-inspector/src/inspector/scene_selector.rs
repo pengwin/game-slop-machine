@@ -100,6 +100,7 @@ fn update_selector_caption(
     mut caption: Single<'_, '_, &mut Text, With<SceneSelectorCaption>>,
 ) {
     if selected.is_changed() {
-        caption.0 = selected.get().label().to_string();
+        let new_label = selected.label().to_string();
+        caption.0 = new_label;
     }
 }

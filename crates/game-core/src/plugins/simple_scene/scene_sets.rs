@@ -9,7 +9,7 @@ pub fn plugin(app: &mut App) {
     );
 }
 
-#[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(SystemSet, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum SimpleSceneSet {
     Root,
     Content,

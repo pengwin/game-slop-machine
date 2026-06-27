@@ -12,7 +12,7 @@ impl Plugin for InspectorScenePlugin {
 }
 
 /// Active scene selected in the inspector.
-#[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]
+#[derive(States, Debug, Clone, Default, Eq, PartialEq, Hash)]
 pub enum InspectorScene {
     /// No inspector scene is currently active.
     #[default]
@@ -24,7 +24,7 @@ pub enum InspectorScene {
 impl InspectorScene {
     /// Returns the human-readable label shown in inspector UI.
     #[must_use]
-    pub const fn label(self) -> &'static str {
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::None => "None",
             Self::Simple => "Simple scene",

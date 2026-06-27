@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::plugins::inspector_scene::InspectorScene;
 
-use super::{layout, root::SimpleSceneRoot, scene_sets::SimpleSceneSet};
+use super::{boxes, root::SimpleSceneRoot, scene_sets::SimpleSceneSet};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
@@ -30,7 +30,7 @@ fn spawn_simple_scene_geometry(
 }
 
 fn geometry_scene() -> impl SceneList {
-    let [red_box, green_box, blue_box, gold_box] = layout::boxes();
+    let [red_box, green_box, blue_box, gold_box] = boxes::boxes();
 
     bsn_list![
         (
@@ -39,7 +39,7 @@ fn geometry_scene() -> impl SceneList {
             Mesh3d(asset_value(
                 Plane3d::default()
                     .mesh()
-                    .size(layout::PLANE_SIZE, layout::PLANE_SIZE)
+                    .size(boxes::PLANE_SIZE, boxes::PLANE_SIZE)
             ))
             MeshMaterial3d::<StandardMaterial>(asset_value(StandardMaterial {
                 base_color: Color::srgb(0.30, 0.36, 0.32),
@@ -50,28 +50,28 @@ fn geometry_scene() -> impl SceneList {
         (
             Name::new(red_box.name)
             SimpleSceneGeometry
-            Mesh3d(asset_value(Cuboid::from_size(layout::BOX_SIZE)))
+            Mesh3d(asset_value(Cuboid::from_size(boxes::BOX_SIZE)))
             MeshMaterial3d::<StandardMaterial>(asset_value(box_material(red_box.color)))
             Transform::from_translation(red_box.position)
         ),
         (
             Name::new(green_box.name)
             SimpleSceneGeometry
-            Mesh3d(asset_value(Cuboid::from_size(layout::BOX_SIZE)))
+            Mesh3d(asset_value(Cuboid::from_size(boxes::BOX_SIZE)))
             MeshMaterial3d::<StandardMaterial>(asset_value(box_material(green_box.color)))
             Transform::from_translation(green_box.position)
         ),
         (
             Name::new(blue_box.name)
             SimpleSceneGeometry
-            Mesh3d(asset_value(Cuboid::from_size(layout::BOX_SIZE)))
+            Mesh3d(asset_value(Cuboid::from_size(boxes::BOX_SIZE)))
             MeshMaterial3d::<StandardMaterial>(asset_value(box_material(blue_box.color)))
             Transform::from_translation(blue_box.position)
         ),
         (
             Name::new(gold_box.name)
             SimpleSceneGeometry
-            Mesh3d(asset_value(Cuboid::from_size(layout::BOX_SIZE)))
+            Mesh3d(asset_value(Cuboid::from_size(boxes::BOX_SIZE)))
             MeshMaterial3d::<StandardMaterial>(asset_value(box_material(gold_box.color)))
             Transform::from_translation(gold_box.position)
         ),
