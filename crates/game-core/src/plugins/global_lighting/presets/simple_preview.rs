@@ -4,7 +4,7 @@ use crate::plugins::global_lighting::SceneLightingSettings;
 
 /// Returns bright inspector preview lighting.
 #[must_use]
-pub fn scene_lighting() -> SceneLightingSettings {
+pub fn settings() -> SceneLightingSettings {
     SceneLightingSettings {
         ambient_color: Color::WHITE,
         ambient_brightness: 250.0,

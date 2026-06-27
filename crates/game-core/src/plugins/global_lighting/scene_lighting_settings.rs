@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 /// Resolved lighting values applied to Bevy lighting resources and entities.
-#[derive(Clone)]
 pub struct SceneLightingSettings {
     /// Ambient light color.
     pub ambient_color: Color,

@@ -15,10 +15,10 @@ pub enum LightingPreset {
 impl LightingPreset {
     /// Resolves this preset into concrete lighting values.
     #[must_use]
-    pub fn scene_lighting(self) -> SceneLightingSettings {
+    pub fn settings(self) -> SceneLightingSettings {
         match self {
-            Self::DefaultGame => presets::default_game::scene_lighting(),
-            Self::SimplePreview => presets::simple_preview::scene_lighting(),
+            Self::DefaultGame => presets::default_game::settings(),
+            Self::SimplePreview => presets::simple_preview::settings(),
         }
     }
 }

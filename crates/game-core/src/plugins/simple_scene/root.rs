@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use super::{scene_sets::SimpleSceneSet, InspectorScene};
+use crate::plugins::inspector_scene::InspectorScene;
+
+use super::scene_sets::SimpleSceneSet;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(

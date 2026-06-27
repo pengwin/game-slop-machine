@@ -10,7 +10,7 @@ use bevy::{
     prelude::*,
     ui_widgets::Activate,
 };
-use game_core::plugins::simple_scene::InspectorScene;
+use game_core::plugins::inspector_scene::InspectorScene;
 
 #[derive(Clone, Component, Default)]
 struct SceneSelectorCaption;

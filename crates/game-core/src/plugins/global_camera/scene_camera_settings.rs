@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 /// Resolved camera values applied to the global 3D camera.
-#[derive(Clone)]
 pub struct SceneCameraSettings {
     /// Camera clear color.
     pub clear_color: Color,

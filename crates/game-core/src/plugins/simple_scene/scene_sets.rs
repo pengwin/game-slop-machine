@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::InspectorScene;
+use crate::plugins::inspector_scene::InspectorScene;
 
 pub fn plugin(app: &mut App) {
     app.configure_sets(

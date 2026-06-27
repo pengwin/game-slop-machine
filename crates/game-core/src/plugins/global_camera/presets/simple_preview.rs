@@ -4,7 +4,7 @@ use crate::plugins::global_camera::SceneCameraSettings;
 
 /// Returns the simple scene preview camera.
 #[must_use]
-pub const fn scene_camera() -> SceneCameraSettings {
+pub const fn settings() -> SceneCameraSettings {
     SceneCameraSettings {
         clear_color: Color::srgb(0.12, 0.13, 0.15),
         orthographic_viewport_height: 10.0,

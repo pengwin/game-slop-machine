@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 
-use crate::plugins::global_lighting::LightingPreset;
-
-use super::InspectorScene;
+use crate::plugins::{global_lighting::LightingPreset, inspector_scene::InspectorScene};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(

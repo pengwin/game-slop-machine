@@ -10,7 +10,7 @@ pub fn plugin(app: &mut App) {
 }
 
 /// Marker for the single global directional sun entity.
-#[derive(Component)]
+#[derive(Component, Clone, Default)]
 pub struct GlobalSunLight;
 
 fn spawn_global_sun(
@@ -18,19 +18,10 @@ fn spawn_global_sun(
     preset: Res<'_, LightingPreset>,
     mut ambient_light: ResMut<'_, GlobalAmbientLight>,
 ) {
-    let lighting = preset.into_inner().scene_lighting();
+    let lighting = preset.into_inner().settings();
     apply_ambient_lighting(&lighting, &mut ambient_light);
 
-    commands.spawn((
-        Name::new("Global Sun Light"),
-        GlobalSunLight,
-        DirectionalLight {
-            illuminance: lighting.sun_illuminance,
-            shadow_maps_enabled: lighting.shadows_enabled,
-            ..default()
-        },
-        Transform::from_rotation(lighting.sun_rotation),
-    ));
+    commands.queue_spawn_scene(sun_scene(&lighting));
 }
 
 fn apply_lighting_preset(
@@ -38,7 +29,7 @@ fn apply_lighting_preset(
     mut ambient_light: ResMut<'_, GlobalAmbientLight>,
     mut sun: Query<'_, '_, (&mut DirectionalLight, &mut Transform), With<GlobalSunLight>>,
 ) {
-    let lighting = preset.into_inner().scene_lighting();
+    let lighting = preset.into_inner().settings();
     apply_ambient_lighting(&lighting, &mut ambient_light);
 
     let Ok((mut sun, mut transform)) = sun.single_mut() else {
@@ -58,4 +49,22 @@ const fn apply_ambient_lighting(
     ambient_light.color = lighting.ambient_color;
     ambient_light.brightness = lighting.ambient_brightness;
     ambient_light.affects_lightmapped_meshes = lighting.ambient_affects_lightmapped_meshes;
+}
+
+fn sun_scene(lighting: &SceneLightingSettings) -> impl Scene {
+    let illuminance = lighting.sun_illuminance;
+    let shadows_enabled = lighting.shadows_enabled;
+    let transform = Transform::from_rotation(lighting.sun_rotation);
+
+    bsn! {
+        (
+            Name::new("Global Sun Light")
+            GlobalSunLight
+            DirectionalLight {
+                illuminance: { illuminance },
+                shadow_maps_enabled: { shadows_enabled },
+            }
+            template_value(transform)
+        )
+    }
 }

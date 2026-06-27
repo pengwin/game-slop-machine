@@ -1,4 +1,15 @@
+//! Shared inspector scene selection state.
+
 use bevy::prelude::*;
+
+/// Registers the active inspector scene state.
+pub struct InspectorScenePlugin;
+
+impl Plugin for InspectorScenePlugin {
+    fn build(&self, app: &mut App) {
+        app.init_state::<InspectorScene>();
+    }
+}
 
 /// Active scene selected in the inspector.
 #[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]

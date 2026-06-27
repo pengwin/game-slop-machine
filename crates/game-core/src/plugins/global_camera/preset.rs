@@ -15,10 +15,10 @@ pub enum CameraPreset {
 impl CameraPreset {
     /// Resolves this preset into concrete camera values.
     #[must_use]
-    pub const fn scene_camera(self) -> SceneCameraSettings {
+    pub const fn settings(self) -> SceneCameraSettings {
         match self {
-            Self::DefaultGame => presets::default_game::scene_camera(),
-            Self::SimplePreview => presets::simple_preview::scene_camera(),
+            Self::DefaultGame => presets::default_game::settings(),
+            Self::SimplePreview => presets::simple_preview::settings(),
         }
     }
 }

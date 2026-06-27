@@ -2,12 +2,11 @@
 
 mod camera;
 mod geometry;
+mod layout;
 mod lighting;
 mod plugin;
 mod root;
 mod scene_sets;
-mod state;
 
 pub use plugin::SimpleScenePlugin;
 pub use root::SimpleSceneRoot;
-pub use state::InspectorScene;
