@@ -15,3 +15,9 @@ fmt:
 
 clean:
     cargo clean
+
+# Run commands
+
+run-inspector:
+    cargo run --release --bin game-inspector
+

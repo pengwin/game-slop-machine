@@ -1,0 +1,19 @@
+[package]
+name = "game-inspector"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+description = "Inspector app for previewing Game Slop Machine scenes and assets."
+readme = "../../README.md"
+
+[dependencies]
+bevy.workspace = true
+game-core = { path = "../../crates/game-core" }
+
+[lints]
+workspace = true
