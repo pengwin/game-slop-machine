@@ -3,10 +3,22 @@ use bevy::prelude::*;
 pub const PLANE_SIZE: f32 = 12.0;
 pub const BOX_SIZE: Vec3 = Vec3::splat(1.5);
 
+
 pub struct SimpleSceneBox {
     pub name: &'static str,
     pub color: Color,
     pub position: Vec3,
+}
+
+impl SimpleSceneBox {
+    pub fn scene(self) -> impl Scene {
+        bsn!(
+            Name::new(self.name)
+            Mesh3d(asset_value(Cuboid::from_size(BOX_SIZE)))
+            MeshMaterial3d::<StandardMaterial>(asset_value(box_material(self.color)))
+            Transform::from_translation(self.position)
+        )
+    }
 }
 
 pub const fn boxes() -> [SimpleSceneBox; 4] {
@@ -32,4 +44,12 @@ pub const fn boxes() -> [SimpleSceneBox; 4] {
             position: Vec3::new(2.0, 0.75, 2.0),
         },
     ]
+}
+
+fn box_material(color: Color) -> StandardMaterial {
+    StandardMaterial {
+        base_color: color,
+        perceptual_roughness: 0.65,
+        ..default()
+    }
 }

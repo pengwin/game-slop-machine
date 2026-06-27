@@ -10,7 +10,7 @@ use bevy::{
     prelude::*,
     ui_widgets::Activate,
 };
-use game_core::plugins::inspector_scene::InspectorScene;
+use game_core::plugins::inspector::InspectorSceneState;
 
 #[derive(Clone, Component, Default)]
 struct SceneSelectorCaption;
@@ -72,16 +72,16 @@ fn selector_root() -> impl Scene {
                                         @FeathersMenuItem {
                                             @caption: bsn! { Text("None") ThemedText }
                                         }
-                                        on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorScene>>| {
-                                            next_scene.set(InspectorScene::None);
+                                        on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorSceneState>>| {
+                                            next_scene.set(InspectorSceneState::None);
                                         })
                                     ),
                                     (
                                         @FeathersMenuItem {
                                             @caption: bsn! { Text("Simple scene") ThemedText }
                                         }
-                                        on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorScene>>| {
-                                            next_scene.set(InspectorScene::Simple);
+                                        on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorSceneState>>| {
+                                            next_scene.set(InspectorSceneState::Simple);
                                         })
                                     )
                                 ]
@@ -96,7 +96,7 @@ fn selector_root() -> impl Scene {
 
 #[allow(clippy::needless_pass_by_value)]
 fn update_selector_caption(
-    selected: Res<'_, State<InspectorScene>>,
+    selected: Res<'_, State<InspectorSceneState>>,
     mut caption: Single<'_, '_, &mut Text, With<SceneSelectorCaption>>,
 ) {
     if selected.is_changed() {

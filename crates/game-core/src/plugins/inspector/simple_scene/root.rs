@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
-use crate::plugins::inspector_scene::InspectorScene;
+use super::super::InspectorSceneState;
 
 use super::scene_sets::SimpleSceneSet;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
-        OnEnter(InspectorScene::Simple),
+        OnEnter(InspectorSceneState::Simple),
         spawn_simple_scene_root.in_set(SimpleSceneSet::Root),
     )
-    .add_systems(OnExit(InspectorScene::Simple), despawn_simple_scene);
+    .add_systems(OnExit(InspectorSceneState::Simple), despawn_simple_scene);
 }
 
 /// Marker applied to entities owned by the simple preview scene.
@@ -30,7 +30,7 @@ fn despawn_simple_scene(
     roots: Query<'_, '_, Entity, With<SimpleSceneRoot>>,
 ) {
     for root in &roots {
-        commands.entity(root).despawn();
+        commands.entity(root).despawn_children().despawn();
     }
 
     info!("Despawned Simple scene");

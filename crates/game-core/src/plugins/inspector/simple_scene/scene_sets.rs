@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use crate::plugins::inspector_scene::InspectorScene;
+use super::super::InspectorSceneState;
 
 pub fn plugin(app: &mut App) {
     app.configure_sets(
-        OnEnter(InspectorScene::Simple),
+        OnEnter(InspectorSceneState::Simple),
         (SimpleSceneSet::Root, SimpleSceneSet::Content).chain(),
     );
 }

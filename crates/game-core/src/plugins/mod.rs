@@ -2,8 +2,7 @@
 
 pub mod global_camera;
 pub mod global_lighting;
-pub mod inspector_scene;
-pub mod simple_scene;
+pub mod inspector;
 
 use bevy::prelude::*;
 
@@ -15,8 +14,7 @@ impl Plugin for GameCorePlugin {
         app.add_plugins((
             global_camera::GlobalCameraPlugin,
             global_lighting::GlobalLightingPlugin,
-            inspector_scene::InspectorScenePlugin,
-            simple_scene::SimpleScenePlugin,
+            inspector::InspectorScenePlugin,
         ));
     }
 }
