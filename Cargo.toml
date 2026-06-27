@@ -2,13 +2,34 @@
 members = ["apps/*", "crates/*"]
 resolver = "2"
 
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+rust_2018_idioms = { level = "deny", priority = -1 } # set priority to not interfere with unsafe_code
+rust-2024-compatibility = "deny"
+
+[workspace.lints.clippy]
+cargo = "deny"
+all = "deny"
+pedantic = "deny"
+nursery = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+print_stdout = "deny"
+
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
+rust-version = "1.91.1"
+authors = ["Ivan Kruchkov <820839+pengwin@users.noreply.github.com>"]
+license = "MIT"
+keywords = ["rust", "bevy", "game"]
+categories = ["Bevy", "Game Development"]
+repository = "https://github.com/pengwin/v-actor"
 
 [workspace.dependencies]
-bevy = { version = "0.19.0", features = ["experimental_pbr_pcss"] }
-game-core = { path = "crates/game-core" }
+bevy = { version = "0.19.0", features = ["experimental_pbr_pcss", "bevy/dynamic_linking"] }
 
 [profile.dev]
 debug = 0

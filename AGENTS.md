@@ -1,76 +1,8 @@
 # Agent Rules for Game Slop Machine
 
-## Project Structure
-- Workspace: `Cargo.toml` (workspace root)
-- Apps: `apps/` (runnable executables)
-- Crates: `crates/` (libraries)
-- Plugins: `crates/game-core/src/plugins/` (one directory per plugin)
-- Each plugin has: `mod.rs`, plus meaningful feature-based files
-- Keep components co-located with the systems that use them
-- Split code into small, meaningful files by feature, not by type
-- Main: `src/main.rs` (App setup only)
-
-## Crates
-
-### `building-gen`
-Pure Rust library for procedural building generation (no Bevy dependencies).
-- BSP algorithm for room layout
-- Tile-based wall/door/window placement
-- 3D mesh data generation
-- Fully unit-testable
-
-### `game-core`
-Bevy game logic library.
-- Plugins in `src/plugins/`
-- Depends on `building-gen` for building generation
-
-### `apps/game`
-Main game executable.
-
-### `apps/game-headless`
-Headless screenshot tool for AI agents.
-
-### `apps/building-ascii`
-CLI tool to visualize building generation in ASCII format.
-- Usage: `cargo run -p building-ascii -- [seed] [width] [height]`
-- Shows tile statistics, room layout, and ASCII map
+This project uses Bevy 0.19, so the rules here are specific to that version.
 
 ## Bevy 0.19 Conventions
-
-### Entity Spawning
-- Use component tuples or bundles for spawning
-- Spawn: `commands.spawn((ComponentA, ComponentB, Transform::default()))`
-- Required Components: `Camera3d` auto-inserts `Camera`, `Projection`
-
-### State Management
-- Use `DespawnOnExit(state)` for state-scoped cleanup
-- Co-locate `OnEnter`/`OnExit` registration
-- Bound Update systems with `run_if(in_state(...))`
-
-### Components & Resources
-- Derive `Component`, `Resource`
-- Use `..default()` for initialization
-- Name top-level entities with `Name::new("...")`
-- Keep components close to the systems that use them (not in separate components.rs)
-
-### Systems
-- End with `_system` suffix
-- `Startup` for one-time setup
-- `Update` for per-frame logic
-- `FixedUpdate` for physics/game logic
-- Explicit ordering: `.before()` / `.after()` / `.chain()`
-
-### Events
-- Prefer events for cross-system communication
-- Order readers after writers
-- Use `run_if(on_event::<MyEvent>())`
-
-### Cleanup Pattern
-Use `CleanupOnExit` component with generic `cleanup_system::<T>`:
-```rust
-commands.spawn((Name::new("Enemy"), CleanupOnExit, ...));
-app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
-```
 
 ### Plugin Rules
 - Each plugin is a directory under `crates/game-core/src/plugins/`
@@ -84,8 +16,6 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
   ```
 - Do NOT use: components.rs, resources.rs, systems.rs
 - DO use: camera.rs, light.rs, player.rs, enemies.rs, etc.
-- Register plugins in `crates/game-core/src/plugins/mod.rs`
-- Use plugin in apps via `game_core::plugins::GamePlugin`
 
 ### Code Style
 - `use bevy::prelude::*;`
@@ -93,10 +23,9 @@ app.add_systems(OnExit(GameState::InGame), cleanup_system::<CleanupOnExit>);
 - Query filters: `Changed<T>`, `Added<T>`, `Without<T>`
 
 ### Build Commands
-- Dev: `cargo run -p game` (default profile)
-- Release: `cargo build -p game --release`
-- Headless screenshot: `cargo run -p game-headless -- [output.png]`
-- ASCII building: `cargo run -p building-ascii -- [seed] [width] [height]`
+- `just build` - builds the project in release mode
+- `just lint` - runs clippy with all warnings as errors
+- `just fmt` - formats the codebase
 
 ## API Notes (0.19 Specific)
 - `despawn()` is recursive by default (no `despawn_recursive()`)
