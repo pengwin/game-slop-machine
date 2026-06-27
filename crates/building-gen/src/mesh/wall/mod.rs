@@ -36,6 +36,8 @@ pub fn generate_wall_meshes(grid: &TileGrid, config: &BuildingConfig) -> WallMes
                     &exterior_faces,
                     config,
                     wall_box.cutout,
+                    wall_box.cull_neighbor_faces,
+                    wall_box.visible_side_faces,
                     grid,
                     x,
                     y,
@@ -175,6 +177,65 @@ mod tests {
         grid.set(1, 1, TileType::Wall(wall));
         let (min, max) = wall_bounds_for_tile(&grid, 1, 1, wall, &config);
         assert_eq!(max[0] - min[0], config.wall_thickness);
+    }
+
+    #[test]
+    fn test_interior_t_junction_keeps_connector_faces() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 3.0, 3.0),
+            tile_size: 1.0,
+            wall_thickness: 0.5,
+            interior_wall_thickness: 0.25,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(3, 3, config.tile_size, Vec2::ZERO);
+        grid.set(
+            1,
+            1,
+            TileType::Wall(WallTile::interior(WallShape::TJunction(
+                crate::tile::TJunctionDir::Left,
+            ))),
+        );
+        grid.set(2, 1, exterior_wall(WallShape::Straight(CardinalDir::Left)));
+        grid.set(1, 0, exterior_wall(WallShape::Straight(CardinalDir::Top)));
+        grid.set(
+            1,
+            2,
+            exterior_wall(WallShape::Straight(CardinalDir::Bottom)),
+        );
+
+        let meshes = generate_wall_meshes(&grid, &config);
+
+        assert!(normal_count(&meshes.wall, [1.0, 0.0, 0.0]) > 0);
+        assert!(normal_count(&meshes.wall, [0.0, 0.0, -1.0]) > 0);
+        assert!(normal_count(&meshes.wall, [0.0, 0.0, 1.0]) > 0);
+    }
+
+    #[test]
+    fn test_doorway_cutout_spans_full_wall_face_width() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 1.0, 1.0),
+            tile_size: 1.0,
+            wall_thickness: 0.25,
+            door_width: 0.5,
+            door_height: 0.8,
+            wall_height: 1.2,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(1, 1, config.tile_size, Vec2::ZERO);
+        grid.set(
+            0,
+            0,
+            TileType::Wall(
+                WallTile::interior(WallShape::Straight(CardinalDir::Top))
+                    .with_opening(WallOpening::Doorway),
+            ),
+        );
+
+        let meshes = generate_wall_meshes(&grid, &config);
+
+        assert_eq!(normal_count(&meshes.wall, [0.0, 0.0, -1.0]), 4);
+        assert_eq!(normal_count(&meshes.wall, [0.0, 0.0, 1.0]), 4);
     }
 
     #[test]

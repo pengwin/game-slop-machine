@@ -1,5 +1,6 @@
 use crate::fixtures;
 use bevy::prelude::*;
+use building_gen::config::BuildingConfig;
 use building_gen::mesh::MeshData;
 use building_gen::mesh::colored_shapes::append_colored_box;
 use building_gen::mesh::math_util::{Quad, append_quad};
@@ -116,7 +117,13 @@ fn spawn_material_board(
         ),
         (
             "Floor",
-            floor_tile_material(Color::srgb(0.62, 0.57, 0.47), textures, images, 0),
+            floor_tile_material(
+                Color::srgb(0.62, 0.57, 0.47),
+                textures,
+                images,
+                &BuildingConfig::default(),
+                0,
+            ),
         ),
         (
             "Brick",

@@ -21,14 +21,38 @@ fn image_bytes(image: &Image) -> &[u8] {
 
 #[test]
 fn generated_images_have_expected_layout() {
-    let plaster = PlasterParams { seed: 7, ..default() };
-    let wood = WoodParams { seed: 7, ..default() };
-    let brick = BrickParams { seed: 7, ..default() };
-    let roof = RoofParams { seed: 7, ..default() };
-    let stone = StoneParams { seed: 7, ..default() };
-    let road = RoadParams { seed: 7, ..default() };
-    let concrete = ConcreteParams { seed: 7, ..default() };
-    let floor = FloorParams { seed: 7, ..default() };
+    let plaster = PlasterParams {
+        seed: 7,
+        ..default()
+    };
+    let wood = WoodParams {
+        seed: 7,
+        ..default()
+    };
+    let brick = BrickParams {
+        seed: 7,
+        ..default()
+    };
+    let roof = RoofParams {
+        seed: 7,
+        ..default()
+    };
+    let stone = StoneParams {
+        seed: 7,
+        ..default()
+    };
+    let road = RoadParams {
+        seed: 7,
+        ..default()
+    };
+    let concrete = ConcreteParams {
+        seed: 7,
+        ..default()
+    };
+    let floor = FloorParams {
+        seed: 7,
+        ..default()
+    };
 
     for (image, is_normal) in [
         (super::plaster::plaster_albedo(&plaster), false),
@@ -106,14 +130,38 @@ fn placeholders_match_texture_kind() {
 
 #[test]
 fn albedo_images_are_not_flat_fills() {
-    let plaster = PlasterParams { seed: 11, ..default() };
-    let wood = WoodParams { seed: 11, ..default() };
-    let brick = BrickParams { seed: 11, ..default() };
-    let roof = RoofParams { seed: 11, ..default() };
-    let stone = StoneParams { seed: 11, ..default() };
-    let road = RoadParams { seed: 11, ..default() };
-    let concrete = ConcreteParams { seed: 11, ..default() };
-    let floor = FloorParams { seed: 11, ..default() };
+    let plaster = PlasterParams {
+        seed: 11,
+        ..default()
+    };
+    let wood = WoodParams {
+        seed: 11,
+        ..default()
+    };
+    let brick = BrickParams {
+        seed: 11,
+        ..default()
+    };
+    let roof = RoofParams {
+        seed: 11,
+        ..default()
+    };
+    let stone = StoneParams {
+        seed: 11,
+        ..default()
+    };
+    let road = RoadParams {
+        seed: 11,
+        ..default()
+    };
+    let concrete = ConcreteParams {
+        seed: 11,
+        ..default()
+    };
+    let floor = FloorParams {
+        seed: 11,
+        ..default()
+    };
 
     for image in [
         super::plaster::plaster_albedo(&plaster),
@@ -136,9 +184,18 @@ fn albedo_images_are_not_flat_fills() {
 
 #[test]
 fn generation_is_deterministic_per_seed() {
-    let wood5 = WoodParams { seed: 5, ..default() };
-    let plaster5 = PlasterParams { seed: 5, ..default() };
-    let floor5 = FloorParams { seed: 5, ..default() };
+    let wood5 = WoodParams {
+        seed: 5,
+        ..default()
+    };
+    let plaster5 = PlasterParams {
+        seed: 5,
+        ..default()
+    };
+    let floor5 = FloorParams {
+        seed: 5,
+        ..default()
+    };
 
     assert_eq!(
         image_bytes(&super::wood::wood_albedo(&wood5)),

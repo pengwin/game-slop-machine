@@ -26,7 +26,9 @@ pub use noise::{fbm, global_dirt_color};
 pub use brick::{BrickParams, brick_albedo, brick_normal, brick_orm};
 pub use concrete::{ConcreteParams, concrete_albedo, concrete_normal, concrete_orm};
 pub use floor::{FloorParams, floor_albedo, floor_normal, floor_orm};
-pub use plaster::{PlasterParams, plaster_albedo, plaster_normal, plaster_orm, plaster_preview_albedo};
+pub use plaster::{
+    PlasterParams, plaster_albedo, plaster_normal, plaster_orm, plaster_preview_albedo,
+};
 pub use road::{RoadParams, road_albedo, road_normal, road_orm};
 pub use roof::{RoofParams, roof_albedo, roof_normal, roof_orm};
 pub use stone::{StoneParams, stone_albedo, stone_normal, stone_orm};
@@ -187,9 +189,7 @@ impl ProceduralTextures {
         let h = hash_params(params);
         let key = format!("plaster_preview_albedo_{:016x}", h);
         let p = params.clone();
-        self.get_or_generate(&key, images, move || {
-            plaster::plaster_preview_albedo(&p)
-        })
+        self.get_or_generate(&key, images, move || plaster::plaster_preview_albedo(&p))
     }
 
     pub fn get_plaster_preview_albedo_now(

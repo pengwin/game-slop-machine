@@ -21,6 +21,7 @@ pub enum WallFaceDir {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WallCutout {
     Door,
+    Doorway,
     Window,
 }
 
@@ -56,7 +57,13 @@ pub fn exterior_face_class(wall: WallTile) -> ExteriorFaceClass {
 
 pub fn opening_cutout(opening: Option<WallOpening>) -> Option<WallCutout> {
     match opening {
-        Some(WallOpening::Door { .. } | WallOpening::Doorway) => Some(WallCutout::Door),
+        Some(WallOpening::Door { render_panel: true }) => Some(WallCutout::Door),
+        Some(
+            WallOpening::Door {
+                render_panel: false,
+            }
+            | WallOpening::Doorway,
+        ) => Some(WallCutout::Doorway),
         Some(WallOpening::Window { .. }) => Some(WallCutout::Window),
         None => None,
     }

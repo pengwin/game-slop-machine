@@ -160,9 +160,9 @@ impl Default for PlasterAlbedoShadeParams {
             broad_scale: 0.85,
             broad_u_off: 0.13,
             broad_v_off: -0.07,
-            stains_freq: 10.0,
+            stains_freq: 7.0,
             stains_oct: 3,
-            stains_warp: 0.12,
+            stains_warp: 0.18,
             streaks_freq: 22.0,
             streaks_oct: 2,
             streaks_u_scale: 0.35,
@@ -183,7 +183,7 @@ impl Default for PlasterAlbedoShadeParams {
             vertical_amp: 0.10,
             shade_base: 0.76,
             shade_broad_amp: 0.08,
-            shade_stains_amp: 0.08,
+            shade_stains_amp: 0.20,
             shade_streaks_amp: 1.0,
             shade_pores_amp: 0.080,
             shade_pale_amp: 0.055,
@@ -230,9 +230,9 @@ impl Default for PlasterAlbedoTintParams {
             age_oct: 4,
             age_u_off: -0.23,
             age_v_off: 0.19,
-            age_r_amp: 0.04,
-            age_g_amp: 0.025,
-            age_b_amp: 0.018,
+            age_r_amp: 0.10,
+            age_g_amp: 0.06,
+            age_b_amp: 0.04,
             base_r: 0.97,
             base_g: 0.94,
             base_b: 0.86,
@@ -428,7 +428,13 @@ pub fn plaster_albedo(params: &PlasterParams) -> Image {
             base.clamp(s.shade_min, s.shade_max)
         },
         |u, v| {
-            let age = fbm(17 ^ seed, t.age_freq, t.age_oct, u - t.age_u_off.abs(), v + t.age_v_off);
+            let age = fbm(
+                17 ^ seed,
+                t.age_freq,
+                t.age_oct,
+                u - t.age_u_off.abs(),
+                v + t.age_v_off,
+            );
             [
                 t.base_r + age * t.age_r_amp,
                 t.base_g + age * t.age_g_amp,

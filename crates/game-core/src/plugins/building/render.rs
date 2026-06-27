@@ -142,19 +142,6 @@ pub fn spawn_building_mesh(
         None,
         config.visual_style.dirt_intensity,
     );
-    spawn_part(
-        commands,
-        meshes,
-        materials,
-        &mut entities,
-        &bmesh.floor_grout_mesh,
-        floor_grout_material(textures, images),
-        transform,
-        &name("Floor Grout"),
-        None,
-        config.visual_style.dirt_intensity,
-    );
-
     if config.render_roof {
         spawn_part(
             commands,
@@ -288,10 +275,7 @@ pub fn plaster_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::PlasterParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::PlasterParams { seed, ..default() };
     plaster_material_with_params(base_color, textures, images, &params)
 }
 
@@ -319,10 +303,7 @@ pub fn wood_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::WoodParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::WoodParams { seed, ..default() };
     wood_material_with_params(_base_color, textures, images, &params)
 }
 
@@ -350,10 +331,7 @@ pub fn brick_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::BrickParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::BrickParams { seed, ..default() };
     brick_material_with_params(base_color, textures, images, &params)
 }
 
@@ -378,10 +356,7 @@ pub fn roof_tile_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::RoofParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::RoofParams { seed, ..default() };
     roof_tile_material_with_params(base_color, textures, images, &params)
 }
 
@@ -406,10 +381,7 @@ pub fn stone_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::StoneParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::StoneParams { seed, ..default() };
     stone_material_with_params(base_color, textures, images, &params)
 }
 
@@ -434,10 +406,7 @@ pub fn road_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::RoadParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::RoadParams { seed, ..default() };
     road_material_with_params(base_color, textures, images, &params)
 }
 
@@ -462,10 +431,7 @@ pub fn concrete_material(
     images: &mut Assets<Image>,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::ConcreteParams {
-        seed,
-        ..default()
-    };
+    let params = super::procedural_texture::ConcreteParams { seed, ..default() };
     concrete_material_with_params(base_color, textures, images, &params)
 }
 
@@ -491,13 +457,34 @@ pub fn floor_tile_material(
     _base_color: Color,
     textures: &mut ProceduralTextures,
     images: &mut Assets<Image>,
+    config: &BuildingConfig,
     seed: u32,
 ) -> StandardMaterial {
-    let params = super::procedural_texture::FloorParams {
-        seed,
-        ..default()
-    };
+    let params = floor_params_from_config(config, seed);
     floor_tile_material_with_params(_base_color, textures, images, &params)
+}
+
+fn floor_params_from_config(
+    config: &BuildingConfig,
+    seed: u32,
+) -> super::procedural_texture::FloorParams {
+    let grout = config.visual_style.floor_grout;
+    let texture_tiles_per_floor_tile = grout.texture_tiles_per_floor_tile.max(0.001);
+    let texture_tile_size = config.tile_size.max(f32::EPSILON) / texture_tiles_per_floor_tile;
+    let min_line = grout.min_line_width.max(0.0);
+    let max_line = grout.max_line_width.max(min_line);
+    let line_width = if grout.line_width_factor <= 0.0 || max_line <= f32::EPSILON {
+        0.0
+    } else {
+        (texture_tile_size * grout.line_width_factor).clamp(min_line, max_line)
+    };
+
+    let mut params = super::procedural_texture::FloorParams { seed, ..default() };
+    params.tile.scale = texture_tiles_per_floor_tile / config.tile_size.max(f32::EPSILON);
+    params.tile.grout = (line_width / texture_tile_size).clamp(0.0, 0.08);
+    params.albedo.base_color = config.visual_style.floor_color;
+    params.albedo.grout_color = grout.color;
+    params
 }
 
 pub fn floor_tile_material_with_params(
@@ -612,6 +599,7 @@ fn floor_material(
         color(config.visual_style.floor_color),
         textures,
         images,
+        config,
         seed,
     )
 }
@@ -628,23 +616,6 @@ fn roof_material(
         images,
         seed,
     )
-}
-
-fn floor_grout_material(
-    textures: &mut ProceduralTextures,
-    images: &mut Assets<Image>,
-) -> StandardMaterial {
-    let orm = textures.get_flat_orm("floor_grout", images, 1.0, 1.0, 0.0);
-    StandardMaterial {
-        base_color: Color::WHITE,
-        normal_map_texture: Some(textures.get_flat_normal(images)),
-        metallic_roughness_texture: Some(orm.clone()),
-        occlusion_texture: Some(orm),
-        alpha_mode: AlphaMode::Blend,
-        perceptual_roughness: 1.0,
-        cull_mode: None,
-        ..default()
-    }
 }
 
 fn door_material(

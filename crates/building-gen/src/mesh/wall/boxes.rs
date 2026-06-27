@@ -9,6 +9,8 @@ pub struct WallBox {
     pub axis: WallAxis,
     pub exterior_class: ExteriorFaceClass,
     pub cutout: Option<WallCutout>,
+    pub cull_neighbor_faces: bool,
+    pub visible_side_faces: Option<[bool; 4]>,
 }
 
 pub fn wall_boxes(
@@ -30,6 +32,8 @@ pub fn wall_boxes(
         axis: wall.main_axis(),
         exterior_class: exterior_face_class(wall),
         cutout: opening_cutout(wall.opening),
+        cull_neighbor_faces: true,
+        visible_side_faces: None,
     }]
 }
 
@@ -60,6 +64,8 @@ fn interior_connector_boxes(
         axis: WallAxis::Both,
         exterior_class: exterior_face_class(wall),
         cutout: None,
+        cull_neighbor_faces: false,
+        visible_side_faces: Some([!dirs.left, !dirs.right, !dirs.bottom, !dirs.top]),
     });
 
     if dirs.left && tile_min_x < min_x {
@@ -69,6 +75,7 @@ fn interior_connector_boxes(
             WallAxis::X,
             wall,
             cutout,
+            Some([false, false, true, true]),
         ));
     }
     if dirs.right && max_x < tile_max_x {
@@ -78,6 +85,7 @@ fn interior_connector_boxes(
             WallAxis::X,
             wall,
             cutout,
+            Some([false, false, true, true]),
         ));
     }
     if dirs.bottom && tile_min_z < min_z {
@@ -87,6 +95,7 @@ fn interior_connector_boxes(
             WallAxis::Z,
             wall,
             cutout,
+            Some([true, true, false, false]),
         ));
     }
     if dirs.top && max_z < tile_max_z {
@@ -96,6 +105,7 @@ fn interior_connector_boxes(
             WallAxis::Z,
             wall,
             cutout,
+            Some([true, true, false, false]),
         ));
     }
 
@@ -108,12 +118,15 @@ fn connector_wall_box(
     axis: WallAxis,
     wall: WallTile,
     cutout: Option<WallCutout>,
+    visible_side_faces: Option<[bool; 4]>,
 ) -> WallBox {
     WallBox {
         bounds: (min, max),
         axis,
         exterior_class: exterior_face_class(wall),
         cutout,
+        cull_neighbor_faces: false,
+        visible_side_faces,
     }
 }
 

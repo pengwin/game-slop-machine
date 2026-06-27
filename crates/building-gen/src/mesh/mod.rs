@@ -104,7 +104,7 @@ pub fn generate_building_mesh(
         exterior_corner_mesh: wall_meshes.exterior_corner,
         exterior_t_junction_mesh: wall_meshes.exterior_t_junction,
         floor_mesh: floor::generate_floor_mesh(grid, config),
-        floor_grout_mesh: floor::generate_floor_grout_mesh(grid, config),
+        floor_grout_mesh: MeshData::default(),
         roof_mesh: roof::generate_roof_mesh(config.footprint, roof, config),
         gable_mesh: roof::generate_gable_mesh(config.footprint, roof, config),
         opening_trim_mesh: opening::generate_opening_trim_mesh(grid, config),
@@ -148,6 +148,10 @@ mod tests {
         assert!(
             !bmesh.floor_mesh.is_empty(),
             "floor mesh should not be empty"
+        );
+        assert!(
+            bmesh.floor_grout_mesh.is_empty(),
+            "floor grout is baked into the procedural floor material"
         );
         assert!(!bmesh.roof_mesh.is_empty(), "roof mesh should not be empty");
         assert!(

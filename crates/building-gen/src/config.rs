@@ -131,7 +131,7 @@ pub struct BuildingVisualStyle {
     pub floor_color: [f32; 3],
     /// Vertex ambient-occlusion settings for floor shading near walls.
     pub floor_ao: FloorAmbientOcclusionSettings,
-    /// Overlay grout-line settings for floor tile seams.
+    /// Procedural floor-texture grout-line settings for tile seams.
     pub floor_grout: FloorGroutSettings,
     /// Multiplier for procedural dirt/wear mapping (default 1.0).
     pub dirt_intensity: f32,
@@ -196,51 +196,33 @@ impl Default for FloorAmbientOcclusionSettings {
             corner_strength: 0.12,
             width_tiles: 1.0,
             falloff: 1.8,
-            subdivisions: 8,
+            subdivisions: 2,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct FloorGroutSettings {
+    /// Number of procedural texture tiles along one floor tile edge.
+    pub texture_tiles_per_floor_tile: f32,
     /// Grout line width as a multiplier of tile size.
     pub line_width_factor: f32,
     /// Minimum grout line width in world units.
     pub min_line_width: f32,
     /// Maximum grout line width in world units.
     pub max_line_width: f32,
-    /// Width multiplier for center seam lines inside each tile.
-    pub center_line_scale: f32,
-    /// Height offset above the floor mesh to avoid z-fighting.
-    pub height_offset: f32,
-    /// Number of segments per grout strip for alpha/noise variation.
-    pub strip_subdivisions: usize,
-    /// Base grout RGB color before warmth variation.
+    /// Grout RGB color baked into the procedural floor albedo texture.
     pub color: [f32; 3],
-    /// Base warmth multiplier for grout color.
-    pub warmth_base: f32,
-    /// Additional warmth variation multiplied by strip noise.
-    pub warmth_noise: f32,
-    /// Base alpha for grout strips.
-    pub alpha_base: f32,
-    /// Additional alpha variation multiplied by strip noise.
-    pub alpha_noise: f32,
 }
 
 impl Default for FloorGroutSettings {
     fn default() -> Self {
         Self {
+            texture_tiles_per_floor_tile: 2.0,
             line_width_factor: 0.0025,
             min_line_width: 0.0010,
             max_line_width: 0.0022,
-            center_line_scale: 1.0,
-            height_offset: 0.004,
-            strip_subdivisions: 4,
             color: [0.40, 0.36, 0.29],
-            warmth_base: 0.88,
-            warmth_noise: 0.18,
-            alpha_base: 0.004,
-            alpha_noise: 0.012,
         }
     }
 }
@@ -427,12 +409,13 @@ mod tests {
         assert_eq!(config.visual_style.floor_ao.edge_strength, 0.18);
         assert_eq!(config.visual_style.floor_ao.corner_strength, 0.12);
         assert_eq!(config.visual_style.floor_ao.width_tiles, 1.0);
-        assert_eq!(config.visual_style.floor_ao.subdivisions, 8);
+        assert_eq!(config.visual_style.floor_ao.subdivisions, 2);
+        assert_eq!(
+            config.visual_style.floor_grout.texture_tiles_per_floor_tile,
+            2.0
+        );
         assert_eq!(config.visual_style.floor_grout.line_width_factor, 0.0025);
-        assert_eq!(config.visual_style.floor_grout.height_offset, 0.004);
         assert_eq!(config.visual_style.floor_grout.color, [0.40, 0.36, 0.29]);
-        assert_eq!(config.visual_style.floor_grout.alpha_base, 0.004);
-        assert_eq!(config.visual_style.floor_grout.alpha_noise, 0.012);
     }
 
     #[test]

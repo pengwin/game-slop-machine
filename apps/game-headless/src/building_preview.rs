@@ -285,21 +285,6 @@ pub fn spawn_building_preview(
         ));
     }
 
-    if !bmesh.floor_grout_mesh.is_empty() {
-        commands.spawn((
-            Mesh3d(meshes.add(convert_mesh(&bmesh.floor_grout_mesh))),
-            MeshMaterial3d(materials.add({
-                let mut material =
-                    flat_preview_material(Color::WHITE, textures, images, "floor_grout", 1.0, 0.0);
-                material.alpha_mode = AlphaMode::Blend;
-                material.cull_mode = None;
-                material
-            })),
-            Transform::default(),
-            Name::new("Floor Grout"),
-        ));
-    }
-
     if !config.render_roof {
         let contact_shadow = building_contact_shadow_mesh(config);
         commands.spawn((
@@ -479,6 +464,7 @@ fn floor_preview_material(
         style_color(config.visual_style.floor_color),
         textures,
         images,
+        config,
         config.seed as u32,
     )
 }

@@ -123,6 +123,7 @@ impl Default for FloorHeightParams {
 #[derive(Clone, Debug)]
 pub struct FloorAlbedoParams {
     pub base_color: [f32; 3],
+    pub grout_color: [f32; 3],
     pub cloudy_freq: f64,
     pub cloudy_oct: usize,
     pub cloudy_u_off: f32,
@@ -199,6 +200,9 @@ impl Hash for FloorAlbedoParams {
         self.base_color[0].to_bits().hash(state);
         self.base_color[1].to_bits().hash(state);
         self.base_color[2].to_bits().hash(state);
+        self.grout_color[0].to_bits().hash(state);
+        self.grout_color[1].to_bits().hash(state);
+        self.grout_color[2].to_bits().hash(state);
         self.cloudy_freq.to_bits().hash(state);
         self.cloudy_oct.hash(state);
         self.cloudy_u_off.to_bits().hash(state);
@@ -275,6 +279,7 @@ impl Default for FloorAlbedoParams {
     fn default() -> Self {
         Self {
             base_color: [0.64, 0.58, 0.48],
+            grout_color: [0.40, 0.36, 0.29],
             cloudy_freq: 8.0,
             cloudy_oct: 4,
             cloudy_u_off: 0.03,
@@ -467,26 +472,13 @@ fn tile_cell(params: &FloorParams, u: f32, v: f32) -> (i32, i32, f32, f32) {
 }
 
 fn clean_grout_mask(params: &FloorParams, local_u: f32, local_v: f32) -> f32 {
-    let edge = local_u
-        .min(1.0 - local_u)
-        .min(local_v)
-        .min(1.0 - local_v);
+    let edge = local_u.min(1.0 - local_u).min(local_v).min(1.0 - local_v);
     (edge / params.tile.grout).clamp(0.0, 1.0)
 }
 
-fn grout_mask(
-    params: &FloorParams,
-    seed: u32,
-    u: f32,
-    v: f32,
-    local_u: f32,
-    local_v: f32,
-) -> f32 {
+fn grout_mask(params: &FloorParams, seed: u32, u: f32, v: f32, local_u: f32, local_v: f32) -> f32 {
     let t = &params.tile;
-    let edge = local_u
-        .min(1.0 - local_u)
-        .min(local_v)
-        .min(1.0 - local_v);
+    let edge = local_u.min(1.0 - local_u).min(local_v).min(1.0 - local_v);
     let width_noise = fbm(
         47 ^ seed,
         t.grout_width_freq,
@@ -529,7 +521,8 @@ pub fn floor_height(params: &FloorParams, u: f32, v: f32) -> f32 {
     ) * h.scratch_amp;
     let grout_drop = (1.0 - grout) * h.grout_drop_amp;
 
-    (h.base_height + tile_variation + broad + chips + pitted + scratched - grout_drop).clamp(0.0, 1.0)
+    (h.base_height + tile_variation + broad + chips + pitted + scratched - grout_drop)
+        .clamp(0.0, 1.0)
 }
 
 pub fn floor_albedo(params: &FloorParams) -> Image {
@@ -600,9 +593,7 @@ pub fn floor_albedo(params: &FloorParams) -> Image {
                 v - tile * a.scuff_v_off.abs(),
             );
 
-            (a.shade_base
-                + tile * a.shade_tile_amp
-                + cloudy * a.shade_cloudy_amp * a.cloudy_amp
+            (a.shade_base + tile * a.shade_tile_amp + cloudy * a.shade_cloudy_amp * a.cloudy_amp
                 - dirt * a.shade_dirt_amp * a.dirt_amp
                 - edge_dirt * a.edge_dirt_amp
                 + wear * a.shade_wear_amp * a.wear_amp
@@ -631,19 +622,37 @@ pub fn floor_albedo(params: &FloorParams) -> Image {
                 u - a.pale_u_off.abs(),
                 v + a.pale_v_off,
             ) * (1.0 - clean_grout_mask(params, lu, lv));
-            let warm = a.tint_warm_base + tile * a.tint_warm_tile_amp
-                - stain * a.tint_warm_stain_amp;
-            let grout_tint = 0.94 + grout * 0.06 - seam_grit * 0.020;
+            let warm =
+                a.tint_warm_base + tile * a.tint_warm_tile_amp - stain * a.tint_warm_stain_amp;
+            let grout_shade = 0.94 + grout * 0.06 - seam_grit * 0.020;
+            let tile_tint = [
+                warm * grout_shade,
+                (a.tint_g_base + tile * a.tint_g_tile_amp - stain * a.tint_g_stain_amp)
+                    * grout_shade,
+                (a.tint_b_base + tile * a.tint_b_tile_amp - stain * a.tint_b_stain_amp)
+                    * grout_shade,
+            ];
+            let grout_tint = [
+                color_ratio(a.grout_color[0], a.base_color[0]) * grout_shade,
+                color_ratio(a.grout_color[1], a.base_color[1]) * grout_shade,
+                color_ratio(a.grout_color[2], a.base_color[2]) * grout_shade,
+            ];
 
             [
-                warm * grout_tint,
-                (a.tint_g_base + tile * a.tint_g_tile_amp - stain * a.tint_g_stain_amp)
-                    * grout_tint,
-                (a.tint_b_base + tile * a.tint_b_tile_amp - stain * a.tint_b_stain_amp)
-                    * grout_tint,
+                lerp(grout_tint[0], tile_tint[0], grout),
+                lerp(grout_tint[1], tile_tint[1], grout),
+                lerp(grout_tint[2], tile_tint[2], grout),
             ]
         },
     )
+}
+
+fn color_ratio(color: f32, base: f32) -> f32 {
+    color / base.max(0.001)
+}
+
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
 }
 
 pub fn floor_normal(params: &FloorParams) -> Image {

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use building_gen::config::BuildingConfig;
+use building_gen::config::{BuildingConfig, BuildingVisualStyle, RoomSpec};
 use building_gen::geometry::{Rect, Vec2};
 use building_gen::tile::{CardinalDir, TileGrid, TileType, WallShape, WallTile};
 use building_gen::tile_converter::classify_wall_tiles;
@@ -10,6 +10,14 @@ use super::render::spawn_building_layout;
 #[derive(Resource)]
 pub struct CurrentBuilding {
     pub entities: Vec<Entity>,
+}
+
+fn despawn_current_building(commands: &mut Commands, existing: Option<ResMut<CurrentBuilding>>) {
+    if let Some(mut existing) = existing {
+        for entity in existing.entities.drain(..) {
+            commands.entity(entity).despawn();
+        }
+    }
 }
 
 /// Spawns a building when B is pressed.
@@ -26,11 +34,7 @@ pub fn spawn_building_on_command(
         return;
     }
 
-    if let Some(mut existing) = existing {
-        for entity in existing.entities.drain(..) {
-            commands.entity(entity).despawn();
-        }
-    }
+    despawn_current_building(&mut commands, existing);
 
     let config = BuildingConfig {
         footprint: Rect::new(0.0, 0.0, 5.0, 5.0),
@@ -58,6 +62,70 @@ pub fn spawn_building_on_command(
     );
 
     commands.insert_resource(CurrentBuilding { entities });
+}
+
+/// Spawns the same picture-room building used by the texture-plaster-wall fixture when L is pressed.
+pub fn spawn_texture_plaster_wall_on_command(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut textures: ResMut<ProceduralTextures>,
+    mut images: ResMut<Assets<Image>>,
+    input: Res<ButtonInput<KeyCode>>,
+    existing: Option<ResMut<CurrentBuilding>>,
+) {
+    if !input.just_pressed(KeyCode::KeyL) {
+        return;
+    }
+
+    despawn_current_building(&mut commands, existing);
+
+    let config = texture_plaster_wall_config();
+    let layout = building_gen::generate_layout(&config);
+    let entities = spawn_building_layout(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &mut textures,
+        &mut images,
+        &config,
+        &layout,
+        Transform::default(),
+        "Texture Plaster Wall",
+    );
+
+    commands.insert_resource(CurrentBuilding { entities });
+}
+
+fn texture_plaster_wall_config() -> BuildingConfig {
+    BuildingConfig {
+        seed: 17,
+        has_stove: false,
+        footprint: Rect::new(0.0, 0.0, 8.0, 6.0),
+        entrance: Vec2::new(4.0, 0.0),
+        room_specs: vec![RoomSpec::new("bedroom", 4)],
+        render_roof: false,
+        furniture: true,
+        wall_height: 2.0,
+        foundation_width: 0.22,
+        foundation_height: 0.10,
+        window_width: 0.75,
+        window_height: 1.0,
+        window_sill_height: 0.65,
+        visual_style: BuildingVisualStyle {
+            wall_color: [0.84, 0.75, 0.57],
+            wall_top_color: [0.91, 0.81, 0.62],
+            exterior_wall_color: [0.86, 0.76, 0.57],
+            corner_color: [0.91, 0.81, 0.61],
+            t_junction_color: [0.86, 0.76, 0.57],
+            floor_color: [0.63, 0.60, 0.51],
+            door_color: [0.34, 0.21, 0.13],
+            trim_color: [0.48, 0.32, 0.19],
+            foundation_color: [0.58, 0.58, 0.56],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
 }
 
 /// Builds a simple L-shaped corner: two perpendicular exterior walls with floor inside.

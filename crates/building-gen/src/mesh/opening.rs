@@ -17,12 +17,20 @@ pub fn generate_opening_trim_mesh(grid: &TileGrid, config: &BuildingConfig) -> M
             let Some(opening) = wall.opening else {
                 continue;
             };
-
             let bounds = wall_bounds_for_tile(grid, x, y, wall, config);
             let [min_x, min_y, min_z] = bounds.0;
             let [max_x, _max_y, max_z] = bounds.1;
 
             let is_window = matches!(opening, WallOpening::Window { .. });
+            let trim_depth = match opening {
+                WallOpening::Door {
+                    render_panel: false,
+                }
+                | WallOpening::Doorway => 0.0,
+                WallOpening::Door { render_panel: true } | WallOpening::Window { .. } => {
+                    config.opening_trim_depth
+                }
+            };
             let (opening_width, opening_bottom, opening_height) = match opening {
                 WallOpening::Door { .. } | WallOpening::Doorway => (
                     config.door_width,
@@ -51,6 +59,7 @@ pub fn generate_opening_trim_mesh(grid: &TileGrid, config: &BuildingConfig) -> M
                         opening_bottom + opening_height,
                         1.0,
                         is_window,
+                        trim_depth,
                         config,
                     );
                     append_opening_trim_on_x_face(
@@ -62,6 +71,7 @@ pub fn generate_opening_trim_mesh(grid: &TileGrid, config: &BuildingConfig) -> M
                         opening_bottom + opening_height,
                         -1.0,
                         is_window,
+                        trim_depth,
                         config,
                     );
                 }
@@ -79,6 +89,7 @@ pub fn generate_opening_trim_mesh(grid: &TileGrid, config: &BuildingConfig) -> M
                         opening_bottom + opening_height,
                         1.0,
                         is_window,
+                        trim_depth,
                         config,
                     );
                     append_opening_trim_on_z_face(
@@ -90,6 +101,7 @@ pub fn generate_opening_trim_mesh(grid: &TileGrid, config: &BuildingConfig) -> M
                         opening_bottom + opening_height,
                         -1.0,
                         is_window,
+                        trim_depth,
                         config,
                     );
                 }
@@ -110,6 +122,7 @@ fn append_opening_trim_on_x_face(
     top_y: f32,
     side: f32,
     is_window: bool,
+    trim_depth: f32,
     config: &BuildingConfig,
 ) {
     let inset = config.opening_trim_thickness.max(0.0);
@@ -117,7 +130,7 @@ fn append_opening_trim_on_x_face(
         return;
     }
     let wall_x = x;
-    let front_x = wall_x + config.opening_trim_depth.max(0.0) * side.signum();
+    let front_x = wall_x + trim_depth.max(0.0) * side.signum();
 
     append_trim_rects(start_z, end_z, bottom_y, top_y, inset, |a, b, c, d| {
         append_trim_box_x(mesh, wall_x, front_x, a, b, c, d, side);
@@ -139,6 +152,7 @@ fn append_opening_trim_on_z_face(
     top_y: f32,
     side: f32,
     is_window: bool,
+    trim_depth: f32,
     config: &BuildingConfig,
 ) {
     let inset = config.opening_trim_thickness.max(0.0);
@@ -146,7 +160,7 @@ fn append_opening_trim_on_z_face(
         return;
     }
     let wall_z = z;
-    let front_z = wall_z + config.opening_trim_depth.max(0.0) * side.signum();
+    let front_z = wall_z + trim_depth.max(0.0) * side.signum();
 
     append_trim_rects(start_x, end_x, bottom_y, top_y, inset, |a, b, c, d| {
         append_trim_box_z(mesh, wall_z, front_z, a, b, c, d, side);
@@ -261,6 +275,7 @@ fn append_trim_box_x(
     let depth = (front_x - wall_x).abs();
     if depth <= f32::EPSILON {
         append_rect_x(mesh, wall_x, a, b, c, d, side, [side.signum(), 0.0, 0.0]);
+        mesh.colors.extend([[1.0, 1.0, 1.0, 1.0]; 4]);
         return;
     }
 
@@ -287,6 +302,7 @@ fn append_trim_box_z(
     let depth = (front_z - wall_z).abs();
     if depth <= f32::EPSILON {
         append_rect_z(mesh, wall_z, a, b, c, d, side, [0.0, 0.0, side.signum()]);
+        mesh.colors.extend([[1.0, 1.0, 1.0, 1.0]; 4]);
         return;
     }
 
@@ -859,6 +875,61 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_doorway_without_panel_generates_trim() {
+        let config = BuildingConfig {
+            footprint: Rect::new(0.0, 0.0, 1.0, 1.0),
+            tile_size: 1.0,
+            wall_thickness: 0.25,
+            ..Default::default()
+        };
+        let mut grid = TileGrid::new(1, 1, config.tile_size, Vec2::ZERO);
+        grid.set(
+            0,
+            0,
+            TileType::Wall(
+                WallTile::interior(WallShape::Straight(CardinalDir::Top))
+                    .with_opening(WallOpening::Doorway),
+            ),
+        );
+
+        let TileType::Wall(wall) = grid.get(0, 0) else {
+            panic!("test grid should contain an opening wall");
+        };
+        let bounds = wall_bounds_for_tile(&grid, 0, 0, wall, &config);
+        let mesh = generate_opening_trim_mesh(&grid, &config);
+        assert!(!mesh.is_empty());
+        assert!(
+            mesh.vertices
+                .iter()
+                .all(|v| approx(v[2], bounds.0[2]) || approx(v[2], bounds.1[2]))
+        );
+
+        grid.set(
+            0,
+            0,
+            TileType::Wall(
+                WallTile::interior(WallShape::Straight(CardinalDir::Top)).with_opening(
+                    WallOpening::Door {
+                        render_panel: false,
+                    },
+                ),
+            ),
+        );
+
+        let TileType::Wall(wall) = grid.get(0, 0) else {
+            panic!("test grid should contain an opening wall");
+        };
+        let bounds = wall_bounds_for_tile(&grid, 0, 0, wall, &config);
+        let mesh = generate_opening_trim_mesh(&grid, &config);
+        assert!(!mesh.is_empty());
+        assert!(
+            mesh.vertices
+                .iter()
+                .all(|v| approx(v[2], bounds.0[2]) || approx(v[2], bounds.1[2]))
+        );
     }
 
     #[test]

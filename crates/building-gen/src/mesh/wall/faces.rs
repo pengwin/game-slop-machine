@@ -13,6 +13,8 @@ pub fn append_wall_box(
     exterior_faces: &[WallFaceDir],
     config: &BuildingConfig,
     cutout: Option<WallCutout>,
+    cull_neighbor_faces: bool,
+    visible_side_face_mask: Option<[bool; 4]>,
     grid: &TileGrid,
     grid_x: usize,
     grid_y: usize,
@@ -28,7 +30,14 @@ pub fn append_wall_box(
         ],
     };
 
-    for dir in visible_side_faces(axis, grid, grid_x, grid_y) {
+    for dir in visible_side_faces(
+        axis,
+        grid,
+        grid_x,
+        grid_y,
+        cull_neighbor_faces,
+        visible_side_face_mask,
+    ) {
         let face_cutout = if cutout_dirs.contains(&dir) {
             cutout
         } else {
@@ -61,7 +70,36 @@ fn visible_side_faces(
     grid: &TileGrid,
     grid_x: usize,
     grid_y: usize,
+    cull_neighbor_faces: bool,
+    visible_side_face_mask: Option<[bool; 4]>,
 ) -> Vec<WallFaceDir> {
+    if let Some(mask) = visible_side_face_mask {
+        return forced_visible_side_faces(mask);
+    }
+
+    if !cull_neighbor_faces {
+        return match axis {
+            WallAxis::X => vec![
+                WallFaceDir::NegX,
+                WallFaceDir::PosX,
+                WallFaceDir::NegZ,
+                WallFaceDir::PosZ,
+            ],
+            WallAxis::Z => vec![
+                WallFaceDir::NegX,
+                WallFaceDir::PosX,
+                WallFaceDir::NegZ,
+                WallFaceDir::PosZ,
+            ],
+            WallAxis::Both => vec![
+                WallFaceDir::NegX,
+                WallFaceDir::PosX,
+                WallFaceDir::NegZ,
+                WallFaceDir::PosZ,
+            ],
+        };
+    }
+
     match axis {
         WallAxis::X => {
             let mut dirs = vec![WallFaceDir::NegZ, WallFaceDir::PosZ];
@@ -95,6 +133,19 @@ fn visible_side_faces(
         })
         .collect(),
     }
+}
+
+fn forced_visible_side_faces(mask: [bool; 4]) -> Vec<WallFaceDir> {
+    [
+        WallFaceDir::NegX,
+        WallFaceDir::PosX,
+        WallFaceDir::NegZ,
+        WallFaceDir::PosZ,
+    ]
+    .into_iter()
+    .zip(mask)
+    .filter_map(|(dir, visible)| visible.then_some(dir))
+    .collect()
 }
 
 fn has_wall_neighbor(grid: &TileGrid, grid_x: usize, grid_y: usize, dx: isize, dy: isize) -> bool {
@@ -345,6 +396,13 @@ fn append_wall_face(
             append_wall_sub_faces(
                 mesh, tl, tr, bl, br, c_tl, c_tr, c_bl, c_br, normal, u_len, v_len, door_start,
                 door_end, 0.0, door_h,
+            );
+        }
+        Some(WallCutout::Doorway) => {
+            let door_h = config.door_height.min(max_y - min_y);
+            append_wall_sub_faces(
+                mesh, tl, tr, bl, br, c_tl, c_tr, c_bl, c_br, normal, u_len, v_len, 0.0, u_len,
+                0.0, door_h,
             );
         }
         Some(WallCutout::Window) => {

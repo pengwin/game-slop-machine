@@ -303,9 +303,8 @@ pub fn wood_height(params: &WoodParams, u: f32, v: f32) -> f32 {
     let broad = ((u * h.broad_freq + warp * h.broad_warp_amp + slow_wander).sin() * 0.5 + 0.5)
         .powf(h.broad_exp);
     let fine = ((u * h.fine_freq + warp * h.fine_warp_amp).sin() * 0.5 + 0.5).powf(h.fine_exp);
-    let extra_fine =
-        ((u * h.extra_fine_freq + warp * h.extra_fine_warp_amp).sin() * 0.5 + 0.5)
-            .powf(h.extra_fine_exp);
+    let extra_fine = ((u * h.extra_fine_freq + warp * h.extra_fine_warp_amp).sin() * 0.5 + 0.5)
+        .powf(h.extra_fine_exp);
     let grain = fbm(
         21 ^ params.seed,
         h.grain_freq,

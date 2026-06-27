@@ -296,8 +296,7 @@ pub fn concrete_albedo(params: &ConcreteParams) -> Image {
                 u * a.crack_u_scale,
                 v * a.crack_v_scale,
             );
-            let crack_line =
-                ((crack - a.crack_threshold).abs() * a.crack_scale).clamp(0.0, 1.0);
+            let crack_line = ((crack - a.crack_threshold).abs() * a.crack_scale).clamp(0.0, 1.0);
 
             let base = a.shade_base + h * a.shade_height_amp;
             let shade = base + broad_shade * a.broad_shade_amp
