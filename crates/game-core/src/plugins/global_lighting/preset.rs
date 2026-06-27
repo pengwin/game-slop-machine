@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{presets, SceneLightingSettings};
+use super::{SceneLightingSettings, presets};
 
 /// The currently requested lighting preset.
 #[derive(Resource, Clone, Default, Eq, PartialEq)]

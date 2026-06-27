@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{presets, SceneCameraSettings};
+use super::{SceneCameraSettings, presets};
 
 /// The currently requested global 3D camera preset.
 #[derive(Resource, Clone, Default, Eq, PartialEq)]

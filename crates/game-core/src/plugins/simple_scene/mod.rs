@@ -1,8 +1,8 @@
 //! A small preview scene for validating rendering and inspector scene selection.
 
+mod boxes;
 mod camera;
 mod geometry;
-mod boxes;
 mod lighting;
 mod plugin;
 mod root;
