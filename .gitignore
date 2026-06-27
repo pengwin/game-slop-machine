@@ -5,3 +5,5 @@
 .DS_Store
 fixtures/*.png
 /assets/generated/
+
+references/

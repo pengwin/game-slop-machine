@@ -12,3 +12,6 @@ lint:
 
 fmt:
     cargo fmt --all
+
+clean:
+    cargo clean

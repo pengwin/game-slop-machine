@@ -21,12 +21,12 @@ print_stdout = "deny"
 [workspace.package]
 version = "0.0.1"
 edition = "2024"
-rust-version = "1.91.1"
+rust-version = "1.96"
 authors = ["Ivan Kruchkov <820839+pengwin@users.noreply.github.com>"]
 license = "MIT"
 keywords = ["rust", "bevy", "game"]
 categories = ["Bevy", "Game Development"]
-repository = "https://github.com/pengwin/v-actor"
+repository = "https://github.com/pengwin/game-slop-machine"
 
 [workspace.dependencies]
 bevy = { version = "0.19.0", features = ["experimental_pbr_pcss", "bevy/dynamic_linking"] }
