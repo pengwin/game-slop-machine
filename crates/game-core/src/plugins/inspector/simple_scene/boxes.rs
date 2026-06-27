@@ -3,7 +3,6 @@ use bevy::prelude::*;
 pub const PLANE_SIZE: f32 = 12.0;
 pub const BOX_SIZE: Vec3 = Vec3::splat(1.5);
 
-
 pub struct SimpleSceneBox {
     pub name: &'static str,
     pub color: Color,

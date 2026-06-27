@@ -30,27 +30,23 @@ fn geometry_scene() -> impl SceneList {
     let mut scenes: Vec<Box<dyn Scene>> = Vec::with_capacity(5);
 
     scenes.push(Box::new(bsn!(
-            Name::new("Simple Scene Plane")
-            Mesh3d(asset_value(
-                Plane3d::default()
-                    .mesh()
-                    .size(boxes::PLANE_SIZE, boxes::PLANE_SIZE)
-            ))
-            MeshMaterial3d::<StandardMaterial>(asset_value(StandardMaterial {
-                base_color: Color::srgb(0.30, 0.36, 0.32),
-                perceptual_roughness: 0.9,
-                ..default()
-            }))
-        )));
-
+        Name::new("Simple Scene Plane")
+        Mesh3d(asset_value(
+            Plane3d::default()
+                .mesh()
+                .size(boxes::PLANE_SIZE, boxes::PLANE_SIZE)
+        ))
+        MeshMaterial3d::<StandardMaterial>(asset_value(StandardMaterial {
+            base_color: Color::srgb(0.30, 0.36, 0.32),
+            perceptual_roughness: 0.9,
+            ..default()
+        }))
+    )));
 
     for box_item in boxes::boxes() {
         let boxed_scene = Box::new(box_item.scene());
         scenes.push(boxed_scene);
     }
-    
 
     scenes
 }
-
-
