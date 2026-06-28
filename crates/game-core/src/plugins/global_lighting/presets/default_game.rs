@@ -14,6 +14,7 @@ pub fn settings() -> SceneLightingSettings {
         shadows_enabled: true,
         shadow_depth_bias: DirectionalLight::DEFAULT_SHADOW_DEPTH_BIAS,
         shadow_normal_bias: DirectionalLight::DEFAULT_SHADOW_NORMAL_BIAS,
+        soft_shadow_size: Some(10.0),
         shadow_cascades: SceneShadowCascadeSettings {
             num_cascades: 4,
             minimum_distance: 0.1,

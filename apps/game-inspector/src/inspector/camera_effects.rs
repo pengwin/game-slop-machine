@@ -3,6 +3,7 @@
 use bevy::{
     feathers::{
         controls::FeathersCheckbox,
+        font_styles::InheritableFont,
         theme::{ThemeBackgroundColor, ThemedText},
         tokens,
     },
@@ -12,6 +13,8 @@ use bevy::{
     ui_widgets::{checkbox_self_update, ValueChange},
 };
 use game_core::plugins::{global_camera::CameraEffects, inspector::InspectorSceneState};
+
+use super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
 struct CameraEffectsUi;
@@ -33,6 +36,7 @@ enum CameraEffect {
     ScreenSpaceAmbientOcclusion,
     TemporalJitter,
     TemporalAntiAliasing,
+    ShadowFilterTemporal,
 }
 
 impl CameraEffect {
@@ -47,6 +51,7 @@ impl CameraEffect {
             Self::ScreenSpaceAmbientOcclusion => effects.screen_space_ambient_occlusion,
             Self::TemporalJitter => effects.temporal_jitter,
             Self::TemporalAntiAliasing => effects.temporal_anti_aliasing,
+            Self::ShadowFilterTemporal => effects.shadow_filter_temporal,
         }
     }
 
@@ -61,6 +66,7 @@ impl CameraEffect {
             Self::ScreenSpaceAmbientOcclusion => effects.screen_space_ambient_occlusion = value,
             Self::TemporalJitter => effects.temporal_jitter = value,
             Self::TemporalAntiAliasing => effects.temporal_anti_aliasing = value,
+            Self::ShadowFilterTemporal => effects.shadow_filter_temporal = value,
         }
     }
 }
@@ -73,7 +79,7 @@ pub fn plugin(app: &mut App) {
     .add_systems(Update, sync_camera_effect_checkboxes)
     .add_systems(
         OnExit(InspectorSceneState::Simple),
-        despawn_camera_effects_ui,
+        despawn_ui::<CameraEffectsUi>,
     );
 }
 
@@ -91,15 +97,18 @@ fn camera_effects_panel() -> impl Scene {
                 top: px(112),
                 left: px(12),
                 min_width: px(330),
-                padding: px(10),
+                padding: px(8),
                 border: px(1),
                 border_radius: px(6),
                 flex_direction: FlexDirection::Column,
-                row_gap: px(8),
+                row_gap: px(4),
             }
             TabGroup
             Pickable::IGNORE
             ThemeBackgroundColor(tokens::MENU_BG)
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
+            }
             Children [
                 (Text("Camera Effects") ThemedText),
                 effect_checkbox(CameraEffect::MsaaOff, "Msaa::Off"),
@@ -111,6 +120,7 @@ fn camera_effects_panel() -> impl Scene {
                 effect_checkbox(CameraEffect::ScreenSpaceAmbientOcclusion, "ScreenSpaceAmbientOcclusion"),
                 effect_checkbox(CameraEffect::TemporalJitter, "TemporalJitter"),
                 effect_checkbox(CameraEffect::TemporalAntiAliasing, "TemporalAntiAliasing"),
+                effect_checkbox(CameraEffect::ShadowFilterTemporal, "ShadowFilter::Temporal"),
             ]
         )
     }
@@ -121,6 +131,9 @@ fn effect_checkbox(effect: CameraEffect, label: &'static str) -> impl Scene {
         (
             @FeathersCheckbox {
                 @caption: bsn! { Text(label) ThemedText }
+            }
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
             }
             template_value(CameraEffectCheckbox { effect })
             Checked
@@ -156,14 +169,5 @@ fn sync_camera_effect_checkboxes(
         } else if !enabled && checked {
             commands.entity(entity).remove::<Checked>();
         }
-    }
-}
-
-fn despawn_camera_effects_ui(
-    mut commands: Commands<'_, '_>,
-    ui: Query<'_, '_, Entity, With<CameraEffectsUi>>,
-) {
-    for entity in &ui {
-        commands.entity(entity).despawn_children().despawn();
     }
 }

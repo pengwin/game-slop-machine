@@ -5,6 +5,7 @@ use bevy::{
         prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass},
         tonemapping::Tonemapping,
     },
+    light::ShadowFilteringMethod,
     pbr::ScreenSpaceAmbientOcclusion,
     prelude::*,
     render::camera::TemporalJitter,
@@ -49,6 +50,8 @@ pub struct CameraEffects {
     pub temporal_jitter: bool,
     /// Enables temporal anti-aliasing.
     pub temporal_anti_aliasing: bool,
+    /// Enables temporal shadow filtering (recommended with TAA).
+    pub shadow_filter_temporal: bool,
 }
 
 impl Default for CameraEffects {
@@ -63,6 +66,7 @@ impl Default for CameraEffects {
             screen_space_ambient_occlusion: true,
             temporal_jitter: true,
             temporal_anti_aliasing: true,
+            shadow_filter_temporal: true,
         }
     }
 }
@@ -165,5 +169,10 @@ fn apply_camera_effects(camera: &mut EntityCommands<'_>, effects: &CameraEffects
     }
     if effects.temporal_anti_aliasing {
         camera.insert(TemporalAntiAliasing::default());
+    }
+    if effects.shadow_filter_temporal {
+        camera.insert(ShadowFilteringMethod::Temporal);
+    } else {
+        camera.insert(ShadowFilteringMethod::Gaussian);
     }
 }

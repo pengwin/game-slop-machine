@@ -6,6 +6,7 @@ use bevy::{
             FeathersCheckbox, FeathersMenu, FeathersMenuButton, FeathersMenuItem,
             FeathersMenuPopup, FeathersSlider,
         },
+        font_styles::InheritableFont,
         theme::{ThemeBackgroundColor, ThemedText},
         tokens,
     },
@@ -18,6 +19,8 @@ use bevy::{
     },
 };
 use game_core::plugins::{global_lighting::GlobalLightControls, inspector::InspectorSceneState};
+
+use super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
 struct GlobalLightUi;
@@ -33,6 +36,9 @@ struct GlobalLightSlider {
 #[derive(Component, Copy, Clone, Default)]
 struct ShadowsEnabledCheckbox;
 
+#[derive(Component, Copy, Clone, Default)]
+struct SoftShadowEnabledCheckbox;
+
 #[derive(Copy, Clone, Default)]
 enum GlobalLightSliderSetting {
     #[default]
@@ -46,6 +52,7 @@ enum GlobalLightSliderSetting {
     CascadeFirstFarBound,
     CascadeMaximumDistance,
     CascadeOverlapProportion,
+    SoftShadowSize,
 }
 
 impl GlobalLightSliderSetting {
@@ -61,6 +68,7 @@ impl GlobalLightSliderSetting {
             Self::CascadeFirstFarBound => controls.cascade_first_far_bound,
             Self::CascadeMaximumDistance => controls.cascade_maximum_distance,
             Self::CascadeOverlapProportion => controls.cascade_overlap_proportion,
+            Self::SoftShadowSize => controls.soft_shadow_size,
         }
     }
 
@@ -78,6 +86,9 @@ impl GlobalLightSliderSetting {
             Self::CascadeOverlapProportion => {
                 controls.cascade_overlap_proportion = value.clamp(0.0, 0.95);
             }
+            Self::SoftShadowSize => {
+                controls.soft_shadow_size = value.max(0.0);
+            }
         }
 
         controls.normalize_shadow_constraints();
@@ -94,10 +105,11 @@ pub fn plugin(app: &mut App) {
         (
             sync_global_light_sliders,
             sync_shadows_enabled_checkbox,
+            sync_soft_shadow_enabled_checkbox,
             sync_shadow_map_size_caption,
         ),
     )
-    .add_systems(OnExit(InspectorSceneState::Simple), despawn_global_light_ui);
+    .add_systems(OnExit(InspectorSceneState::Simple), despawn_ui::<GlobalLightUi>);
 }
 
 fn global_light_ui() -> impl SceneList {
@@ -111,18 +123,23 @@ fn global_light_panel() -> impl Scene {
             GlobalLightUi
             Node {
                 position_type: PositionType::Absolute,
-                top: px(112),
-                left: px(356),
-                min_width: px(380),
-                padding: px(10),
+                bottom: px(12),
+                left: px(12),
+                min_width: px(330),
+                max_height: px(600),
+                padding: px(8),
                 border: px(1),
                 border_radius: px(6),
                 flex_direction: FlexDirection::Column,
-                row_gap: px(8),
+                row_gap: px(4),
+                overflow: Overflow::scroll_y(),
             }
             TabGroup
             Pickable::IGNORE
             ThemeBackgroundColor(tokens::MENU_BG)
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
+            }
             Children [
                 (Text("Global Light") ThemedText),
                 light_slider(GlobalLightSliderSetting::AmbientBrightness, "Ambient", 0.0, 1000.0, 5.0, 1),
@@ -132,6 +149,8 @@ fn global_light_panel() -> impl Scene {
                 shadows_checkbox(),
                 light_slider(GlobalLightSliderSetting::ShadowDepthBias, "Depth bias", 0.0, 0.2, 0.001, 4),
                 light_slider(GlobalLightSliderSetting::ShadowNormalBias, "Normal bias", 0.0, 2.0, 0.01, 3),
+                soft_shadow_checkbox(),
+                light_slider(GlobalLightSliderSetting::SoftShadowSize, "PCSS radius", 0.0, 50.0, 0.5, 1),
                 light_slider(GlobalLightSliderSetting::CascadeMinimumDistance, "Min dist", 0.0, 5.0, 0.1, 2),
                 light_slider(GlobalLightSliderSetting::CascadeFirstFarBound, "First far", 1.0, 150.0, 1.0, 1),
                 light_slider(GlobalLightSliderSetting::CascadeMaximumDistance, "Max dist", 1.0, 200.0, 1.0, 1),
@@ -155,14 +174,17 @@ fn light_slider(
             display: Display::Flex,
             flex_direction: FlexDirection::Row,
             align_items: AlignItems::Center,
-            column_gap: px(8),
+            column_gap: px(4),
+        }
+        InheritableFont {
+            font_size: PANEL_FONT_SIZE,
         }
         Children [
             (
                 Text(label)
                 ThemedText
                 Node {
-                    width: px(92),
+                    width: px(80),
                 }
             ),
             (
@@ -187,10 +209,29 @@ fn shadows_checkbox() -> impl Scene {
             @FeathersCheckbox {
                 @caption: bsn! { Text("Shadows") ThemedText }
             }
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
+            }
             ShadowsEnabledCheckbox
             Checked
             on(checkbox_self_update)
             on(handle_shadows_enabled_change)
+        )
+    }
+}
+
+fn soft_shadow_checkbox() -> impl Scene {
+    bsn! {
+        (
+            @FeathersCheckbox {
+                @caption: bsn! { Text("PCSS") ThemedText }
+            }
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
+            }
+            SoftShadowEnabledCheckbox
+            on(checkbox_self_update)
+            on(handle_soft_shadow_enabled_change)
         )
     }
 }
@@ -219,6 +260,7 @@ fn shadow_map_size_menu() -> impl Scene {
                         shadow_map_size_item(1024),
                         shadow_map_size_item(2048),
                         shadow_map_size_item(4096),
+                        shadow_map_size_item(8192),
                     ]
                 )
             ]
@@ -231,6 +273,7 @@ fn shadow_map_size_item(size: usize) -> impl Scene {
         1024 => "Shadow map 1024",
         2048 => "Shadow map 2048",
         4096 => "Shadow map 4096",
+        8192 => "Shadow map 8192",
         _ => "Shadow map",
     };
 
@@ -238,6 +281,9 @@ fn shadow_map_size_item(size: usize) -> impl Scene {
         (
             @FeathersMenuItem {
                 @caption: bsn! { Text(label) ThemedText }
+            }
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
             }
             on(move |_: On<'_, '_, Activate>, mut controls: ResMut<'_, GlobalLightControls>| {
                 controls.shadow_map_size = size;
@@ -271,6 +317,25 @@ fn handle_shadows_enabled_change(
 }
 
 #[allow(clippy::needless_pass_by_value)]
+fn handle_soft_shadow_enabled_change(
+    change: On<'_, '_, ValueChange<bool>>,
+    checkboxes: Query<'_, '_, Entity, With<SoftShadowEnabledCheckbox>>,
+    mut controls: ResMut<'_, GlobalLightControls>,
+) {
+    if checkboxes.get(change.source).is_ok() {
+        if change.value {
+            controls.soft_shadow_size = if controls.soft_shadow_size > 0.0 {
+                controls.soft_shadow_size
+            } else {
+                10.0
+            };
+        } else {
+            controls.soft_shadow_size = 0.0;
+        }
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
 fn sync_global_light_sliders(
     mut commands: Commands<'_, '_>,
     controls: Res<'_, GlobalLightControls>,
@@ -300,20 +365,27 @@ fn sync_shadows_enabled_checkbox(
 }
 
 #[allow(clippy::needless_pass_by_value)]
+fn sync_soft_shadow_enabled_checkbox(
+    mut commands: Commands<'_, '_>,
+    controls: Res<'_, GlobalLightControls>,
+    checkboxes: Query<'_, '_, (Entity, Has<Checked>), With<SoftShadowEnabledCheckbox>>,
+) {
+    let enabled = controls.soft_shadow_size > 0.0;
+    for (entity, checked) in &checkboxes {
+        if enabled && !checked {
+            commands.entity(entity).insert(Checked);
+        } else if !enabled && checked {
+            commands.entity(entity).remove::<Checked>();
+        }
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)]
 fn sync_shadow_map_size_caption(
     controls: Res<'_, GlobalLightControls>,
     mut caption: Single<'_, '_, &mut Text, With<ShadowMapSizeCaption>>,
 ) {
     if controls.is_changed() {
         caption.0 = controls.shadow_map_size.to_string();
-    }
-}
-
-fn despawn_global_light_ui(
-    mut commands: Commands<'_, '_>,
-    ui: Query<'_, '_, Entity, With<GlobalLightUi>>,
-) {
-    for entity in &ui {
-        commands.entity(entity).despawn_children().despawn();
     }
 }

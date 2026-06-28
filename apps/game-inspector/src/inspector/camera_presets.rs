@@ -3,6 +3,7 @@
 use bevy::{
     feathers::{
         controls::{FeathersMenu, FeathersMenuButton, FeathersMenuItem, FeathersMenuPopup},
+        font_styles::InheritableFont,
         theme::{ThemeBackgroundColor, ThemedText},
         tokens,
     },
@@ -11,6 +12,8 @@ use bevy::{
     ui_widgets::Activate,
 };
 use game_core::plugins::{global_camera::CameraPreset, inspector::InspectorSceneState};
+
+use super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
 struct CameraPresetsUi;
@@ -26,7 +29,7 @@ pub fn plugin(app: &mut App) {
     .add_systems(Update, update_camera_preset_caption)
     .add_systems(
         OnExit(InspectorSceneState::Simple),
-        despawn_camera_presets_ui,
+        despawn_ui::<CameraPresetsUi>,
     );
 }
 
@@ -53,6 +56,9 @@ fn camera_presets_panel() -> impl Scene {
             TabGroup
             Pickable::IGNORE
             ThemeBackgroundColor(tokens::MENU_BG)
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
+            }
             Children [
                 (Text("Camera Preset") ThemedText),
                 (
@@ -94,6 +100,9 @@ fn camera_preset_item(preset: CameraPreset) -> impl Scene {
             @FeathersMenuItem {
                 @caption: bsn! { Text(label) ThemedText }
             }
+            InheritableFont {
+                font_size: PANEL_FONT_SIZE,
+            }
             on(move |_: On<'_, '_, Activate>, mut selected: ResMut<'_, CameraPreset>| {
                 *selected = preset;
             })
@@ -108,14 +117,5 @@ fn update_camera_preset_caption(
 ) {
     if selected.is_changed() {
         caption.0 = selected.label().to_string();
-    }
-}
-
-fn despawn_camera_presets_ui(
-    mut commands: Commands<'_, '_>,
-    ui: Query<'_, '_, Entity, With<CameraPresetsUi>>,
-) {
-    for entity in &ui {
-        commands.entity(entity).despawn_children().despawn();
     }
 }

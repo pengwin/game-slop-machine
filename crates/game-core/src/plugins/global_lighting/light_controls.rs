@@ -31,6 +31,8 @@ pub struct GlobalLightControls {
     pub cascade_overlap_proportion: f32,
     /// Directional shadow map size.
     pub shadow_map_size: usize,
+    /// Soft shadow radius for PCSS. 0.0 disables soft shadows.
+    pub soft_shadow_size: f32,
 }
 
 impl GlobalLightControls {
@@ -53,6 +55,7 @@ impl GlobalLightControls {
             cascade_maximum_distance: settings.shadow_cascades.maximum_distance,
             cascade_overlap_proportion: settings.shadow_cascades.overlap_proportion,
             shadow_map_size,
+            soft_shadow_size: settings.soft_shadow_size.unwrap_or(0.0),
         }
     }
 
@@ -103,6 +106,7 @@ impl Default for GlobalLightControls {
             cascade_maximum_distance: 150.0,
             cascade_overlap_proportion: 0.2,
             shadow_map_size: 2048,
+            soft_shadow_size: 10.0,
         }
     }
 }

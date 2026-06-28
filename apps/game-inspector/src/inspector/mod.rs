@@ -2,6 +2,8 @@
 
 mod camera_effects;
 mod camera_presets;
+mod consts;
+mod despawn_ui;
 mod global_light;
 mod scene_selector;
 

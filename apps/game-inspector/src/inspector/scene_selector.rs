@@ -3,6 +3,7 @@
 use bevy::{
     feathers::{
         controls::{FeathersMenu, FeathersMenuButton, FeathersMenuItem, FeathersMenuPopup},
+        font_styles::InheritableFont,
         theme::{ThemeBackgroundColor, ThemedText},
         tokens,
     },
@@ -11,6 +12,8 @@ use bevy::{
     ui_widgets::Activate,
 };
 use game_core::plugins::inspector::InspectorSceneState;
+
+use super::consts::PANEL_FONT_SIZE;
 
 #[derive(Clone, Component, Default)]
 struct SceneSelectorCaption;
@@ -47,6 +50,9 @@ fn selector_root() -> impl Scene {
                     border_radius: px(6),
                 }
                 ThemeBackgroundColor(tokens::MENU_BG)
+                InheritableFont {
+                    font_size: PANEL_FONT_SIZE,
+                }
                 Children [
                     (Text("Scene") ThemedText),
                     (
@@ -72,6 +78,9 @@ fn selector_root() -> impl Scene {
                                         @FeathersMenuItem {
                                             @caption: bsn! { Text("None") ThemedText }
                                         }
+                                        InheritableFont {
+                                            font_size: PANEL_FONT_SIZE,
+                                        }
                                         on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorSceneState>>| {
                                             next_scene.set(InspectorSceneState::None);
                                         })
@@ -79,6 +88,9 @@ fn selector_root() -> impl Scene {
                                     (
                                         @FeathersMenuItem {
                                             @caption: bsn! { Text("Simple scene") ThemedText }
+                                        }
+                                        InheritableFont {
+                                            font_size: PANEL_FONT_SIZE,
                                         }
                                         on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorSceneState>>| {
                                             next_scene.set(InspectorSceneState::Simple);

@@ -73,6 +73,11 @@ fn apply_light_controls(
     sun.shadow_maps_enabled = controls.shadows_enabled;
     sun.shadow_depth_bias = controls.shadow_depth_bias;
     sun.shadow_normal_bias = controls.shadow_normal_bias;
+    sun.soft_shadow_size = if controls.soft_shadow_size > 0.0 {
+        Some(controls.soft_shadow_size)
+    } else {
+        None
+    };
     transform.rotation = controls.sun_rotation();
     let mut controls = controls.clone();
     controls.normalize_shadow_constraints();
@@ -98,6 +103,11 @@ fn sun_scene(controls: &GlobalLightControls) -> impl Scene {
     let shadows_enabled = controls.shadows_enabled;
     let shadow_depth_bias = controls.shadow_depth_bias;
     let shadow_normal_bias = controls.shadow_normal_bias;
+    let soft_shadow_size = if controls.soft_shadow_size > 0.0 {
+        Some(controls.soft_shadow_size)
+    } else {
+        None
+    };
     let transform = Transform::from_rotation(controls.sun_rotation());
     let shadow_cascades = cascade_shadow_config(controls);
 
@@ -110,6 +120,7 @@ fn sun_scene(controls: &GlobalLightControls) -> impl Scene {
                 shadow_maps_enabled: { shadows_enabled },
                 shadow_depth_bias: { shadow_depth_bias },
                 shadow_normal_bias: { shadow_normal_bias },
+                soft_shadow_size: { soft_shadow_size },
             }
             template_value(shadow_cascades)
             template_value(transform)
