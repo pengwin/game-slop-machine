@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::SceneLightingSettings;
+use super::{SceneLightingSettings, SceneShadowCascadeSettings};
 
 /// Runtime controls for tuning the global sun and ambient light.
 #[derive(Resource, Clone, PartialEq)]
@@ -31,14 +31,12 @@ pub struct GlobalLightControls {
     pub cascade_overlap_proportion: f32,
     /// Directional shadow map size.
     pub shadow_map_size: usize,
-    /// Soft shadow radius for PCSS. 0.0 disables soft shadows.
-    pub soft_shadow_size: f32,
 }
 
 impl GlobalLightControls {
     /// Converts lighting preset values into editable controls.
     #[must_use]
-    pub fn from_settings(settings: &SceneLightingSettings, shadow_map_size: usize) -> Self {
+    pub fn from_settings(settings: &SceneLightingSettings) -> Self {
         let (sun_elevation, sun_azimuth, _) = settings.sun_rotation.to_euler(EulerRot::XYZ);
 
         Self {
@@ -54,8 +52,7 @@ impl GlobalLightControls {
             cascade_first_far_bound: settings.shadow_cascades.first_cascade_far_bound,
             cascade_maximum_distance: settings.shadow_cascades.maximum_distance,
             cascade_overlap_proportion: settings.shadow_cascades.overlap_proportion,
-            shadow_map_size,
-            soft_shadow_size: settings.soft_shadow_size.unwrap_or(0.0),
+            shadow_map_size: 8192,
         }
     }
 
@@ -68,6 +65,28 @@ impl GlobalLightControls {
             self.sun_azimuth_degrees.to_radians(),
             0.0,
         )
+    }
+
+    /// Converts these controls into a lighting preset.
+    #[must_use]
+    pub fn to_settings(&self) -> SceneLightingSettings {
+        SceneLightingSettings {
+            ambient_color: Color::WHITE,
+            ambient_brightness: self.ambient_brightness,
+            ambient_affects_lightmapped_meshes: true,
+            sun_illuminance: self.sun_illuminance,
+            sun_rotation: self.sun_rotation(),
+            shadows_enabled: self.shadows_enabled,
+            shadow_depth_bias: self.shadow_depth_bias,
+            shadow_normal_bias: self.shadow_normal_bias,
+            shadow_cascades: SceneShadowCascadeSettings {
+                num_cascades: self.cascade_count,
+                minimum_distance: self.cascade_minimum_distance,
+                first_cascade_far_bound: self.cascade_first_far_bound,
+                maximum_distance: self.cascade_maximum_distance,
+                overlap_proportion: self.cascade_overlap_proportion,
+            },
+        }
     }
 
     /// Clamps dependent shadow settings into a Bevy-safe cascade configuration.
@@ -93,20 +112,19 @@ impl GlobalLightControls {
 impl Default for GlobalLightControls {
     fn default() -> Self {
         Self {
-            ambient_brightness: 80.0,
-            sun_illuminance: 6_000.0,
-            sun_elevation_degrees: -45.836_624,
-            sun_azimuth_degrees: -28.647_888,
+            ambient_brightness: 700.0,
+            sun_illuminance: 7_000.0,
+            sun_elevation_degrees: -75.0,
+            sun_azimuth_degrees: -10.0,
             shadows_enabled: true,
             shadow_depth_bias: DirectionalLight::DEFAULT_SHADOW_DEPTH_BIAS,
             shadow_normal_bias: DirectionalLight::DEFAULT_SHADOW_NORMAL_BIAS,
-            cascade_count: 4,
+            cascade_count: 1,
             cascade_minimum_distance: 0.1,
             cascade_first_far_bound: 10.0,
             cascade_maximum_distance: 150.0,
             cascade_overlap_proportion: 0.2,
-            shadow_map_size: 2048,
-            soft_shadow_size: 10.0,
+            shadow_map_size: 8192,
         }
     }
 }

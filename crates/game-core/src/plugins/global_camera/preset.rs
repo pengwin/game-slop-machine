@@ -6,20 +6,20 @@ use super::{presets, SceneCameraSettings};
 #[derive(Resource, Copy, Clone, Default, Eq, PartialEq)]
 pub enum CameraPreset {
     /// Default orthographic gameplay camera.
-    #[default]
     DefaultGame,
     /// Default perspective gameplay camera.
     DefaultGamePerspective,
     /// Orthographic-looking perspective gameplay camera.
+    #[default]
     DefaultGameIsometricPerspective,
 }
 
 impl CameraPreset {
     /// All built-in camera presets.
     pub const ALL: [Self; 3] = [
+        Self::DefaultGameIsometricPerspective,
         Self::DefaultGame,
         Self::DefaultGamePerspective,
-        Self::DefaultGameIsometricPerspective,
     ];
 
     /// Human-readable preset label.

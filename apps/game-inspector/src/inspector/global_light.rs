@@ -36,9 +36,6 @@ struct GlobalLightSlider {
 #[derive(Component, Copy, Clone, Default)]
 struct ShadowsEnabledCheckbox;
 
-#[derive(Component, Copy, Clone, Default)]
-struct SoftShadowEnabledCheckbox;
-
 #[derive(Copy, Clone, Default)]
 enum GlobalLightSliderSetting {
     #[default]
@@ -52,7 +49,6 @@ enum GlobalLightSliderSetting {
     CascadeFirstFarBound,
     CascadeMaximumDistance,
     CascadeOverlapProportion,
-    SoftShadowSize,
 }
 
 impl GlobalLightSliderSetting {
@@ -68,7 +64,6 @@ impl GlobalLightSliderSetting {
             Self::CascadeFirstFarBound => controls.cascade_first_far_bound,
             Self::CascadeMaximumDistance => controls.cascade_maximum_distance,
             Self::CascadeOverlapProportion => controls.cascade_overlap_proportion,
-            Self::SoftShadowSize => controls.soft_shadow_size,
         }
     }
 
@@ -86,9 +81,6 @@ impl GlobalLightSliderSetting {
             Self::CascadeOverlapProportion => {
                 controls.cascade_overlap_proportion = value.clamp(0.0, 0.95);
             }
-            Self::SoftShadowSize => {
-                controls.soft_shadow_size = value.max(0.0);
-            }
         }
 
         controls.normalize_shadow_constraints();
@@ -105,7 +97,6 @@ pub fn plugin(app: &mut App) {
         (
             sync_global_light_sliders,
             sync_shadows_enabled_checkbox,
-            sync_soft_shadow_enabled_checkbox,
             sync_shadow_map_size_caption,
         ),
     )
@@ -149,8 +140,6 @@ fn global_light_panel() -> impl Scene {
                 shadows_checkbox(),
                 light_slider(GlobalLightSliderSetting::ShadowDepthBias, "Depth bias", 0.0, 0.2, 0.001, 4),
                 light_slider(GlobalLightSliderSetting::ShadowNormalBias, "Normal bias", 0.0, 2.0, 0.01, 3),
-                soft_shadow_checkbox(),
-                light_slider(GlobalLightSliderSetting::SoftShadowSize, "PCSS radius", 0.0, 50.0, 0.5, 1),
                 light_slider(GlobalLightSliderSetting::CascadeMinimumDistance, "Min dist", 0.0, 5.0, 0.1, 2),
                 light_slider(GlobalLightSliderSetting::CascadeFirstFarBound, "First far", 1.0, 150.0, 1.0, 1),
                 light_slider(GlobalLightSliderSetting::CascadeMaximumDistance, "Max dist", 1.0, 200.0, 1.0, 1),
@@ -216,22 +205,6 @@ fn shadows_checkbox() -> impl Scene {
             Checked
             on(checkbox_self_update)
             on(handle_shadows_enabled_change)
-        )
-    }
-}
-
-fn soft_shadow_checkbox() -> impl Scene {
-    bsn! {
-        (
-            @FeathersCheckbox {
-                @caption: bsn! { Text("PCSS") ThemedText }
-            }
-            InheritableFont {
-                font_size: PANEL_FONT_SIZE,
-            }
-            SoftShadowEnabledCheckbox
-            on(checkbox_self_update)
-            on(handle_soft_shadow_enabled_change)
         )
     }
 }
@@ -317,25 +290,6 @@ fn handle_shadows_enabled_change(
 }
 
 #[allow(clippy::needless_pass_by_value)]
-fn handle_soft_shadow_enabled_change(
-    change: On<'_, '_, ValueChange<bool>>,
-    checkboxes: Query<'_, '_, Entity, With<SoftShadowEnabledCheckbox>>,
-    mut controls: ResMut<'_, GlobalLightControls>,
-) {
-    if checkboxes.get(change.source).is_ok() {
-        if change.value {
-            controls.soft_shadow_size = if controls.soft_shadow_size > 0.0 {
-                controls.soft_shadow_size
-            } else {
-                10.0
-            };
-        } else {
-            controls.soft_shadow_size = 0.0;
-        }
-    }
-}
-
-#[allow(clippy::needless_pass_by_value)]
 fn sync_global_light_sliders(
     mut commands: Commands<'_, '_>,
     controls: Res<'_, GlobalLightControls>,
@@ -359,22 +313,6 @@ fn sync_shadows_enabled_checkbox(
         if controls.shadows_enabled && !checked {
             commands.entity(entity).insert(Checked);
         } else if !controls.shadows_enabled && checked {
-            commands.entity(entity).remove::<Checked>();
-        }
-    }
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn sync_soft_shadow_enabled_checkbox(
-    mut commands: Commands<'_, '_>,
-    controls: Res<'_, GlobalLightControls>,
-    checkboxes: Query<'_, '_, (Entity, Has<Checked>), With<SoftShadowEnabledCheckbox>>,
-) {
-    let enabled = controls.soft_shadow_size > 0.0;
-    for (entity, checked) in &checkboxes {
-        if enabled && !checked {
-            commands.entity(entity).insert(Checked);
-        } else if !enabled && checked {
             commands.entity(entity).remove::<Checked>();
         }
     }

@@ -32,8 +32,6 @@ pub struct SceneLightingSettings {
     pub shadow_depth_bias: f32,
     /// Directional shadow normal bias.
     pub shadow_normal_bias: f32,
-    /// Soft shadow radius for PCSS. `None` disables soft shadows.
-    pub soft_shadow_size: Option<f32>,
     /// Directional shadow cascade bounds.
     pub shadow_cascades: SceneShadowCascadeSettings,
 }

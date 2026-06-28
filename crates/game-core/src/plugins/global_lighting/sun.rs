@@ -25,11 +25,10 @@ fn spawn_global_sun(
     mut commands: Commands<'_, '_>,
     preset: Res<'_, LightingPreset>,
     mut controls: ResMut<'_, GlobalLightControls>,
-    shadow_map: Res<'_, DirectionalLightShadowMap>,
     mut ambient_light: ResMut<'_, GlobalAmbientLight>,
 ) {
     let lighting = preset.settings();
-    *controls = GlobalLightControls::from_settings(&lighting, shadow_map.size);
+    *controls = GlobalLightControls::from_settings(&lighting);
     controls.normalize_shadow_constraints();
     apply_ambient_lighting(&controls, &lighting, &mut ambient_light);
 
@@ -40,10 +39,9 @@ fn spawn_global_sun(
 fn sync_light_controls_from_preset(
     preset: Res<'_, LightingPreset>,
     mut controls: ResMut<'_, GlobalLightControls>,
-    shadow_map: Res<'_, DirectionalLightShadowMap>,
 ) {
     let lighting = preset.settings();
-    *controls = GlobalLightControls::from_settings(&lighting, shadow_map.size);
+    *controls = GlobalLightControls::from_settings(&lighting);
     controls.normalize_shadow_constraints();
 }
 
@@ -73,11 +71,6 @@ fn apply_light_controls(
     sun.shadow_maps_enabled = controls.shadows_enabled;
     sun.shadow_depth_bias = controls.shadow_depth_bias;
     sun.shadow_normal_bias = controls.shadow_normal_bias;
-    sun.soft_shadow_size = if controls.soft_shadow_size > 0.0 {
-        Some(controls.soft_shadow_size)
-    } else {
-        None
-    };
     transform.rotation = controls.sun_rotation();
     let mut controls = controls.clone();
     controls.normalize_shadow_constraints();
@@ -103,11 +96,6 @@ fn sun_scene(controls: &GlobalLightControls) -> impl Scene {
     let shadows_enabled = controls.shadows_enabled;
     let shadow_depth_bias = controls.shadow_depth_bias;
     let shadow_normal_bias = controls.shadow_normal_bias;
-    let soft_shadow_size = if controls.soft_shadow_size > 0.0 {
-        Some(controls.soft_shadow_size)
-    } else {
-        None
-    };
     let transform = Transform::from_rotation(controls.sun_rotation());
     let shadow_cascades = cascade_shadow_config(controls);
 
@@ -120,7 +108,6 @@ fn sun_scene(controls: &GlobalLightControls) -> impl Scene {
                 shadow_maps_enabled: { shadows_enabled },
                 shadow_depth_bias: { shadow_depth_bias },
                 shadow_normal_bias: { shadow_normal_bias },
-                soft_shadow_size: { soft_shadow_size },
             }
             template_value(shadow_cascades)
             template_value(transform)
