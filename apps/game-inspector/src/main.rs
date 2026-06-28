@@ -3,7 +3,7 @@
 mod inspector;
 
 use bevy::{
-    feathers::{FeathersPlugins, dark_theme::create_dark_theme, theme::UiTheme},
+    feathers::{dark_theme::create_dark_theme, theme::UiTheme, FeathersPlugins},
     prelude::*,
 };
 use game_core::plugins::GameCorePlugin;

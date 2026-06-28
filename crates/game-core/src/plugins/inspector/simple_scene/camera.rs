@@ -15,7 +15,7 @@ pub fn plugin(app: &mut App) {
 }
 
 fn configure_simple_scene_camera(mut preset: ResMut<'_, CameraPreset>) {
-    *preset = CameraPreset::SimplePreview;
+    *preset = CameraPreset::DefaultGame;
 }
 
 fn restore_default_game_camera(mut preset: ResMut<'_, CameraPreset>) {

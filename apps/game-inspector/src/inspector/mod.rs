@@ -1,5 +1,8 @@
 //! Inspector feature wiring.
 
+mod camera_effects;
+mod camera_presets;
+mod global_light;
 mod scene_selector;
 
 use bevy::prelude::*;
@@ -9,18 +12,9 @@ pub struct InspectorPlugin;
 
 impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_ui_camera);
+        camera_effects::plugin(app);
+        camera_presets::plugin(app);
+        global_light::plugin(app);
         scene_selector::plugin(app);
     }
-}
-
-fn spawn_ui_camera(mut commands: Commands<'_, '_>) {
-    commands.spawn((
-        Camera2d,
-        Camera {
-            order: 10,
-            clear_color: ClearColorConfig::None,
-            ..default()
-        },
-    ));
 }
