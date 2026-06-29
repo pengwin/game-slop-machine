@@ -8,6 +8,7 @@ mod plugin;
 mod root;
 mod scene_sets;
 
+pub use geometry::PlasterWallDirtSettings;
 pub use material::{
     PlasterGenerationStage, PlasterWallGenerationProgress, PlasterWallGenerationRequest,
     PlasterWallGenerationStatus, PlasterWallMaterialControls, PlasterWallMaterialSettings,

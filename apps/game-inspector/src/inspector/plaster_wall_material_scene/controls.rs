@@ -10,11 +10,12 @@ use bevy::{
     input_focus::tab_navigation::TabGroup,
     prelude::*,
     ui_widgets::{
-        slider_self_update, Activate, SliderPrecision, SliderStep, SliderValue, ValueChange,
+        Activate, SliderPrecision, SliderStep, SliderValue, ValueChange, slider_self_update,
     },
 };
 use game_core::plugins::inspector::{
-    InspectorSceneState, PlasterWallGenerationRequest, PlasterWallMaterialControls,
+    InspectorSceneState, PlasterWallDirtSettings, PlasterWallGenerationRequest,
+    PlasterWallMaterialControls,
 };
 
 use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
@@ -25,6 +26,11 @@ struct PlasterWallControlsUi;
 #[derive(Component, Clone, Default)]
 struct PlasterWallSlider {
     setting: PlasterWallSliderSetting,
+}
+
+#[derive(Component, Clone, Default)]
+struct DirtSlider {
+    setting: DirtSliderSetting,
 }
 
 #[derive(Clone, Default)]
@@ -42,6 +48,16 @@ enum PlasterWallSliderSetting {
     Normal,
     RoughBase,
     AoBase,
+}
+
+#[derive(Clone, Default)]
+enum DirtSliderSetting {
+    #[default]
+    FloorDirt,
+    CornerDirt,
+    ColorR,
+    ColorG,
+    ColorB,
 }
 
 #[allow(
@@ -90,6 +106,28 @@ impl PlasterWallSliderSetting {
     }
 }
 
+impl DirtSliderSetting {
+    const fn value(&self, settings: &PlasterWallDirtSettings) -> f32 {
+        match self {
+            Self::FloorDirt => settings.floor_strength,
+            Self::CornerDirt => settings.corner_strength,
+            Self::ColorR => settings.color_r,
+            Self::ColorG => settings.color_g,
+            Self::ColorB => settings.color_b,
+        }
+    }
+
+    const fn set(&self, settings: &mut PlasterWallDirtSettings, value: f32) {
+        match self {
+            Self::FloorDirt => settings.floor_strength = value.clamp(0.0, 1.5),
+            Self::CornerDirt => settings.corner_strength = value.clamp(0.0, 1.5),
+            Self::ColorR => settings.color_r = value.clamp(0.0, 1.0),
+            Self::ColorG => settings.color_g = value.clamp(0.0, 1.0),
+            Self::ColorB => settings.color_b = value.clamp(0.0, 1.0),
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(InspectorSceneState::PlasterWallMaterial),
@@ -97,7 +135,8 @@ pub fn plugin(app: &mut App) {
     )
     .add_systems(
         Update,
-        sync_plaster_wall_sliders.run_if(in_state(InspectorSceneState::PlasterWallMaterial)),
+        (sync_plaster_wall_sliders, sync_dirt_sliders)
+            .run_if(in_state(InspectorSceneState::PlasterWallMaterial)),
     )
     .add_systems(
         OnExit(InspectorSceneState::PlasterWallMaterial),
@@ -147,6 +186,12 @@ fn controls_panel() -> impl Scene {
                 plaster_slider(PlasterWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),
                 plaster_slider(PlasterWallSliderSetting::RoughBase, "Rough base", 0.0, 1.0, 0.01, 2),
                 plaster_slider(PlasterWallSliderSetting::AoBase, "AO base", 0.0, 1.0, 0.01, 2),
+                (Text("Dirt") ThemedText),
+                dirt_slider(DirtSliderSetting::FloorDirt, "Floor dirt", 0.0, 1.5, 0.01, 2),
+                dirt_slider(DirtSliderSetting::CornerDirt, "Corner dirt", 0.0, 1.5, 0.01, 2),
+                dirt_slider(DirtSliderSetting::ColorR, "Dirt R", 0.0, 1.0, 0.01, 2),
+                dirt_slider(DirtSliderSetting::ColorG, "Dirt G", 0.0, 1.0, 0.01, 2),
+                dirt_slider(DirtSliderSetting::ColorB, "Dirt B", 0.0, 1.0, 0.01, 2),
                 command_buttons(),
             ]
         )
@@ -204,6 +249,57 @@ fn plaster_slider(
     }
 }
 
+fn dirt_slider(
+    setting: DirtSliderSetting,
+    label: &'static str,
+    min: f32,
+    max: f32,
+    step: f32,
+    precision: i32,
+) -> impl Scene {
+    let handler_setting = setting.clone();
+
+    bsn! {
+        Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: px(4),
+        }
+        InheritableFont {
+            font_size: PANEL_FONT_SIZE,
+        }
+        Children [
+            (
+                Text(label)
+                ThemedText
+                Node {
+                    width: px(88),
+                }
+            ),
+            (
+                @FeathersSlider {
+                    @min: min,
+                    @max: max,
+                    @value: min,
+                }
+                template_value(DirtSlider { setting })
+                SliderStep(step)
+                SliderPrecision(precision)
+                on(slider_self_update)
+                on(
+                    move |
+                        change: On<'_, '_, ValueChange<f32>>,
+                        mut dirt_settings: ResMut<'_, PlasterWallDirtSettings>,
+                    | {
+                        handler_setting.set(&mut dirt_settings, change.value);
+                    }
+                )
+            )
+        ]
+    }
+}
+
 fn command_buttons() -> impl Scene {
     bsn! {
         Node {
@@ -251,8 +347,10 @@ fn handle_reset(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
     mut controls: ResMut<'_, PlasterWallMaterialControls>,
+    mut dirt_settings: ResMut<'_, PlasterWallDirtSettings>,
 ) {
     *controls = PlasterWallMaterialControls::default();
+    *dirt_settings = PlasterWallDirtSettings::default();
     commands.insert_resource(PlasterWallGenerationRequest {
         params: controls.params.clone(),
     });
@@ -266,6 +364,20 @@ fn sync_plaster_wall_sliders(
 ) {
     for (entity, slider, value) in &sliders {
         let expected = slider.setting.value(&controls);
+        if (value.0 - expected).abs() > 0.001 {
+            commands.entity(entity).insert(SliderValue(expected));
+        }
+    }
+}
+
+fn sync_dirt_sliders(
+    mut commands: Commands<'_, '_>,
+    dirt_settings: Res<'_, PlasterWallDirtSettings>,
+    sliders: Query<'_, '_, (Entity, &DirtSlider, &SliderValue)>,
+) {
+    let dirt_settings = dirt_settings.into_inner();
+    for (entity, slider, value) in &sliders {
+        let expected = slider.setting.value(dirt_settings);
         if (value.0 - expected).abs() > 0.001 {
             commands.entity(entity).insert(SliderValue(expected));
         }

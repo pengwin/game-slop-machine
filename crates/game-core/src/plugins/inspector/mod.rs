@@ -7,8 +7,9 @@ mod state;
 use bevy::prelude::*;
 
 pub use plaster_wall_material_scene::{
-    PlasterWallGenerationProgress, PlasterWallGenerationRequest, PlasterWallMaterialControls,
-    PlasterWallMaterialScenePlugin, PlasterWallMaterialSceneRoot, PlasterWallMaterialSettings,
+    PlasterWallDirtSettings, PlasterWallGenerationProgress, PlasterWallGenerationRequest,
+    PlasterWallMaterialControls, PlasterWallMaterialScenePlugin, PlasterWallMaterialSceneRoot,
+    PlasterWallMaterialSettings,
 };
 pub use simple_scene::{SimpleScenePlugin, SimpleSceneRoot};
 pub use state::InspectorSceneState;
