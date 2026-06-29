@@ -5,8 +5,10 @@ pub(super) struct WorkingMaps {
     pub(super) size: TextureSize,
     pub(super) height: Vec<f32>,
     pub(super) tone: Vec<f32>,
+    pub(super) macro_tone: Vec<f32>,
     pub(super) stain: Vec<f32>,
     pub(super) crack: Vec<f32>,
+    pub(super) crack_lip: Vec<f32>,
     pub(super) pit: Vec<f32>,
 }
 
@@ -17,8 +19,10 @@ impl WorkingMaps {
             size,
             height: vec![0.0; len],
             tone: vec![0.0; len],
+            macro_tone: vec![0.0; len],
             stain: vec![0.0; len],
             crack: vec![0.0; len],
+            crack_lip: vec![0.0; len],
             pit: vec![0.0; len],
         }
     }

@@ -46,15 +46,6 @@ pub(super) fn wrapped_delta(delta: f32) -> f32 {
     }
 }
 
-pub(super) fn normalize2(v: [f32; 2]) -> [f32; 2] {
-    let len = v[0].hypot(v[1]);
-    if len <= f32::EPSILON {
-        [1.0, 0.0]
-    } else {
-        [v[0] / len, v[1] / len]
-    }
-}
-
 pub(super) fn normalize3(v: [f32; 3]) -> [f32; 3] {
     let len = v[2].mul_add(v[2], v[1].mul_add(v[1], v[0] * v[0])).sqrt();
     if len <= f32::EPSILON {

@@ -8,6 +8,8 @@ use super::{
     scene_sets::PlasterWallMaterialSceneSet,
 };
 
+const PLASTER_UV_TILES_PER_METER: f32 = 0.32;
+
 pub fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(InspectorSceneState::PlasterWallMaterial),
@@ -178,15 +180,19 @@ impl WallMeshBuilder {
         let Ok(base) = u32::try_from(self.positions.len()) else {
             unreachable!("wall debug mesh vertex count fits in u32");
         };
+        let face_index = self.positions.len() / 4;
+        let uv_offset = face_uv_offset(face_index);
+        let uv_width = uv_size[0] * PLASTER_UV_TILES_PER_METER;
+        let uv_height = uv_size[1] * PLASTER_UV_TILES_PER_METER;
 
         self.positions
             .extend(corners.map(|corner| corner.to_array()));
         self.normals.extend([normal.to_array(); 4]);
         self.uvs.extend([
-            [0.0, 0.0],
-            [uv_size[0], 0.0],
-            [uv_size[0], uv_size[1]],
-            [0.0, uv_size[1]],
+            [uv_offset[0], uv_offset[1]],
+            [uv_offset[0] + uv_width, uv_offset[1]],
+            [uv_offset[0] + uv_width, uv_offset[1] + uv_height],
+            [uv_offset[0], uv_offset[1] + uv_height],
         ]);
         let winding_normal = (corners[1] - corners[0])
             .cross(corners[2] - corners[0])
@@ -199,4 +205,19 @@ impl WallMeshBuilder {
                 .extend([base, base + 2, base + 1, base, base + 3, base + 2]);
         }
     }
+}
+
+fn face_uv_offset(face_index: usize) -> [f32; 2] {
+    let mut hash = u32::try_from(face_index).unwrap_or(0);
+    hash ^= hash >> 16;
+    hash = hash.wrapping_mul(0x7FEB_352D);
+    hash ^= hash >> 15;
+    hash = hash.wrapping_mul(0x846C_A68B);
+    hash ^= hash >> 16;
+
+    let u_bits = u16::try_from(hash & 0xFFFF).unwrap_or(0);
+    let v_bits = u16::try_from(hash >> 16).unwrap_or(0);
+    let u = (f32::from(u_bits) / f32::from(u16::MAX)) * 3.0;
+    let v = (f32::from(v_bits) / f32::from(u16::MAX)) * 3.0;
+    [u, v]
 }
