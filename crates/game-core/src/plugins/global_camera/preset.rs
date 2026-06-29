@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{presets, SceneCameraSettings};
+use super::{SceneCameraSettings, presets};
 
 /// The currently requested global 3D camera preset.
 /// Note: it's ok to keep it copy, since it's just numeric enum
