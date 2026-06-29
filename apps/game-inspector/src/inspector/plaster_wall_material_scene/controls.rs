@@ -10,7 +10,7 @@ use bevy::{
     input_focus::tab_navigation::TabGroup,
     prelude::*,
     ui_widgets::{
-        Activate, SliderPrecision, SliderStep, SliderValue, ValueChange, slider_self_update,
+        slider_self_update, Activate, SliderPrecision, SliderStep, SliderValue, ValueChange,
     },
 };
 use game_core::plugins::inspector::{
@@ -31,12 +31,15 @@ struct PlasterWallSlider {
 enum PlasterWallSliderSetting {
     #[default]
     Seed,
-    NormalStrength,
-    BroadAmp,
-    FineAmp,
-    PatchesAmp,
-    PitsAmp,
-    HairAmp,
+    Tone,
+    Grain,
+    Stains,
+    StainDarkening,
+    Pores,
+    PoreDepth,
+    Cracks,
+    CrackDepth,
+    Normal,
     RoughBase,
     AoBase,
 }
@@ -51,14 +54,17 @@ impl PlasterWallSliderSetting {
     const fn value(&self, controls: &PlasterWallMaterialControls) -> f32 {
         match self {
             Self::Seed => controls.params.seed as f32,
-            Self::NormalStrength => controls.params.normal.strength,
-            Self::BroadAmp => controls.params.height.broad_amp,
-            Self::FineAmp => controls.params.height.fine_amp,
-            Self::PatchesAmp => controls.params.height.patches_amp,
-            Self::PitsAmp => controls.params.height.pits_amp,
-            Self::HairAmp => controls.params.height.hair_amp,
-            Self::RoughBase => controls.params.orm.rough_base,
-            Self::AoBase => controls.params.orm.ao_base,
+            Self::Tone => controls.params.tone_variation,
+            Self::Grain => controls.params.grain_height,
+            Self::Stains => controls.params.stain_count as f32,
+            Self::StainDarkening => controls.params.stain_darkening,
+            Self::Pores => controls.params.pit_count as f32,
+            Self::PoreDepth => controls.params.pit_depth,
+            Self::Cracks => controls.params.crack_count as f32,
+            Self::CrackDepth => controls.params.crack_depth,
+            Self::Normal => controls.params.normal_strength,
+            Self::RoughBase => controls.params.rough_base,
+            Self::AoBase => controls.params.ao_base,
         }
     }
 
@@ -69,14 +75,17 @@ impl PlasterWallSliderSetting {
     fn set(&self, controls: &mut PlasterWallMaterialControls, value: f32) {
         match self {
             Self::Seed => controls.params.seed = value.round().clamp(0.0, 9999.0) as u32,
-            Self::NormalStrength => controls.params.normal.strength = value.clamp(0.0, 2.0),
-            Self::BroadAmp => controls.params.height.broad_amp = value.clamp(0.0, 1.0),
-            Self::FineAmp => controls.params.height.fine_amp = value.clamp(0.0, 1.0),
-            Self::PatchesAmp => controls.params.height.patches_amp = value.clamp(0.0, 1.0),
-            Self::PitsAmp => controls.params.height.pits_amp = value.clamp(0.0, 0.5),
-            Self::HairAmp => controls.params.height.hair_amp = value.clamp(0.0, 0.5),
-            Self::RoughBase => controls.params.orm.rough_base = value.clamp(0.0, 1.0),
-            Self::AoBase => controls.params.orm.ao_base = value.clamp(0.0, 1.0),
+            Self::Tone => controls.params.tone_variation = value.clamp(0.0, 0.3),
+            Self::Grain => controls.params.grain_height = value.clamp(0.0, 0.08),
+            Self::Stains => controls.params.stain_count = value.round().clamp(0.0, 80.0) as u32,
+            Self::StainDarkening => controls.params.stain_darkening = value.clamp(0.0, 0.4),
+            Self::Pores => controls.params.pit_count = value.round().clamp(0.0, 400.0) as u32,
+            Self::PoreDepth => controls.params.pit_depth = value.clamp(0.0, 0.12),
+            Self::Cracks => controls.params.crack_count = value.round().clamp(0.0, 40.0) as u32,
+            Self::CrackDepth => controls.params.crack_depth = value.clamp(0.0, 0.14),
+            Self::Normal => controls.params.normal_strength = value.clamp(0.0, 12.0),
+            Self::RoughBase => controls.params.rough_base = value.clamp(0.0, 1.0),
+            Self::AoBase => controls.params.ao_base = value.clamp(0.0, 1.0),
         }
     }
 }
@@ -127,12 +136,15 @@ fn controls_panel() -> impl Scene {
             Children [
                 (Text("Plaster Params") ThemedText),
                 plaster_slider(PlasterWallSliderSetting::Seed, "Seed", 0.0, 9999.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::NormalStrength, "Normal", 0.0, 2.0, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::BroadAmp, "Broad amp", 0.0, 1.0, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::FineAmp, "Fine amp", 0.0, 1.0, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::PatchesAmp, "Patch amp", 0.0, 1.0, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::PitsAmp, "Pits amp", 0.0, 0.5, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::HairAmp, "Hair amp", 0.0, 0.5, 0.01, 2),
+                plaster_slider(PlasterWallSliderSetting::Tone, "Tone", 0.0, 0.3, 0.01, 2),
+                plaster_slider(PlasterWallSliderSetting::Grain, "Grain", 0.0, 0.08, 0.001, 3),
+                plaster_slider(PlasterWallSliderSetting::Stains, "Stains", 0.0, 80.0, 1.0, 0),
+                plaster_slider(PlasterWallSliderSetting::StainDarkening, "Stain dark", 0.0, 0.4, 0.01, 2),
+                plaster_slider(PlasterWallSliderSetting::Pores, "Pores", 0.0, 400.0, 1.0, 0),
+                plaster_slider(PlasterWallSliderSetting::PoreDepth, "Pore depth", 0.0, 0.12, 0.001, 3),
+                plaster_slider(PlasterWallSliderSetting::Cracks, "Cracks", 0.0, 40.0, 1.0, 0),
+                plaster_slider(PlasterWallSliderSetting::CrackDepth, "Crack depth", 0.0, 0.14, 0.001, 3),
+                plaster_slider(PlasterWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),
                 plaster_slider(PlasterWallSliderSetting::RoughBase, "Rough base", 0.0, 1.0, 0.01, 2),
                 plaster_slider(PlasterWallSliderSetting::AoBase, "AO base", 0.0, 1.0, 0.01, 2),
                 command_buttons(),

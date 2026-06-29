@@ -6,9 +6,7 @@ mod params;
 mod tests;
 
 pub use generate::{
-    PlasterTextureSet, TextureKind, generate_plaster_channel, generate_plaster_set, plaster_height,
+    PlasterGenerationStage, PlasterTextureSet, generate_plaster_set,
+    generate_plaster_set_with_progress,
 };
-pub use params::{
-    PlasterAlbedoParams, PlasterAlbedoShadeParams, PlasterAlbedoTintParams, PlasterHeightParams,
-    PlasterNormalParams, PlasterOrmParams, PlasterParams,
-};
+pub use params::PlasterParams;

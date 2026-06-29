@@ -116,6 +116,9 @@ fn wall_mesh() -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, builder.normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, builder.uvs);
     mesh.insert_indices(Indices::U32(builder.indices));
+    if let Err(err) = mesh.generate_tangents() {
+        warn!("Failed to generate tangents for plaster wall debug mesh: {err:?}");
+    }
     mesh
 }
 

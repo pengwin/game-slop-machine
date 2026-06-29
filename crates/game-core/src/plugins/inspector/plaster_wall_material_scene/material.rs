@@ -9,9 +9,10 @@ use std::sync::{
     Mutex,
     mpsc::{Receiver, Sender, channel},
 };
+pub use texture_gen::PlasterGenerationStage;
 use texture_gen::{
-    GeneratedTexture, PlasterParams, RUNTIME_TEXTURE_SIZE, TextureColorSpace, TextureKind,
-    generate_plaster_channel,
+    GeneratedTexture, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE, TextureColorSpace,
+    generate_plaster_set_with_progress,
 };
 
 use super::super::InspectorSceneState;
@@ -135,8 +136,8 @@ impl Default for PlasterWallGenerationProgress {
 pub enum PlasterWallGenerationStatus {
     /// Generation task is queued.
     Queued,
-    /// One channel is currently being generated.
-    Generating(TextureKind),
+    /// One pipeline stage has just completed.
+    Generating(PlasterGenerationStage),
     /// All channels are ready and applied.
     Ready,
 }
@@ -147,7 +148,7 @@ impl PlasterWallGenerationStatus {
     pub const fn label(&self) -> &'static str {
         match self {
             Self::Queued => "Queued",
-            Self::Generating(kind) => kind.label(),
+            Self::Generating(stage) => stage.label(),
             Self::Ready => "Ready",
         }
     }
@@ -168,8 +169,8 @@ pub struct PlasterWallGeneration {
 }
 
 enum PlasterGenerationMessage {
-    Started(u64, TextureKind),
-    Finished(u64, TextureKind, GeneratedTexture),
+    StageFinished(u64, PlasterGenerationStage),
+    Finished(u64, PlasterTextureSet),
 }
 
 pub(super) fn start_plaster_generation(
@@ -199,11 +200,13 @@ pub(super) fn start_plaster_generation(
 fn spawn_generation_task(sender: Sender<PlasterGenerationMessage>, id: u64, params: PlasterParams) {
     AsyncComputeTaskPool::get()
         .spawn(async move {
-            for kind in [TextureKind::Albedo, TextureKind::Normal, TextureKind::Orm] {
-                let _ = sender.send(PlasterGenerationMessage::Started(id, kind));
-                let texture = generate_plaster_channel(&params, kind, RUNTIME_TEXTURE_SIZE);
-                let _ = sender.send(PlasterGenerationMessage::Finished(id, kind, texture));
-            }
+            let progress_sender = sender.clone();
+            let texture_set =
+                generate_plaster_set_with_progress(&params, RUNTIME_TEXTURE_SIZE, |stage| {
+                    let _ =
+                        progress_sender.send(PlasterGenerationMessage::StageFinished(id, stage));
+                });
+            let _ = sender.send(PlasterGenerationMessage::Finished(id, texture_set));
         })
         .detach();
 }
@@ -244,31 +247,21 @@ fn poll_plaster_generation(
         };
 
         match message {
-            PlasterGenerationMessage::Started(id, kind) => {
+            PlasterGenerationMessage::StageFinished(id, stage) => {
                 if id != generation.active_id {
                     continue;
                 }
-                progress.status = PlasterWallGenerationStatus::Generating(kind);
+                progress.status = PlasterWallGenerationStatus::Generating(stage);
+                progress.fraction = stage.fraction();
             }
-            PlasterGenerationMessage::Finished(id, kind, texture) => {
+            PlasterGenerationMessage::Finished(id, texture_set) => {
                 if id != generation.active_id {
                     continue;
                 }
-                let handle = images.add(bevy_image(texture));
-                match kind {
-                    TextureKind::Albedo => {
-                        generation.albedo = Some(handle);
-                        progress.fraction = 1.0 / 3.0;
-                    }
-                    TextureKind::Normal => {
-                        generation.normal = Some(handle);
-                        progress.fraction = 2.0 / 3.0;
-                    }
-                    TextureKind::Orm => {
-                        generation.orm = Some(handle);
-                        progress.fraction = 1.0;
-                    }
-                }
+                generation.albedo = Some(images.add(bevy_image(texture_set.albedo)));
+                generation.normal = Some(images.add(bevy_image(texture_set.normal)));
+                generation.orm = Some(images.add(bevy_image(texture_set.orm)));
+                progress.fraction = 1.0;
             }
         }
     }

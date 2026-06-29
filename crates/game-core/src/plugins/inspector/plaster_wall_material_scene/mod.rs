@@ -9,8 +9,8 @@ mod root;
 mod scene_sets;
 
 pub use material::{
-    PlasterWallGenerationProgress, PlasterWallGenerationRequest, PlasterWallGenerationStatus,
-    PlasterWallMaterialControls, PlasterWallMaterialSettings,
+    PlasterGenerationStage, PlasterWallGenerationProgress, PlasterWallGenerationRequest,
+    PlasterWallGenerationStatus, PlasterWallMaterialControls, PlasterWallMaterialSettings,
 };
 pub use plugin::PlasterWallMaterialScenePlugin;
 pub use root::PlasterWallMaterialSceneRoot;

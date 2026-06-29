@@ -12,7 +12,7 @@ description = "Pure procedural texture generation for Game Slop Machine."
 readme = "../../README.md"
 
 [dependencies]
-noise = "0.9.0"
+num-traits = "0.2.19"
 
 [lints]
 workspace = true
