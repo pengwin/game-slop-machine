@@ -13,7 +13,7 @@ use bevy::{
 };
 use game_core::plugins::{global_camera::CameraPreset, inspector::InspectorSceneState};
 
-use super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
+use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
 struct CameraPresetsUi;

@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use super::{presets, SceneCameraSettings};
 
 /// The currently requested global 3D camera preset.
-#[derive(Resource, Copy, Clone, Default, Eq, PartialEq)]
+/// Note: it's ok to keep it copy, since it's just numeric enum
+#[derive(Resource, Clone, Copy, Default, Eq, PartialEq)]
 pub enum CameraPreset {
     /// Default orthographic gameplay camera.
     DefaultGame,

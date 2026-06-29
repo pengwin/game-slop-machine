@@ -14,13 +14,13 @@ use bevy::{
     prelude::*,
     ui::Checked,
     ui_widgets::{
-        checkbox_self_update, slider_self_update, Activate, SliderPrecision, SliderStep,
-        SliderValue, ValueChange,
+        Activate, SliderPrecision, SliderStep, SliderValue, ValueChange, checkbox_self_update,
+        slider_self_update,
     },
 };
 use game_core::plugins::{global_lighting::GlobalLightControls, inspector::InspectorSceneState};
 
-use super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
+use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
 struct GlobalLightUi;
@@ -28,15 +28,15 @@ struct GlobalLightUi;
 #[derive(Component, Clone, Default)]
 struct ShadowMapSizeCaption;
 
-#[derive(Component, Copy, Clone, Default)]
+#[derive(Component, Clone, Default)]
 struct GlobalLightSlider {
     setting: GlobalLightSliderSetting,
 }
 
-#[derive(Component, Copy, Clone, Default)]
+#[derive(Component, Clone, Default)]
 struct ShadowsEnabledCheckbox;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Clone, Default)]
 enum GlobalLightSliderSetting {
     #[default]
     AmbientBrightness,
@@ -52,7 +52,7 @@ enum GlobalLightSliderSetting {
 }
 
 impl GlobalLightSliderSetting {
-    const fn value(self, controls: &GlobalLightControls) -> f32 {
+    const fn value(&self, controls: &GlobalLightControls) -> f32 {
         match self {
             Self::AmbientBrightness => controls.ambient_brightness,
             Self::SunIlluminance => controls.sun_illuminance,
@@ -67,7 +67,7 @@ impl GlobalLightSliderSetting {
         }
     }
 
-    fn set(self, controls: &mut GlobalLightControls, value: f32) {
+    fn set(&self, controls: &mut GlobalLightControls, value: f32) {
         match self {
             Self::AmbientBrightness => controls.ambient_brightness = value,
             Self::SunIlluminance => controls.sun_illuminance = value,
@@ -100,7 +100,10 @@ pub fn plugin(app: &mut App) {
             sync_shadow_map_size_caption,
         ),
     )
-    .add_systems(OnExit(InspectorSceneState::Simple), despawn_ui::<GlobalLightUi>);
+    .add_systems(
+        OnExit(InspectorSceneState::Simple),
+        despawn_ui::<GlobalLightUi>,
+    );
 }
 
 fn global_light_ui() -> impl SceneList {
@@ -158,6 +161,8 @@ fn light_slider(
     step: f32,
     precision: i32,
 ) -> impl Scene {
+    let handler_setting = setting.clone();
+
     bsn! {
         Node {
             display: Display::Flex,
@@ -186,7 +191,14 @@ fn light_slider(
                 SliderStep(step)
                 SliderPrecision(precision)
                 on(slider_self_update)
-                on(handle_light_slider_change)
+                on(
+                    move |
+                        change: On<'_, '_, ValueChange<f32>>,
+                        mut controls: ResMut<'_, GlobalLightControls>,
+                    | {
+                        handler_setting.set(&mut controls, change.value);
+                    }
+                )
             )
         ]
     }
@@ -204,7 +216,14 @@ fn shadows_checkbox() -> impl Scene {
             ShadowsEnabledCheckbox
             Checked
             on(checkbox_self_update)
-            on(handle_shadows_enabled_change)
+            on(
+                |
+                    change: On<'_, '_, ValueChange<bool>>,
+                    mut controls: ResMut<'_, GlobalLightControls>,
+                | {
+                    controls.shadows_enabled = change.value;
+                }
+            )
         )
     }
 }
@@ -262,30 +281,6 @@ fn shadow_map_size_item(size: usize) -> impl Scene {
                 controls.shadow_map_size = size;
             })
         )
-    }
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn handle_light_slider_change(
-    change: On<'_, '_, ValueChange<f32>>,
-    sliders: Query<'_, '_, &GlobalLightSlider>,
-    mut controls: ResMut<'_, GlobalLightControls>,
-) {
-    let Ok(slider) = sliders.get(change.source) else {
-        return;
-    };
-
-    slider.setting.set(&mut controls, change.value);
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn handle_shadows_enabled_change(
-    change: On<'_, '_, ValueChange<bool>>,
-    checkboxes: Query<'_, '_, Entity, With<ShadowsEnabledCheckbox>>,
-    mut controls: ResMut<'_, GlobalLightControls>,
-) {
-    if checkboxes.get(change.source).is_ok() {
-        controls.shadows_enabled = change.value;
     }
 }
 

@@ -6,7 +6,7 @@ use super::boxes;
 
 pub const BOX_BOB_AMPLITUDE: f32 = boxes::BOX_SIZE.y * 0.25;
 
-#[derive(Component, Clone, Copy, Default)]
+#[derive(Component, Clone, Default)]
 pub struct SimpleSceneBoxMotion {
     pub base_y: f32,
     pub phase: f32,

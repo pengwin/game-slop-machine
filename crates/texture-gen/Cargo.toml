@@ -1,5 +1,5 @@
 [package]
-name = "game-core"
+name = "texture-gen"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,12 +8,11 @@ license.workspace = true
 keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
-description = "Reusable Bevy plugins and game systems for Game Slop Machine."
+description = "Pure procedural texture generation for Game Slop Machine."
 readme = "../../README.md"
 
 [dependencies]
-bevy.workspace = true
-texture-gen = { path = "../texture-gen" }
+noise = "0.9.0"
 
 [lints]
 workspace = true

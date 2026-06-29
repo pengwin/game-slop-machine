@@ -10,21 +10,21 @@ use bevy::{
     input_focus::tab_navigation::TabGroup,
     prelude::*,
     ui::Checked,
-    ui_widgets::{checkbox_self_update, ValueChange},
+    ui_widgets::{ValueChange, checkbox_self_update},
 };
 use game_core::plugins::{global_camera::CameraEffects, inspector::InspectorSceneState};
 
-use super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
+use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
 struct CameraEffectsUi;
 
-#[derive(Component, Copy, Clone, Default)]
+#[derive(Component, Clone, Default)]
 struct CameraEffectCheckbox {
     effect: CameraEffect,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Clone, Default)]
 enum CameraEffect {
     #[default]
     MsaaOff,
@@ -40,7 +40,7 @@ enum CameraEffect {
 }
 
 impl CameraEffect {
-    const fn enabled(self, effects: &CameraEffects) -> bool {
+    const fn enabled(&self, effects: &CameraEffects) -> bool {
         match self {
             Self::MsaaOff => effects.msaa_off,
             Self::Hdr => effects.hdr,
@@ -55,7 +55,7 @@ impl CameraEffect {
         }
     }
 
-    const fn set(self, effects: &mut CameraEffects, value: bool) {
+    const fn set(&self, effects: &mut CameraEffects, value: bool) {
         match self {
             Self::MsaaOff => effects.msaa_off = value,
             Self::Hdr => effects.hdr = value,
@@ -127,6 +127,8 @@ fn camera_effects_panel() -> impl Scene {
 }
 
 fn effect_checkbox(effect: CameraEffect, label: &'static str) -> impl Scene {
+    let handler_effect = effect.clone();
+
     bsn! {
         (
             @FeathersCheckbox {
@@ -138,22 +140,16 @@ fn effect_checkbox(effect: CameraEffect, label: &'static str) -> impl Scene {
             template_value(CameraEffectCheckbox { effect })
             Checked
             on(checkbox_self_update)
-            on(handle_camera_effect_change)
+            on(
+                move |
+                    change: On<'_, '_, ValueChange<bool>>,
+                    mut effects: ResMut<'_, CameraEffects>,
+                | {
+                    handler_effect.set(&mut effects, change.value);
+                }
+            )
         )
     }
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn handle_camera_effect_change(
-    change: On<'_, '_, ValueChange<bool>>,
-    checkboxes: Query<'_, '_, &CameraEffectCheckbox>,
-    mut effects: ResMut<'_, CameraEffects>,
-) {
-    let Ok(checkbox) = checkboxes.get(change.source) else {
-        return;
-    };
-
-    checkbox.effect.set(&mut effects, change.value);
 }
 
 #[allow(clippy::needless_pass_by_value)]
