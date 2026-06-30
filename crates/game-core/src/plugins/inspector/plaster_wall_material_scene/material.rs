@@ -2,7 +2,7 @@ use bevy::{
     asset::RenderAssetUsages,
     image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     prelude::*,
-    render::render_resource::{Extent3d, Face, TextureDimension, TextureFormat},
+    render::render_resource::{Extent3d, Face, TextureDataOrder, TextureDimension, TextureFormat},
     tasks::AsyncComputeTaskPool,
 };
 use std::sync::{
@@ -12,8 +12,8 @@ use std::sync::{
 };
 pub use texture_gen::PlasterGenerationStage;
 use texture_gen::{
-    GeneratedTexture, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE, TextureColorSpace,
-    generate_plaster_set_with_progress_and_cancellation,
+    GeneratedMipTexture, MipGenerationKind, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE,
+    TextureColorSpace, generate_mip_chain, generate_plaster_set_with_progress_and_cancellation,
 };
 
 use super::super::InspectorSceneState;
@@ -276,9 +276,18 @@ fn poll_plaster_generation(
                 if id != generation.active_id {
                     continue;
                 }
-                generation.albedo = Some(images.add(bevy_image(texture_set.albedo)));
-                generation.normal = Some(images.add(bevy_image(texture_set.normal)));
-                generation.orm = Some(images.add(bevy_image(texture_set.orm)));
+                generation.albedo = Some(images.add(bevy_image(generate_mip_chain(
+                    &texture_set.albedo,
+                    MipGenerationKind::Color,
+                ))));
+                generation.normal = Some(images.add(bevy_image(generate_mip_chain(
+                    &texture_set.normal,
+                    MipGenerationKind::Normal,
+                ))));
+                generation.orm = Some(images.add(bevy_image(generate_mip_chain(
+                    &texture_set.orm,
+                    MipGenerationKind::Color,
+                ))));
                 progress.fraction = 1.0;
             }
         }
@@ -396,22 +405,24 @@ impl PlasterWallGeneration {
     }
 }
 
-fn bevy_image(texture: GeneratedTexture) -> Image {
+fn bevy_image(texture: GeneratedMipTexture) -> Image {
     let format = match texture.color_space {
         TextureColorSpace::Srgb => TextureFormat::Rgba8UnormSrgb,
         TextureColorSpace::Linear => TextureFormat::Rgba8Unorm,
     };
-    let mut image = Image::new(
+    let mut image = Image::new_uninit(
         Extent3d {
             width: texture.width,
             height: texture.height,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
-        texture.data,
         format,
         RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
     );
+    image.data = Some(texture.data);
+    image.data_order = TextureDataOrder::MipMajor;
+    image.texture_descriptor.mip_level_count = texture.mip_level_count;
     image.sampler = ImageSampler::Descriptor(repeating_linear_sampler());
     image
 }

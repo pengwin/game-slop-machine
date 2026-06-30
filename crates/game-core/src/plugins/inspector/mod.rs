@@ -9,7 +9,7 @@ use bevy::prelude::*;
 pub use plaster_wall_material_scene::{
     PlasterWallDirtSettings, PlasterWallGenerationProgress, PlasterWallGenerationRequest,
     PlasterWallMaterialControls, PlasterWallMaterialScenePlugin, PlasterWallMaterialSceneRoot,
-    PlasterWallMaterialSettings,
+    PlasterWallMaterialSettings, PlasterWallUvSettings,
 };
 pub use simple_scene::{SimpleScenePlugin, SimpleSceneRoot};
 pub use state::InspectorSceneState;

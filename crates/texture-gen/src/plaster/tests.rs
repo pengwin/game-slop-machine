@@ -1,6 +1,8 @@
 use std::cell::Cell;
 
-use crate::{TEST_TEXTURE_SIZE, TextureColorSpace};
+use crate::{
+    GeneratedTexture, MipGenerationKind, TEST_TEXTURE_SIZE, TextureColorSpace, generate_mip_chain,
+};
 
 use super::{
     PlasterGenerationStage, PlasterParams, generate_plaster_set,
@@ -112,4 +114,39 @@ fn cancellable_generation_stops_after_requested_stage() {
 
     assert!(texture_set.is_none());
     assert_eq!(stages, [PlasterGenerationStage::Tone]);
+}
+
+#[test]
+fn color_mip_chain_has_expected_layout() {
+    let texture = GeneratedTexture {
+        width: 4,
+        height: 4,
+        data: vec![128; 4 * 4 * 4],
+        color_space: TextureColorSpace::Srgb,
+    };
+
+    let mip_texture = generate_mip_chain(&texture, MipGenerationKind::Color);
+
+    assert_eq!(mip_texture.width, 4);
+    assert_eq!(mip_texture.height, 4);
+    assert_eq!(mip_texture.color_space, TextureColorSpace::Srgb);
+    assert_eq!(mip_texture.mip_level_count, 3);
+    assert_eq!(mip_texture.data.len(), 4 * 4 * 4 + 2 * 2 * 4 + 4);
+}
+
+#[test]
+fn normal_mip_chain_renormalizes_vectors() {
+    let texture = GeneratedTexture {
+        width: 2,
+        height: 2,
+        data: [128, 128, 255, 255].repeat(4),
+        color_space: TextureColorSpace::Linear,
+    };
+
+    let mip_texture = generate_mip_chain(&texture, MipGenerationKind::Normal);
+    let final_mip = &mip_texture.data[2 * 2 * 4..];
+
+    assert_eq!(mip_texture.mip_level_count, 2);
+    assert_eq!(final_mip[3], 255);
+    assert!(final_mip[2] > 250);
 }

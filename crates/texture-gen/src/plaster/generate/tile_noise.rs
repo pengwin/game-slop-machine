@@ -1,13 +1,7 @@
 use super::math::{lerp, smooth01, u32_to_f32};
 use num_traits::ToPrimitive;
 
-pub fn fbm_tileable(
-    seed: u32,
-    base_cells: u32,
-    octaves: u32,
-    sample_u: f32,
-    sample_v: f32,
-) -> f32 {
+pub fn fbm_tileable(seed: u32, base_cells: u32, octaves: u32, sample_u: f32, sample_v: f32) -> f32 {
     let mut value = 0.0;
     let mut amp = 1.0;
     let mut amp_sum = 0.0;

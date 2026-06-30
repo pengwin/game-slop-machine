@@ -2622,6 +2622,7 @@ version = "0.0.1"
 dependencies = [
  "bevy",
  "game-core",
+ "num-traits",
 ]
 
 [[package]]

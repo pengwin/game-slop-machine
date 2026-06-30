@@ -1,8 +1,8 @@
 use super::{
     maps::WorkingMaps,
-    math::{normalize3, write_rgba},
+    math::{normalize3, u32_to_f32, write_rgba},
 };
-use crate::PlasterParams;
+use crate::{PlasterParams, RUNTIME_TEXTURE_SIZE};
 
 pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
@@ -41,6 +41,8 @@ pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
 
 pub fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
+    let width_scale = u32_to_f32(maps.size.width) / u32_to_f32(RUNTIME_TEXTURE_SIZE.width);
+    let height_scale = u32_to_f32(maps.size.height) / u32_to_f32(RUNTIME_TEXTURE_SIZE.height);
 
     for y in 0..maps.size.height {
         for x in 0..maps.size.width {
@@ -50,8 +52,8 @@ pub fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
             let right = maps.sample_height_wrapped(xi + 1, yi);
             let up = maps.sample_height_wrapped(xi, yi - 1);
             let down = maps.sample_height_wrapped(xi, yi + 1);
-            let dx = right - left;
-            let dy = down - up;
+            let dx = (right - left) * width_scale;
+            let dy = (down - up) * height_scale;
             let normal = normalize3([
                 -dx * params.normal_strength,
                 -dy * params.normal_strength,

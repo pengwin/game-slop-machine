@@ -8,21 +8,25 @@ use super::{
     scene_sets::PlasterWallMaterialSceneSet,
 };
 
-const PLASTER_UV_TILES_PER_METER: f32 = 0.32;
-const WALL_FACE_COLUMNS: usize = 12;
-const WALL_FACE_ROWS: usize = 8;
+const DEFAULT_PLASTER_UV_TILES_PER_METER: f32 = 0.32;
+const DEFAULT_WALL_FACE_COLUMNS: u32 = 12;
+const DEFAULT_WALL_FACE_ROWS: u32 = 8;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<PlasterWallDirtSettings>()
+        .init_resource::<PlasterWallUvSettings>()
         .add_systems(
             OnEnter(InspectorSceneState::PlasterWallMaterial),
             spawn_plaster_wall_geometry.in_set(PlasterWallMaterialSceneSet::Content),
         )
         .add_systems(
             Update,
-            update_plaster_wall_dirt
+            update_plaster_wall_mesh
                 .run_if(in_state(InspectorSceneState::PlasterWallMaterial))
-                .run_if(resource_changed::<PlasterWallDirtSettings>),
+                .run_if(
+                    resource_changed::<PlasterWallDirtSettings>
+                        .or_else(resource_changed::<PlasterWallUvSettings>),
+                ),
         );
 }
 
@@ -53,6 +57,30 @@ impl Default for PlasterWallDirtSettings {
     }
 }
 
+/// Editable UV projection settings for the plaster wall preview mesh.
+#[derive(Resource, Clone, Debug, PartialEq)]
+pub struct PlasterWallUvSettings {
+    /// Uses old per-face local UVs with deterministic offsets instead of world-space projection.
+    pub per_face_offset: bool,
+    /// Texture tiles per meter on the preview wall mesh.
+    pub tiles_per_meter: f32,
+    /// Horizontal subdivisions for each vertical wall face.
+    pub face_columns: u32,
+    /// Vertical subdivisions for each vertical wall face.
+    pub face_rows: u32,
+}
+
+impl Default for PlasterWallUvSettings {
+    fn default() -> Self {
+        Self {
+            per_face_offset: false,
+            tiles_per_meter: DEFAULT_PLASTER_UV_TILES_PER_METER,
+            face_columns: DEFAULT_WALL_FACE_COLUMNS,
+            face_rows: DEFAULT_WALL_FACE_ROWS,
+        }
+    }
+}
+
 #[derive(Component)]
 struct PlasterWallDebugWall;
 
@@ -60,6 +88,7 @@ fn spawn_plaster_wall_geometry(
     mut commands: Commands<'_, '_>,
     root: Query<'_, '_, Entity, With<PlasterWallMaterialSceneRoot>>,
     dirt_settings: Res<'_, PlasterWallDirtSettings>,
+    uv_settings: Res<'_, PlasterWallUvSettings>,
     mut meshes: ResMut<'_, Assets<Mesh>>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
 ) {
@@ -67,6 +96,7 @@ fn spawn_plaster_wall_geometry(
         return;
     };
     let dirt_settings = dirt_settings.into_inner();
+    let uv_settings = uv_settings.into_inner();
 
     let mut wall_material = StandardMaterial {
         base_color: Color::srgb(0.72, 0.68, 0.58),
@@ -82,7 +112,7 @@ fn spawn_plaster_wall_geometry(
         .spawn((
             Name::new("Plaster Material Debug Wall"),
             PlasterWallDebugWall,
-            Mesh3d(meshes.add(wall_mesh(dirt_settings))),
+            Mesh3d(meshes.add(wall_mesh(dirt_settings, uv_settings))),
             MeshMaterial3d(material.clone()),
         ))
         .id();
@@ -104,19 +134,25 @@ fn spawn_plaster_wall_geometry(
     info!("Spawned Plaster wall material scene geometry");
 }
 
-fn update_plaster_wall_dirt(
+fn update_plaster_wall_mesh(
     dirt_settings: Res<'_, PlasterWallDirtSettings>,
+    uv_settings: Res<'_, PlasterWallUvSettings>,
     mut meshes: ResMut<'_, Assets<Mesh>>,
     mut walls: Query<'_, '_, &mut Mesh3d, With<PlasterWallDebugWall>>,
 ) {
     let dirt_settings = dirt_settings.into_inner();
+    let uv_settings = uv_settings.into_inner();
     for mut mesh in &mut walls {
-        *mesh = Mesh3d(meshes.add(wall_mesh(dirt_settings)));
+        *mesh = Mesh3d(meshes.add(wall_mesh(dirt_settings, uv_settings)));
     }
 }
 
-fn wall_mesh(dirt_settings: &PlasterWallDirtSettings) -> Mesh {
-    let mut builder = WallMeshBuilder::default();
+fn wall_mesh(dirt_settings: &PlasterWallDirtSettings, uv_settings: &PlasterWallUvSettings) -> Mesh {
+    let mut builder = WallMeshBuilder::new(
+        uv_settings.uv_mapping(),
+        uv_settings.face_columns(),
+        uv_settings.face_rows(),
+    );
     let height = 2.4;
     let thickness = 0.18;
     let half_thickness = thickness * 0.5;
@@ -201,8 +237,11 @@ fn wall_mesh(dirt_settings: &PlasterWallDirtSettings) -> Mesh {
     mesh
 }
 
-#[derive(Default)]
 struct WallMeshBuilder {
+    uv_mapping: UvMapping,
+    face_columns: usize,
+    face_rows: usize,
+    face_count: usize,
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     uvs: Vec<[f32; 2]>,
@@ -211,6 +250,20 @@ struct WallMeshBuilder {
 }
 
 impl WallMeshBuilder {
+    const fn new(uv_mapping: UvMapping, face_columns: usize, face_rows: usize) -> Self {
+        Self {
+            uv_mapping,
+            face_columns,
+            face_rows,
+            face_count: 0,
+            positions: Vec::new(),
+            normals: Vec::new(),
+            uvs: Vec::new(),
+            colors: Vec::new(),
+            indices: Vec::new(),
+        }
+    }
+
     fn push_boundary(
         &mut self,
         points: &[Vec2],
@@ -282,13 +335,12 @@ impl WallMeshBuilder {
         let Ok(base) = u32::try_from(self.positions.len()) else {
             unreachable!("wall debug mesh vertex count fits in u32");
         };
-        let face_index = self.positions.len() / 4;
-        let uv_offset = face_uv_offset(face_index);
-        let uv_width = uv_size[0] * PLASTER_UV_TILES_PER_METER;
-        let uv_height = uv_size[1] * PLASTER_UV_TILES_PER_METER;
-        let columns = if dirt { WALL_FACE_COLUMNS } else { 1 };
-        let rows = if dirt { WALL_FACE_ROWS } else { 1 };
-        let normal = normal.to_array();
+        let face_index = self.face_count;
+        self.face_count = self.face_count.saturating_add(1);
+        let columns = if dirt { self.face_columns } else { 1 };
+        let rows = if dirt { self.face_rows } else { 1 };
+        let uv_projection = UvProjection::new(self.uv_mapping, normal, uv_size, face_index);
+        let normal_array = normal.to_array();
 
         for row in 0..=rows {
             let local_v = ratio(row, rows);
@@ -299,11 +351,8 @@ impl WallMeshBuilder {
                 let position = bottom.lerp(top, local_v);
 
                 self.positions.push(position.to_array());
-                self.normals.push(normal);
-                self.uvs.push([
-                    uv_width.mul_add(local_u, uv_offset[0]),
-                    uv_height.mul_add(local_v, uv_offset[1]),
-                ]);
+                self.normals.push(normal_array);
+                self.uvs.push(uv_projection.uv(position, local_u, local_v));
                 self.colors.push(dirt_vertex_color(
                     local_u,
                     height_ratio(position, corners),
@@ -316,7 +365,7 @@ impl WallMeshBuilder {
         let winding_normal = (corners[1] - corners[0])
             .cross(corners[2] - corners[0])
             .normalize_or_zero();
-        let same_winding = winding_normal.dot(Vec3::from_array(normal)) >= 0.0;
+        let same_winding = winding_normal.dot(Vec3::from_array(normal_array)) >= 0.0;
         let stride = columns + 1;
 
         for row in 0..rows {
@@ -332,6 +381,102 @@ impl WallMeshBuilder {
                     self.indices.extend([i0, i2, i1, i0, i3, i2]);
                 }
             }
+        }
+    }
+}
+
+impl PlasterWallUvSettings {
+    const fn uv_mapping(&self) -> UvMapping {
+        let tiles_per_meter = self.tiles_per_meter.clamp(0.01, 4.0);
+        if self.per_face_offset {
+            UvMapping::PerFaceOffset { tiles_per_meter }
+        } else {
+            UvMapping::World { tiles_per_meter }
+        }
+    }
+
+    fn face_columns(&self) -> usize {
+        usize::try_from(self.face_columns.clamp(1, 96)).unwrap_or(1)
+    }
+
+    fn face_rows(&self) -> usize {
+        usize::try_from(self.face_rows.clamp(1, 96)).unwrap_or(1)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum UvMapping {
+    World { tiles_per_meter: f32 },
+    PerFaceOffset { tiles_per_meter: f32 },
+}
+
+impl Default for UvMapping {
+    fn default() -> Self {
+        Self::World {
+            tiles_per_meter: DEFAULT_PLASTER_UV_TILES_PER_METER,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum UvProjection {
+    WorldXy {
+        tiles_per_meter: f32,
+    },
+    WorldZy {
+        tiles_per_meter: f32,
+    },
+    WorldXz {
+        tiles_per_meter: f32,
+    },
+    PerFace {
+        width: f32,
+        height: f32,
+        offset: [f32; 2],
+    },
+}
+
+impl UvProjection {
+    fn new(uv_mapping: UvMapping, normal: Vec3, uv_size: [f32; 2], face_index: usize) -> Self {
+        match uv_mapping {
+            UvMapping::World { tiles_per_meter } => Self::world(normal, tiles_per_meter),
+            UvMapping::PerFaceOffset { tiles_per_meter } => Self::PerFace {
+                width: uv_size[0] * tiles_per_meter,
+                height: uv_size[1] * tiles_per_meter,
+                offset: face_uv_offset(face_index),
+            },
+        }
+    }
+
+    fn world(normal: Vec3, tiles_per_meter: f32) -> Self {
+        if normal.y.abs() > normal.x.abs().max(normal.z.abs()) {
+            Self::WorldXz { tiles_per_meter }
+        } else if normal.x.abs() > normal.z.abs() {
+            Self::WorldZy { tiles_per_meter }
+        } else {
+            Self::WorldXy { tiles_per_meter }
+        }
+    }
+
+    fn uv(self, position: Vec3, local_u: f32, local_v: f32) -> [f32; 2] {
+        match self {
+            Self::WorldXy { tiles_per_meter } => {
+                [position.x * tiles_per_meter, position.y * tiles_per_meter]
+            }
+            Self::WorldZy { tiles_per_meter } => {
+                [position.z * tiles_per_meter, position.y * tiles_per_meter]
+            }
+            Self::WorldXz { tiles_per_meter } => {
+                [position.x * tiles_per_meter, position.z * tiles_per_meter]
+            }
+            Self::PerFace {
+                width,
+                height,
+                offset,
+            } => [
+                width.mul_add(local_u, offset[0]),
+                height.mul_add(local_v, offset[1]),
+            ],
         }
     }
 }
