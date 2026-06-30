@@ -54,10 +54,14 @@ enum ConcreteWallSliderSetting {
     Aggregates,
     AggregateContrast,
     AggregateHeight,
+    ExposedAggregate,
+    ExposedAggregateHeight,
     Voids,
     VoidDepth,
     Stains,
     StainDarkening,
+    Formwork,
+    Efflorescence,
     Cracks,
     CrackDepth,
     Normal,
@@ -93,10 +97,14 @@ impl ConcreteWallSliderSetting {
             Self::Aggregates => controls.params.aggregate_count.to_f32().unwrap_or(0.0),
             Self::AggregateContrast => controls.params.aggregate_contrast,
             Self::AggregateHeight => controls.params.aggregate_height,
+            Self::ExposedAggregate => controls.params.exposed_aggregate_count.to_f32().unwrap_or(0.0),
+            Self::ExposedAggregateHeight => controls.params.exposed_aggregate_height,
             Self::Voids => controls.params.void_count.to_f32().unwrap_or(0.0),
             Self::VoidDepth => controls.params.void_depth,
             Self::Stains => controls.params.stain_count.to_f32().unwrap_or(0.0),
             Self::StainDarkening => controls.params.stain_darkening,
+            Self::Formwork => controls.params.formwork_strength,
+            Self::Efflorescence => controls.params.efflorescence_strength,
             Self::Cracks => controls.params.crack_count.to_f32().unwrap_or(0.0),
             Self::CrackDepth => controls.params.crack_depth,
             Self::Normal => controls.params.normal_strength,
@@ -119,6 +127,13 @@ impl ConcreteWallSliderSetting {
             }
             Self::AggregateContrast => controls.params.aggregate_contrast = value.clamp(0.0, 0.5),
             Self::AggregateHeight => controls.params.aggregate_height = value.clamp(0.0, 0.08),
+            Self::ExposedAggregate => {
+                controls.params.exposed_aggregate_count =
+                    value.round().clamp(0.0, 40.0).to_u32().unwrap_or(0);
+            }
+            Self::ExposedAggregateHeight => {
+                controls.params.exposed_aggregate_height = value.clamp(0.0, 0.06);
+            }
             Self::Voids => {
                 controls.params.void_count = value.round().clamp(0.0, 260.0).to_u32().unwrap_or(0);
             }
@@ -127,6 +142,8 @@ impl ConcreteWallSliderSetting {
                 controls.params.stain_count = value.round().clamp(0.0, 80.0).to_u32().unwrap_or(0);
             }
             Self::StainDarkening => controls.params.stain_darkening = value.clamp(0.0, 0.4),
+            Self::Formwork => controls.params.formwork_strength = value.clamp(0.0, 0.5),
+            Self::Efflorescence => controls.params.efflorescence_strength = value.clamp(0.0, 0.4),
             Self::Cracks => {
                 controls.params.crack_count = value.round().clamp(0.0, 30.0).to_u32().unwrap_or(0);
             }
@@ -217,7 +234,7 @@ fn controls_panel() -> impl Scene {
                 bottom: px(12),
                 left: px(12),
                 min_width: px(330),
-                max_height: px(850),
+                max_height: px(980),
                 padding: px(8),
                 border: px(1),
                 border_radius: px(6),
@@ -240,10 +257,14 @@ fn controls_panel() -> impl Scene {
                 concrete_slider(ConcreteWallSliderSetting::Aggregates, "Aggregate", 0.0, 800.0, 1.0, 0),
                 concrete_slider(ConcreteWallSliderSetting::AggregateContrast, "Agg contrast", 0.0, 0.5, 0.01, 2),
                 concrete_slider(ConcreteWallSliderSetting::AggregateHeight, "Agg height", 0.0, 0.08, 0.001, 3),
+                concrete_slider(ConcreteWallSliderSetting::ExposedAggregate, "Exposed agg", 0.0, 40.0, 1.0, 0),
+                concrete_slider(ConcreteWallSliderSetting::ExposedAggregateHeight, "Exp height", 0.0, 0.06, 0.001, 3),
                 concrete_slider(ConcreteWallSliderSetting::Voids, "Voids", 0.0, 260.0, 1.0, 0),
                 concrete_slider(ConcreteWallSliderSetting::VoidDepth, "Void depth", 0.0, 0.14, 0.001, 3),
                 concrete_slider(ConcreteWallSliderSetting::Stains, "Stains", 0.0, 80.0, 1.0, 0),
                 concrete_slider(ConcreteWallSliderSetting::StainDarkening, "Stain dark", 0.0, 0.4, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::Formwork, "Formwork", 0.0, 0.5, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::Efflorescence, "Efflorescence", 0.0, 0.4, 0.01, 2),
                 concrete_slider(ConcreteWallSliderSetting::Cracks, "Cracks", 0.0, 30.0, 1.0, 0),
                 concrete_slider(ConcreteWallSliderSetting::CrackDepth, "Crack depth", 0.0, 0.14, 0.001, 3),
                 concrete_slider(ConcreteWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),

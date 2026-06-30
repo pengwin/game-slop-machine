@@ -33,6 +33,14 @@ pub struct ConcreteParams {
     pub crack_depth: f32,
     /// Fine sandy grain strength in height.
     pub grain_height: f32,
+    /// Strength of horizontal formwork board marks.
+    pub formwork_strength: f32,
+    /// Number of large exposed aggregate stones.
+    pub exposed_aggregate_count: u32,
+    /// Height of exposed aggregate stones in the height field.
+    pub exposed_aggregate_height: f32,
+    /// Strength of white efflorescence mineral deposits.
+    pub efflorescence_strength: f32,
     /// Normal strength multiplier.
     pub normal_strength: f32,
     /// Base ambient occlusion.
@@ -60,6 +68,10 @@ impl Hash for ConcreteParams {
         self.crack_count.hash(state);
         self.crack_depth.to_bits().hash(state);
         self.grain_height.to_bits().hash(state);
+        self.formwork_strength.to_bits().hash(state);
+        self.exposed_aggregate_count.hash(state);
+        self.exposed_aggregate_height.to_bits().hash(state);
+        self.efflorescence_strength.to_bits().hash(state);
         self.normal_strength.to_bits().hash(state);
         self.ao_base.to_bits().hash(state);
         self.rough_base.to_bits().hash(state);
@@ -79,11 +91,15 @@ impl Default for ConcreteParams {
             aggregate_height: 0.018,
             void_count: 85,
             void_depth: 0.05,
-            stain_count: 16,
+            stain_count: 5,
             stain_darkening: 0.13,
             crack_count: 3,
             crack_depth: 0.032,
             grain_height: 0.022,
+            formwork_strength: 0.15,
+            exposed_aggregate_count: 8,
+            exposed_aggregate_height: 0.025,
+            efflorescence_strength: 0.12,
             normal_strength: 5.5,
             ao_base: 0.93,
             rough_base: 0.88,

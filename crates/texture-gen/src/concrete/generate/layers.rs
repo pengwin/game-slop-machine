@@ -22,7 +22,7 @@ pub fn build_tileable_tone(
             let broad = fbm_tileable(params.seed ^ 0x3100, 2, 4, u, v);
             let pozzolana = fbm_tileable(params.seed ^ 0x3101, 5, 4, u, v);
             let lime = fbm_tileable(params.seed ^ 0x3102, 11, 3, u, v);
-            let grain = fbm_tileable(params.seed ^ 0x3103, 120, 2, u, v);
+            let grain = fbm_tileable(params.seed ^ 0x3103, 70, 2, u, v);
             let i = maps.index(x, y);
 
             maps.tone[i] = broad.mul_add(0.55, pozzolana * 0.45).mul_add(2.0, -1.0);
@@ -141,6 +141,108 @@ pub fn draw_stains(
     true
 }
 
+pub fn build_formwork_marks(
+    params: &ConcreteParams,
+    maps: &mut WorkingMaps,
+    should_cancel: &impl Fn() -> bool,
+) -> bool {
+    let mut rng = SmallRng::new(params.seed ^ 0xF0AB);
+    let board_count = rng.u32_range(5, 9);
+    let board_spacing = 1.0 / u32_to_f32(board_count);
+
+    for y in 0..maps.size.height {
+        if should_cancel() {
+            return false;
+        }
+        let v = u32_to_f32(y) / u32_to_f32(maps.size.height);
+
+        for x in 0..maps.size.width {
+            let u = u32_to_f32(x) / u32_to_f32(maps.size.width);
+            let board_index = (v / board_spacing).floor();
+            let board_seed = params.seed ^ 0xB0A7_u32.wrapping_add(
+                board_index.to_u32().unwrap_or(0),
+            );
+            let wave = fbm_tileable(board_seed, 3, 2, u, 0.0);
+            let edge = v % board_spacing;
+            let edge_dist = edge.min(board_spacing - edge);
+            let board_edge = smoothstep(board_spacing * 0.08, board_spacing * 0.02, edge_dist);
+            let notch = (wave * 2.0 - 1.0).abs();
+            let mark = board_edge * (1.0 - notch * 0.6);
+
+            let i = maps.index(x, y);
+            maps.formwork[i] = mark;
+        }
+    }
+
+    true
+}
+
+pub fn draw_exposed_aggregate(
+    params: &ConcreteParams,
+    maps: &mut WorkingMaps,
+    should_cancel: &impl Fn() -> bool,
+) -> bool {
+    let mut rng = SmallRng::new(params.seed ^ 0xE99A);
+
+    for _ in 0..params.exposed_aggregate_count {
+        if should_cancel() {
+            return false;
+        }
+
+        let center_u = rng.f32();
+        let center_v = rng.f32();
+        let radius = rng.range(0.015, 0.045);
+        let strength = rng.range(0.5, 1.0);
+        let tint = if rng.f32() > 0.5 {
+            rng.range(0.3, 1.0)
+        } else {
+            -rng.range(0.2, 0.7)
+        };
+
+        raster_ellipse(
+            maps,
+            center_u,
+            center_v,
+            radius,
+            radius * rng.range(0.7, 1.3),
+            |maps, index, soft| {
+                let value = soft * strength;
+                maps.exposed_aggregate[index] = maps.exposed_aggregate[index].max(value);
+                if value > maps.aggregate_tint[index].abs() {
+                    maps.aggregate_tint[index] = tint * value;
+                }
+            },
+        );
+    }
+
+    true
+}
+
+pub fn build_efflorescence(
+    params: &ConcreteParams,
+    maps: &mut WorkingMaps,
+    should_cancel: &impl Fn() -> bool,
+) -> bool {
+    for y in 0..maps.size.height {
+        if should_cancel() {
+            return false;
+        }
+        for x in 0..maps.size.width {
+            let u = u32_to_f32(x) / u32_to_f32(maps.size.width);
+            let v = u32_to_f32(y) / u32_to_f32(maps.size.height);
+            let broad = fbm_tileable(params.seed ^ 0xEFF0, 4, 3, u, v);
+            let detail = fbm_tileable(params.seed ^ 0xEFF1, 18, 2, u, v);
+            let combined = broad * 0.65 + detail * 0.35;
+            let mask = smoothstep(0.52, 0.78, combined);
+
+            let i = maps.index(x, y);
+            maps.efflorescence[i] = mask;
+        }
+    }
+
+    true
+}
+
 pub fn draw_hairline_cracks(
     params: &ConcreteParams,
     maps: &mut WorkingMaps,
@@ -182,7 +284,10 @@ pub fn compose_height(
         maps.height[i] =
             (maps.lime[i] * params.lime_cloud_strength).mul_add(0.018, maps.height[i]);
         maps.height[i] = maps.aggregate[i].mul_add(params.aggregate_height, maps.height[i]);
+        maps.height[i] = maps.exposed_aggregate[i]
+            .mul_add(params.exposed_aggregate_height, maps.height[i]);
         maps.height[i] = maps.void[i].mul_add(-params.void_depth, maps.height[i]);
+        maps.height[i] = maps.formwork[i].mul_add(-params.formwork_strength * 0.03, maps.height[i]);
         maps.height[i] = (maps.crack_lip[i] * params.crack_depth).mul_add(0.42, maps.height[i]);
         maps.height[i] = maps.crack[i].mul_add(-params.crack_depth, maps.height[i]);
     }

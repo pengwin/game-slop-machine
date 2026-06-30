@@ -12,6 +12,9 @@ pub struct WorkingMaps {
     pub stain: Vec<f32>,
     pub crack: Vec<f32>,
     pub crack_lip: Vec<f32>,
+    pub formwork: Vec<f32>,
+    pub exposed_aggregate: Vec<f32>,
+    pub efflorescence: Vec<f32>,
 }
 
 impl WorkingMaps {
@@ -28,6 +31,9 @@ impl WorkingMaps {
             stain: vec![0.0; len],
             crack: vec![0.0; len],
             crack_lip: vec![0.0; len],
+            formwork: vec![0.0; len],
+            exposed_aggregate: vec![0.0; len],
+            efflorescence: vec![0.0; len],
         }
     }
 

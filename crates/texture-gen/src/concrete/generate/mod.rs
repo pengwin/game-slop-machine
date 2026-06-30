@@ -9,8 +9,8 @@ use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
 use super::params::ConcreteParams;
 use channels::{build_albedo, build_normal, build_orm};
 use layers::{
-    build_tileable_tone, compose_height, draw_aggregate, draw_hairline_cracks, draw_stains,
-    draw_voids,
+    build_tileable_tone, build_formwork_marks, build_efflorescence, compose_height,
+    draw_aggregate, draw_exposed_aggregate, draw_hairline_cracks, draw_stains, draw_voids,
 };
 use maps::WorkingMaps;
 
@@ -66,15 +66,30 @@ pub fn generate_concrete_set_with_progress_and_cancellation(
     }
     on_stage_finished(ConcreteGenerationStage::Voids);
 
+    if !draw_exposed_aggregate(params, &mut maps, &should_cancel) {
+        return None;
+    }
+    on_stage_finished(ConcreteGenerationStage::ExposedAggregate);
+
     if !draw_stains(params, &mut maps, &should_cancel) {
         return None;
     }
     on_stage_finished(ConcreteGenerationStage::Stains);
 
+    if !build_formwork_marks(params, &mut maps, &should_cancel) {
+        return None;
+    }
+    on_stage_finished(ConcreteGenerationStage::Formwork);
+
     if !draw_hairline_cracks(params, &mut maps, &should_cancel) {
         return None;
     }
     on_stage_finished(ConcreteGenerationStage::Cracks);
+
+    if !build_efflorescence(params, &mut maps, &should_cancel) {
+        return None;
+    }
+    on_stage_finished(ConcreteGenerationStage::Efflorescence);
 
     if !compose_height(params, &mut maps, &should_cancel) {
         return None;
