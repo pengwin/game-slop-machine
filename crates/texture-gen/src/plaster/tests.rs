@@ -1,7 +1,10 @@
+use std::cell::Cell;
+
 use crate::{TEST_TEXTURE_SIZE, TextureColorSpace};
 
 use super::{
-    PlasterGenerationStage, PlasterParams, generate_plaster_set, generate_plaster_set_with_progress,
+    PlasterGenerationStage, PlasterParams, generate_plaster_set,
+    generate_plaster_set_with_progress, generate_plaster_set_with_progress_and_cancellation,
 };
 
 fn params(seed: u32) -> PlasterParams {
@@ -91,4 +94,22 @@ fn staged_generation_reports_expected_order() {
             PlasterGenerationStage::Orm,
         ]
     );
+}
+
+#[test]
+fn cancellable_generation_stops_after_requested_stage() {
+    let cancelled = Cell::new(false);
+    let mut stages = Vec::new();
+    let texture_set = generate_plaster_set_with_progress_and_cancellation(
+        &params(31),
+        TEST_TEXTURE_SIZE,
+        |stage| {
+            stages.push(stage);
+            cancelled.set(true);
+        },
+        || cancelled.get(),
+    );
+
+    assert!(texture_set.is_none());
+    assert_eq!(stages, [PlasterGenerationStage::Tone]);
 }

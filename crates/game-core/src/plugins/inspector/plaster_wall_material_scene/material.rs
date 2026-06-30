@@ -6,13 +6,14 @@ use bevy::{
     tasks::AsyncComputeTaskPool,
 };
 use std::sync::{
-    Mutex,
+    Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
     mpsc::{Receiver, Sender, channel},
 };
 pub use texture_gen::PlasterGenerationStage;
 use texture_gen::{
     GeneratedTexture, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE, TextureColorSpace,
-    generate_plaster_set_with_progress,
+    generate_plaster_set_with_progress_and_cancellation,
 };
 
 use super::super::InspectorSceneState;
@@ -161,7 +162,7 @@ pub struct PlasterWallGeneration {
     material: Handle<StandardMaterial>,
     active_id: u64,
     next_id: u64,
-    pending_params: Option<PlasterParams>,
+    cancellation: Arc<AtomicBool>,
     albedo: Option<Handle<Image>>,
     normal: Option<Handle<Image>>,
     orm: Option<Handle<Image>>,
@@ -173,20 +174,21 @@ enum PlasterGenerationMessage {
     Finished(u64, PlasterTextureSet),
 }
 
-pub(super) fn start_plaster_generation(
+pub fn start_plaster_generation(
     commands: &mut Commands<'_, '_>,
     material: Handle<StandardMaterial>,
     params: PlasterParams,
 ) {
     let (sender, receiver) = channel();
-    spawn_generation_task(sender, 0, params);
+    let cancellation = Arc::new(AtomicBool::new(false));
+    spawn_generation_task(sender, 0, params, Arc::clone(&cancellation));
 
     commands.insert_resource(PlasterWallGeneration {
         receiver: Mutex::new(receiver),
         material,
         active_id: 0,
         next_id: 1,
-        pending_params: None,
+        cancellation,
         albedo: None,
         normal: None,
         orm: None,
@@ -197,15 +199,31 @@ pub(super) fn start_plaster_generation(
     info!("Started plaster wall material generation");
 }
 
-fn spawn_generation_task(sender: Sender<PlasterGenerationMessage>, id: u64, params: PlasterParams) {
+fn spawn_generation_task(
+    sender: Sender<PlasterGenerationMessage>,
+    id: u64,
+    params: PlasterParams,
+    cancellation: Arc<AtomicBool>,
+) {
     AsyncComputeTaskPool::get()
         .spawn(async move {
             let progress_sender = sender.clone();
-            let texture_set =
-                generate_plaster_set_with_progress(&params, RUNTIME_TEXTURE_SIZE, |stage| {
+            let progress_cancellation = Arc::clone(&cancellation);
+            let texture_set = generate_plaster_set_with_progress_and_cancellation(
+                &params,
+                RUNTIME_TEXTURE_SIZE,
+                |stage| {
+                    if progress_cancellation.load(Ordering::Relaxed) {
+                        return;
+                    }
                     let _ =
                         progress_sender.send(PlasterGenerationMessage::StageFinished(id, stage));
-                });
+                },
+                || cancellation.load(Ordering::Relaxed),
+            );
+            let Some(texture_set) = texture_set else {
+                return;
+            };
             let _ = sender.send(PlasterGenerationMessage::Finished(id, texture_set));
         })
         .detach();
@@ -288,10 +306,6 @@ fn poll_plaster_generation(
 
     progress.status = PlasterWallGenerationStatus::Ready;
     generation.applied = true;
-
-    if let Some(params) = generation.pending_params.take() {
-        begin_next_plaster_generation(generation, progress, params);
-    }
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -311,7 +325,7 @@ fn apply_plaster_wall_material_settings(
 }
 
 #[allow(clippy::missing_const_for_fn)]
-pub(super) fn apply_material_settings(
+pub fn apply_material_settings(
     material: &mut StandardMaterial,
     settings: &PlasterWallMaterialSettings,
 ) {
@@ -338,13 +352,7 @@ fn request_plaster_generation(
     progress: &mut PlasterWallGenerationProgress,
     params: PlasterParams,
 ) {
-    if generation.applied {
-        begin_next_plaster_generation(generation, progress, params);
-    } else {
-        generation.pending_params = Some(params);
-        progress.status = PlasterWallGenerationStatus::Queued;
-        progress.fraction = 0.0;
-    }
+    begin_next_plaster_generation(generation, progress, params);
 }
 
 fn begin_next_plaster_generation(
@@ -353,8 +361,10 @@ fn begin_next_plaster_generation(
     params: PlasterParams,
 ) {
     let id = generation.next_id;
+    generation.cancel_active();
     generation.next_id = generation.next_id.saturating_add(1);
     generation.active_id = id;
+    generation.cancellation = Arc::new(AtomicBool::new(false));
     generation.albedo = None;
     generation.normal = None;
     generation.orm = None;
@@ -362,7 +372,12 @@ fn begin_next_plaster_generation(
     progress.status = PlasterWallGenerationStatus::Queued;
     progress.fraction = 0.0;
 
-    spawn_generation_task(generation.sender(), id, params);
+    spawn_generation_task(
+        generation.sender(),
+        id,
+        params,
+        Arc::clone(&generation.cancellation),
+    );
 }
 
 impl PlasterWallGeneration {
@@ -374,6 +389,10 @@ impl PlasterWallGeneration {
         let old_receiver = std::mem::replace(&mut *receiver, replacement_receiver);
         drop(old_receiver);
         sender
+    }
+
+    fn cancel_active(&self) {
+        self.cancellation.store(true, Ordering::Relaxed);
     }
 }
 

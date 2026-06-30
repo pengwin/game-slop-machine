@@ -1,7 +1,7 @@
 use super::math::{lerp, smooth01, u32_to_f32};
 use num_traits::ToPrimitive;
 
-pub(super) fn fbm_tileable(
+pub fn fbm_tileable(
     seed: u32,
     base_cells: u32,
     octaves: u32,

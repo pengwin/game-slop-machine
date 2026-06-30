@@ -4,7 +4,7 @@ use super::{
 };
 use crate::PlasterParams;
 
-pub(super) fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
+pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
 
     for y in 0..maps.size.height {
@@ -39,7 +39,7 @@ pub(super) fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8
     data
 }
 
-pub(super) fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
+pub fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
 
     for y in 0..maps.size.height {
@@ -76,7 +76,7 @@ pub(super) fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8
     data
 }
 
-pub(super) fn build_orm(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
+pub fn build_orm(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
 
     for y in 0..maps.size.height {

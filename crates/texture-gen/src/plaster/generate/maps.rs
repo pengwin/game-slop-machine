@@ -1,19 +1,19 @@
 use crate::TextureSize;
 
 #[derive(Clone)]
-pub(super) struct WorkingMaps {
-    pub(super) size: TextureSize,
-    pub(super) height: Vec<f32>,
-    pub(super) tone: Vec<f32>,
-    pub(super) macro_tone: Vec<f32>,
-    pub(super) stain: Vec<f32>,
-    pub(super) crack: Vec<f32>,
-    pub(super) crack_lip: Vec<f32>,
-    pub(super) pit: Vec<f32>,
+pub struct WorkingMaps {
+    pub size: TextureSize,
+    pub height: Vec<f32>,
+    pub tone: Vec<f32>,
+    pub macro_tone: Vec<f32>,
+    pub stain: Vec<f32>,
+    pub crack: Vec<f32>,
+    pub crack_lip: Vec<f32>,
+    pub pit: Vec<f32>,
 }
 
 impl WorkingMaps {
-    pub(super) fn new(size: TextureSize) -> Self {
+    pub fn new(size: TextureSize) -> Self {
         let len = (size.width * size.height) as usize;
         Self {
             size,
@@ -27,11 +27,11 @@ impl WorkingMaps {
         }
     }
 
-    pub(super) const fn index(&self, x: u32, y: u32) -> usize {
+    pub const fn index(&self, x: u32, y: u32) -> usize {
         (y * self.size.width + x) as usize
     }
 
-    pub(super) fn sample_height_wrapped(&self, x: i64, y: i64) -> f32 {
+    pub fn sample_height_wrapped(&self, x: i64, y: i64) -> f32 {
         let width = i64::from(self.size.width);
         let height = i64::from(self.size.height);
         let xx = u32::try_from(x.rem_euclid(width)).unwrap_or(0);
