@@ -106,6 +106,17 @@ fn selector_root() -> impl Scene {
                                         on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorSceneState>>| {
                                             next_scene.set(InspectorSceneState::PlasterWallMaterial);
                                         })
+                                    ),
+                                    (
+                                        @FeathersMenuItem {
+                                            @caption: bsn! { Text("Concrete wall material") ThemedText }
+                                        }
+                                        InheritableFont {
+                                            font_size: PANEL_FONT_SIZE,
+                                        }
+                                        on(|_: On<'_, '_, Activate>, mut next_scene: ResMut<'_, NextState<InspectorSceneState>>| {
+                                            next_scene.set(InspectorSceneState::ConcreteWallMaterial);
+                                        })
                                     )
                                 ]
                             )

@@ -1,5 +1,5 @@
 [package]
-name = "game-core"
+name = "material-preview-geometry"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,13 +8,11 @@ license.workspace = true
 keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
-description = "Reusable Bevy plugins and game systems for Game Slop Machine."
+description = "Reusable Bevy preview geometry for material inspection."
 readme = "../../README.md"
 
 [dependencies]
 bevy.workspace = true
-material-preview-geometry = { path = "../material-preview-geometry" }
-texture-gen = { path = "../texture-gen" }
 
 [lints]
 workspace = true

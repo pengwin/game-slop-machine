@@ -6,11 +6,11 @@ pub fn u32_to_f32(value: u32) -> f32 {
 }
 
 pub fn write_rgba(data: &mut [u8], size: TextureSize, x: u32, y: u32, rgba: [f32; 4]) {
-    let i = ((y * size.width + x) * 4) as usize;
-    data[i] = to_u8(rgba[0]);
-    data[i + 1] = to_u8(rgba[1]);
-    data[i + 2] = to_u8(rgba[2]);
-    data[i + 3] = to_u8(rgba[3]);
+    let index = usize::try_from((y * size.width + x) * 4).unwrap_or(0);
+    data[index] = to_u8(rgba[0]);
+    data[index + 1] = to_u8(rgba[1]);
+    data[index + 2] = to_u8(rgba[2]);
+    data[index + 3] = to_u8(rgba[3]);
 }
 
 fn to_u8(value: f32) -> u8 {

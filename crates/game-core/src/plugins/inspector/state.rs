@@ -10,6 +10,8 @@ pub enum InspectorSceneState {
     Simple,
     /// The plaster wall material debug scene is currently active.
     PlasterWallMaterial,
+    /// The concrete wall material debug scene is currently active.
+    ConcreteWallMaterial,
 }
 
 impl InspectorSceneState {
@@ -20,6 +22,7 @@ impl InspectorSceneState {
             Self::None => "None",
             Self::Simple => "Simple scene",
             Self::PlasterWallMaterial => "Plaster wall material",
+            Self::ConcreteWallMaterial => "Concrete wall material",
         }
     }
 }

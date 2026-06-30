@@ -1,4 +1,4 @@
-//! Parameter controls for plaster wall material generation.
+//! Parameter controls for concrete wall material generation.
 
 use bevy::{
     feathers::{
@@ -16,19 +16,19 @@ use bevy::{
     },
 };
 use game_core::plugins::inspector::{
-    InspectorSceneState, PlasterWallDirtSettings, PlasterWallGenerationRequest,
-    PlasterWallMaterialControls, PlasterWallUvSettings,
+    ConcreteWallDirtSettings, ConcreteWallGenerationRequest, ConcreteWallMaterialControls,
+    ConcreteWallUvSettings, InspectorSceneState,
 };
 use num_traits::ToPrimitive;
 
 use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
 #[derive(Component, Clone, Default)]
-struct PlasterWallControlsUi;
+struct ConcreteWallControlsUi;
 
 #[derive(Component, Clone, Default)]
-struct PlasterWallSlider {
-    setting: PlasterWallSliderSetting,
+struct ConcreteWallSlider {
+    setting: ConcreteWallSliderSetting,
 }
 
 #[derive(Component, Clone, Default)]
@@ -45,15 +45,19 @@ struct UvSlider {
 struct PerFaceUvCheckbox;
 
 #[derive(Clone, Default)]
-enum PlasterWallSliderSetting {
+enum ConcreteWallSliderSetting {
     #[default]
     Seed,
     Tone,
+    LimeClouds,
     Grain,
+    Aggregates,
+    AggregateContrast,
+    AggregateHeight,
+    Voids,
+    VoidDepth,
     Stains,
     StainDarkening,
-    Pores,
-    PoreDepth,
     Cracks,
     CrackDepth,
     Normal,
@@ -79,23 +83,21 @@ enum UvSliderSetting {
     FaceRows,
 }
 
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    reason = "seed is edited through a float slider and clamped to a small integer range"
-)]
-impl PlasterWallSliderSetting {
-    const fn value(&self, controls: &PlasterWallMaterialControls) -> f32 {
+impl ConcreteWallSliderSetting {
+    fn value(&self, controls: &ConcreteWallMaterialControls) -> f32 {
         match self {
-            Self::Seed => controls.params.seed as f32,
+            Self::Seed => controls.params.seed.to_f32().unwrap_or(0.0),
             Self::Tone => controls.params.tone_variation,
+            Self::LimeClouds => controls.params.lime_cloud_strength,
             Self::Grain => controls.params.grain_height,
-            Self::Stains => controls.params.stain_count as f32,
+            Self::Aggregates => controls.params.aggregate_count.to_f32().unwrap_or(0.0),
+            Self::AggregateContrast => controls.params.aggregate_contrast,
+            Self::AggregateHeight => controls.params.aggregate_height,
+            Self::Voids => controls.params.void_count.to_f32().unwrap_or(0.0),
+            Self::VoidDepth => controls.params.void_depth,
+            Self::Stains => controls.params.stain_count.to_f32().unwrap_or(0.0),
             Self::StainDarkening => controls.params.stain_darkening,
-            Self::Pores => controls.params.pit_count as f32,
-            Self::PoreDepth => controls.params.pit_depth,
-            Self::Cracks => controls.params.crack_count as f32,
+            Self::Cracks => controls.params.crack_count.to_f32().unwrap_or(0.0),
             Self::CrackDepth => controls.params.crack_depth,
             Self::Normal => controls.params.normal_strength,
             Self::RoughBase => controls.params.rough_base,
@@ -103,20 +105,31 @@ impl PlasterWallSliderSetting {
         }
     }
 
-    #[allow(
-        clippy::missing_const_for_fn,
-        reason = "kept non-const to match other UI setting mutators"
-    )]
-    fn set(&self, controls: &mut PlasterWallMaterialControls, value: f32) {
+    fn set(&self, controls: &mut ConcreteWallMaterialControls, value: f32) {
         match self {
-            Self::Seed => controls.params.seed = value.round().clamp(0.0, 9999.0) as u32,
+            Self::Seed => {
+                controls.params.seed = value.round().clamp(0.0, 9999.0).to_u32().unwrap_or(0);
+            }
             Self::Tone => controls.params.tone_variation = value.clamp(0.0, 0.3),
+            Self::LimeClouds => controls.params.lime_cloud_strength = value.clamp(0.0, 0.3),
             Self::Grain => controls.params.grain_height = value.clamp(0.0, 0.08),
-            Self::Stains => controls.params.stain_count = value.round().clamp(0.0, 80.0) as u32,
+            Self::Aggregates => {
+                controls.params.aggregate_count =
+                    value.round().clamp(0.0, 800.0).to_u32().unwrap_or(0);
+            }
+            Self::AggregateContrast => controls.params.aggregate_contrast = value.clamp(0.0, 0.5),
+            Self::AggregateHeight => controls.params.aggregate_height = value.clamp(0.0, 0.08),
+            Self::Voids => {
+                controls.params.void_count = value.round().clamp(0.0, 260.0).to_u32().unwrap_or(0);
+            }
+            Self::VoidDepth => controls.params.void_depth = value.clamp(0.0, 0.14),
+            Self::Stains => {
+                controls.params.stain_count = value.round().clamp(0.0, 80.0).to_u32().unwrap_or(0);
+            }
             Self::StainDarkening => controls.params.stain_darkening = value.clamp(0.0, 0.4),
-            Self::Pores => controls.params.pit_count = value.round().clamp(0.0, 400.0) as u32,
-            Self::PoreDepth => controls.params.pit_depth = value.clamp(0.0, 0.12),
-            Self::Cracks => controls.params.crack_count = value.round().clamp(0.0, 40.0) as u32,
+            Self::Cracks => {
+                controls.params.crack_count = value.round().clamp(0.0, 30.0).to_u32().unwrap_or(0);
+            }
             Self::CrackDepth => controls.params.crack_depth = value.clamp(0.0, 0.14),
             Self::Normal => controls.params.normal_strength = value.clamp(0.0, 12.0),
             Self::RoughBase => controls.params.rough_base = value.clamp(0.0, 1.0),
@@ -126,7 +139,7 @@ impl PlasterWallSliderSetting {
 }
 
 impl DirtSliderSetting {
-    const fn value(&self, settings: &PlasterWallDirtSettings) -> f32 {
+    const fn value(&self, settings: &ConcreteWallDirtSettings) -> f32 {
         match self {
             Self::FloorDirt => settings.floor_strength,
             Self::CornerDirt => settings.corner_strength,
@@ -136,7 +149,7 @@ impl DirtSliderSetting {
         }
     }
 
-    const fn set(&self, settings: &mut PlasterWallDirtSettings, value: f32) {
+    const fn set(&self, settings: &mut ConcreteWallDirtSettings, value: f32) {
         match self {
             Self::FloorDirt => settings.floor_strength = value.clamp(0.0, 1.5),
             Self::CornerDirt => settings.corner_strength = value.clamp(0.0, 1.5),
@@ -148,7 +161,7 @@ impl DirtSliderSetting {
 }
 
 impl UvSliderSetting {
-    fn value(&self, settings: &PlasterWallUvSettings) -> f32 {
+    fn value(&self, settings: &ConcreteWallUvSettings) -> f32 {
         match self {
             Self::TilesPerMeter => settings.tiles_per_meter,
             Self::FaceColumns => settings.face_columns.to_f32().unwrap_or(1.0),
@@ -156,7 +169,7 @@ impl UvSliderSetting {
         }
     }
 
-    fn set(&self, settings: &mut PlasterWallUvSettings, value: f32) {
+    fn set(&self, settings: &mut ConcreteWallUvSettings, value: f32) {
         match self {
             Self::TilesPerMeter => settings.tiles_per_meter = value.clamp(0.05, 1.5),
             Self::FaceColumns => {
@@ -171,34 +184,34 @@ impl UvSliderSetting {
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
-        OnEnter(InspectorSceneState::PlasterWallMaterial),
-        plaster_wall_controls_ui.spawn(),
+        OnEnter(InspectorSceneState::ConcreteWallMaterial),
+        concrete_wall_controls_ui.spawn(),
     )
     .add_systems(
         Update,
         (
-            sync_plaster_wall_sliders,
+            sync_concrete_wall_sliders,
             sync_dirt_sliders,
             sync_uv_sliders,
             sync_uv_checkboxes,
         )
-            .run_if(in_state(InspectorSceneState::PlasterWallMaterial)),
+            .run_if(in_state(InspectorSceneState::ConcreteWallMaterial)),
     )
     .add_systems(
-        OnExit(InspectorSceneState::PlasterWallMaterial),
-        despawn_ui::<PlasterWallControlsUi>,
+        OnExit(InspectorSceneState::ConcreteWallMaterial),
+        despawn_ui::<ConcreteWallControlsUi>,
     );
 }
 
-fn plaster_wall_controls_ui() -> impl SceneList {
+fn concrete_wall_controls_ui() -> impl SceneList {
     bsn_list![controls_panel()]
 }
 
 fn controls_panel() -> impl Scene {
     bsn! {
         (
-            Name::new("Plaster Wall Controls UI")
-            PlasterWallControlsUi
+            Name::new("Concrete Wall Controls UI")
+            ConcreteWallControlsUi
             Node {
                 position_type: PositionType::Absolute,
                 bottom: px(12),
@@ -219,19 +232,23 @@ fn controls_panel() -> impl Scene {
                 font_size: PANEL_FONT_SIZE,
             }
             Children [
-                (Text("Plaster Params") ThemedText),
-                plaster_slider(PlasterWallSliderSetting::Seed, "Seed", 0.0, 9999.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::Tone, "Tone", 0.0, 0.3, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::Grain, "Grain", 0.0, 0.08, 0.001, 3),
-                plaster_slider(PlasterWallSliderSetting::Stains, "Stains", 0.0, 80.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::StainDarkening, "Stain dark", 0.0, 0.4, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::Pores, "Pores", 0.0, 400.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::PoreDepth, "Pore depth", 0.0, 0.12, 0.001, 3),
-                plaster_slider(PlasterWallSliderSetting::Cracks, "Cracks", 0.0, 40.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::CrackDepth, "Crack depth", 0.0, 0.14, 0.001, 3),
-                plaster_slider(PlasterWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),
-                plaster_slider(PlasterWallSliderSetting::RoughBase, "Rough base", 0.0, 1.0, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::AoBase, "AO base", 0.0, 1.0, 0.01, 2),
+                (Text("Concrete Params") ThemedText),
+                concrete_slider(ConcreteWallSliderSetting::Seed, "Seed", 0.0, 9999.0, 1.0, 0),
+                concrete_slider(ConcreteWallSliderSetting::Tone, "Tone", 0.0, 0.3, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::LimeClouds, "Lime", 0.0, 0.3, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::Grain, "Grain", 0.0, 0.08, 0.001, 3),
+                concrete_slider(ConcreteWallSliderSetting::Aggregates, "Aggregate", 0.0, 800.0, 1.0, 0),
+                concrete_slider(ConcreteWallSliderSetting::AggregateContrast, "Agg contrast", 0.0, 0.5, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::AggregateHeight, "Agg height", 0.0, 0.08, 0.001, 3),
+                concrete_slider(ConcreteWallSliderSetting::Voids, "Voids", 0.0, 260.0, 1.0, 0),
+                concrete_slider(ConcreteWallSliderSetting::VoidDepth, "Void depth", 0.0, 0.14, 0.001, 3),
+                concrete_slider(ConcreteWallSliderSetting::Stains, "Stains", 0.0, 80.0, 1.0, 0),
+                concrete_slider(ConcreteWallSliderSetting::StainDarkening, "Stain dark", 0.0, 0.4, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::Cracks, "Cracks", 0.0, 30.0, 1.0, 0),
+                concrete_slider(ConcreteWallSliderSetting::CrackDepth, "Crack depth", 0.0, 0.14, 0.001, 3),
+                concrete_slider(ConcreteWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),
+                concrete_slider(ConcreteWallSliderSetting::RoughBase, "Rough base", 0.0, 1.0, 0.01, 2),
+                concrete_slider(ConcreteWallSliderSetting::AoBase, "AO base", 0.0, 1.0, 0.01, 2),
                 (Text("Dirt") ThemedText),
                 dirt_slider(DirtSliderSetting::FloorDirt, "Floor dirt", 0.0, 1.5, 0.01, 2),
                 dirt_slider(DirtSliderSetting::CornerDirt, "Corner dirt", 0.0, 1.5, 0.01, 2),
@@ -249,8 +266,8 @@ fn controls_panel() -> impl Scene {
     }
 }
 
-fn plaster_slider(
-    setting: PlasterWallSliderSetting,
+fn concrete_slider(
+    setting: ConcreteWallSliderSetting,
     label: &'static str,
     min: f32,
     max: f32,
@@ -283,14 +300,14 @@ fn plaster_slider(
                     @max: max,
                     @value: min,
                 }
-                template_value(PlasterWallSlider { setting })
+                template_value(ConcreteWallSlider { setting })
                 SliderStep(step)
                 SliderPrecision(precision)
                 on(slider_self_update)
                 on(
                     move |
                         change: On<'_, '_, ValueChange<f32>>,
-                        mut controls: ResMut<'_, PlasterWallMaterialControls>,
+                        mut controls: ResMut<'_, ConcreteWallMaterialControls>,
                     | {
                         handler_setting.set(&mut controls, change.value);
                     }
@@ -341,7 +358,7 @@ fn dirt_slider(
                 on(
                     move |
                         change: On<'_, '_, ValueChange<f32>>,
-                        mut dirt_settings: ResMut<'_, PlasterWallDirtSettings>,
+                        mut dirt_settings: ResMut<'_, ConcreteWallDirtSettings>,
                     | {
                         handler_setting.set(&mut dirt_settings, change.value);
                     }
@@ -392,7 +409,7 @@ fn uv_slider(
                 on(
                     move |
                         change: On<'_, '_, ValueChange<f32>>,
-                        mut uv_settings: ResMut<'_, PlasterWallUvSettings>,
+                        mut uv_settings: ResMut<'_, ConcreteWallUvSettings>,
                     | {
                         handler_setting.set(&mut uv_settings, change.value);
                     }
@@ -416,7 +433,7 @@ fn uv_checkbox() -> impl Scene {
             on(
                 |
                     change: On<'_, '_, ValueChange<bool>>,
-                    mut uv_settings: ResMut<'_, PlasterWallUvSettings>,
+                    mut uv_settings: ResMut<'_, ConcreteWallUvSettings>,
                 | {
                     uv_settings.per_face_offset = change.value;
                 }
@@ -460,9 +477,9 @@ fn command_buttons() -> impl Scene {
 fn handle_apply(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
-    controls: Res<'_, PlasterWallMaterialControls>,
+    controls: Res<'_, ConcreteWallMaterialControls>,
 ) {
-    commands.insert_resource(PlasterWallGenerationRequest {
+    commands.insert_resource(ConcreteWallGenerationRequest {
         params: controls.params.clone(),
     });
 }
@@ -471,23 +488,23 @@ fn handle_apply(
 fn handle_reset(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
-    mut controls: ResMut<'_, PlasterWallMaterialControls>,
-    mut dirt_settings: ResMut<'_, PlasterWallDirtSettings>,
-    mut uv_settings: ResMut<'_, PlasterWallUvSettings>,
+    mut controls: ResMut<'_, ConcreteWallMaterialControls>,
+    mut dirt_settings: ResMut<'_, ConcreteWallDirtSettings>,
+    mut uv_settings: ResMut<'_, ConcreteWallUvSettings>,
 ) {
-    *controls = PlasterWallMaterialControls::default();
-    *dirt_settings = PlasterWallDirtSettings::default();
-    *uv_settings = PlasterWallUvSettings::default();
-    commands.insert_resource(PlasterWallGenerationRequest {
+    *controls = ConcreteWallMaterialControls::default();
+    *dirt_settings = ConcreteWallDirtSettings::default();
+    *uv_settings = ConcreteWallUvSettings::default();
+    commands.insert_resource(ConcreteWallGenerationRequest {
         params: controls.params.clone(),
     });
 }
 
 #[allow(clippy::needless_pass_by_value)]
-fn sync_plaster_wall_sliders(
+fn sync_concrete_wall_sliders(
     mut commands: Commands<'_, '_>,
-    controls: Res<'_, PlasterWallMaterialControls>,
-    sliders: Query<'_, '_, (Entity, &PlasterWallSlider, &SliderValue)>,
+    controls: Res<'_, ConcreteWallMaterialControls>,
+    sliders: Query<'_, '_, (Entity, &ConcreteWallSlider, &SliderValue)>,
 ) {
     for (entity, slider, value) in &sliders {
         let expected = slider.setting.value(&controls);
@@ -499,7 +516,7 @@ fn sync_plaster_wall_sliders(
 
 fn sync_uv_checkboxes(
     mut commands: Commands<'_, '_>,
-    uv_settings: Res<'_, PlasterWallUvSettings>,
+    uv_settings: Res<'_, ConcreteWallUvSettings>,
     checkboxes: Query<'_, '_, (Entity, Has<Checked>), With<PerFaceUvCheckbox>>,
 ) {
     let uv_settings = uv_settings.into_inner();
@@ -514,7 +531,7 @@ fn sync_uv_checkboxes(
 
 fn sync_uv_sliders(
     mut commands: Commands<'_, '_>,
-    uv_settings: Res<'_, PlasterWallUvSettings>,
+    uv_settings: Res<'_, ConcreteWallUvSettings>,
     sliders: Query<'_, '_, (Entity, &UvSlider, &SliderValue)>,
 ) {
     let uv_settings = uv_settings.into_inner();
@@ -528,7 +545,7 @@ fn sync_uv_sliders(
 
 fn sync_dirt_sliders(
     mut commands: Commands<'_, '_>,
-    dirt_settings: Res<'_, PlasterWallDirtSettings>,
+    dirt_settings: Res<'_, ConcreteWallDirtSettings>,
     sliders: Query<'_, '_, (Entity, &DirtSlider, &SliderValue)>,
 ) {
     let dirt_settings = dirt_settings.into_inner();

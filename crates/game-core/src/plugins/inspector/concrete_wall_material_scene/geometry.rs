@@ -5,13 +5,13 @@ use material_preview_geometry::{
 };
 
 use super::{
-    super::InspectorSceneState, material, root::PlasterWallMaterialSceneRoot,
-    scene_sets::PlasterWallMaterialSceneSet,
+    super::InspectorSceneState, material, root::ConcreteWallMaterialSceneRoot,
+    scene_sets::ConcreteWallMaterialSceneSet,
 };
 
-/// Editable vertex-color dirt settings for the plaster wall preview mesh.
+/// Editable vertex-color dirt settings for the concrete wall preview mesh.
 #[derive(Resource, Clone, Debug, PartialEq)]
-pub struct PlasterWallDirtSettings {
+pub struct ConcreteWallDirtSettings {
     /// Dirt amount that accumulates upward from the floor.
     pub floor_strength: f32,
     /// Dirt amount that accumulates in wall corner triangles.
@@ -24,7 +24,7 @@ pub struct PlasterWallDirtSettings {
     pub color_b: f32,
 }
 
-impl Default for PlasterWallDirtSettings {
+impl Default for ConcreteWallDirtSettings {
     fn default() -> Self {
         let defaults = WallPreviewDirtSettings::default();
         Self {
@@ -37,8 +37,8 @@ impl Default for PlasterWallDirtSettings {
     }
 }
 
-impl From<&PlasterWallDirtSettings> for WallPreviewDirtSettings {
-    fn from(settings: &PlasterWallDirtSettings) -> Self {
+impl From<&ConcreteWallDirtSettings> for WallPreviewDirtSettings {
+    fn from(settings: &ConcreteWallDirtSettings) -> Self {
         Self {
             floor_strength: settings.floor_strength,
             corner_strength: settings.corner_strength,
@@ -49,9 +49,9 @@ impl From<&PlasterWallDirtSettings> for WallPreviewDirtSettings {
     }
 }
 
-/// Editable UV projection settings for the plaster wall preview mesh.
+/// Editable UV projection settings for the concrete wall preview mesh.
 #[derive(Resource, Clone, Debug, PartialEq)]
-pub struct PlasterWallUvSettings {
+pub struct ConcreteWallUvSettings {
     /// Uses old per-face local UVs with deterministic offsets instead of world-space projection.
     pub per_face_offset: bool,
     /// Texture tiles per meter on the preview wall mesh.
@@ -62,7 +62,7 @@ pub struct PlasterWallUvSettings {
     pub face_rows: u32,
 }
 
-impl Default for PlasterWallUvSettings {
+impl Default for ConcreteWallUvSettings {
     fn default() -> Self {
         let defaults = WallPreviewUvSettings::default();
         Self {
@@ -74,8 +74,8 @@ impl Default for PlasterWallUvSettings {
     }
 }
 
-impl From<&PlasterWallUvSettings> for WallPreviewUvSettings {
-    fn from(settings: &PlasterWallUvSettings) -> Self {
+impl From<&ConcreteWallUvSettings> for WallPreviewUvSettings {
+    fn from(settings: &ConcreteWallUvSettings) -> Self {
         Self {
             per_face_offset: settings.per_face_offset,
             tiles_per_meter: settings.tiles_per_meter,
@@ -86,31 +86,31 @@ impl From<&PlasterWallUvSettings> for WallPreviewUvSettings {
 }
 
 #[derive(Component)]
-struct PlasterWallDebugWall;
+struct ConcreteWallDebugWall;
 
 pub fn plugin(app: &mut App) {
-    app.init_resource::<PlasterWallDirtSettings>()
-        .init_resource::<PlasterWallUvSettings>()
+    app.init_resource::<ConcreteWallDirtSettings>()
+        .init_resource::<ConcreteWallUvSettings>()
         .add_systems(
-            OnEnter(InspectorSceneState::PlasterWallMaterial),
-            spawn_plaster_wall_geometry.in_set(PlasterWallMaterialSceneSet::Content),
+            OnEnter(InspectorSceneState::ConcreteWallMaterial),
+            spawn_concrete_wall_geometry.in_set(ConcreteWallMaterialSceneSet::Content),
         )
         .add_systems(
             Update,
-            update_plaster_wall_mesh
-                .run_if(in_state(InspectorSceneState::PlasterWallMaterial))
+            update_concrete_wall_mesh
+                .run_if(in_state(InspectorSceneState::ConcreteWallMaterial))
                 .run_if(
-                    resource_changed::<PlasterWallDirtSettings>
-                        .or_else(resource_changed::<PlasterWallUvSettings>),
+                    resource_changed::<ConcreteWallDirtSettings>
+                        .or_else(resource_changed::<ConcreteWallUvSettings>),
                 ),
         );
 }
 
-fn spawn_plaster_wall_geometry(
+fn spawn_concrete_wall_geometry(
     mut commands: Commands<'_, '_>,
-    root: Query<'_, '_, Entity, With<PlasterWallMaterialSceneRoot>>,
-    dirt_settings: Res<'_, PlasterWallDirtSettings>,
-    uv_settings: Res<'_, PlasterWallUvSettings>,
+    root: Query<'_, '_, Entity, With<ConcreteWallMaterialSceneRoot>>,
+    dirt_settings: Res<'_, ConcreteWallDirtSettings>,
+    uv_settings: Res<'_, ConcreteWallUvSettings>,
     mut meshes: ResMut<'_, Assets<Mesh>>,
     mut materials: ResMut<'_, Assets<StandardMaterial>>,
 ) {
@@ -121,26 +121,26 @@ fn spawn_plaster_wall_geometry(
     let uv_settings = uv_settings.into_inner();
 
     let mut wall_material = StandardMaterial {
-        base_color: Color::srgb(0.72, 0.68, 0.58),
+        base_color: Color::srgb(0.58, 0.55, 0.48),
         perceptual_roughness: 1.0,
         ..default()
     };
     material::apply_material_settings(
         &mut wall_material,
-        &material::PlasterWallMaterialSettings::default(),
+        &material::ConcreteWallMaterialSettings::default(),
     );
     let material = materials.add(wall_material);
     let wall = commands
         .spawn((
-            Name::new("Plaster Material Debug Wall"),
-            PlasterWallDebugWall,
+            Name::new("Concrete Material Debug Wall"),
+            ConcreteWallDebugWall,
             Mesh3d(meshes.add(wall_mesh(dirt_settings, uv_settings))),
             MeshMaterial3d(material.clone()),
         ))
         .id();
     let ground = commands
         .spawn((
-            Name::new("Plaster Material Debug Ground"),
+            Name::new("Concrete Material Debug Ground"),
             Mesh3d(meshes.add(Plane3d::default().mesh().size(9.0, 9.0))),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgb(0.24, 0.27, 0.25),
@@ -151,16 +151,20 @@ fn spawn_plaster_wall_geometry(
         .id();
 
     commands.entity(root).add_children(&[wall, ground]);
-    material::start_plaster_generation(&mut commands, material, material::default_plaster_params());
+    material::start_concrete_generation(
+        &mut commands,
+        material,
+        material::default_concrete_params(),
+    );
 
-    info!("Spawned Plaster wall material scene geometry");
+    info!("Spawned Concrete wall material scene geometry");
 }
 
-fn update_plaster_wall_mesh(
-    dirt_settings: Res<'_, PlasterWallDirtSettings>,
-    uv_settings: Res<'_, PlasterWallUvSettings>,
+fn update_concrete_wall_mesh(
+    dirt_settings: Res<'_, ConcreteWallDirtSettings>,
+    uv_settings: Res<'_, ConcreteWallUvSettings>,
     mut meshes: ResMut<'_, Assets<Mesh>>,
-    mut walls: Query<'_, '_, &mut Mesh3d, With<PlasterWallDebugWall>>,
+    mut walls: Query<'_, '_, &mut Mesh3d, With<ConcreteWallDebugWall>>,
 ) {
     let dirt_settings = dirt_settings.into_inner();
     let uv_settings = uv_settings.into_inner();
@@ -169,7 +173,10 @@ fn update_plaster_wall_mesh(
     }
 }
 
-fn wall_mesh(dirt_settings: &PlasterWallDirtSettings, uv_settings: &PlasterWallUvSettings) -> Mesh {
+fn wall_mesh(
+    dirt_settings: &ConcreteWallDirtSettings,
+    uv_settings: &ConcreteWallUvSettings,
+) -> Mesh {
     build_wall_preview_mesh(
         &WallPreviewMeshSettings::default(),
         &WallPreviewDirtSettings::from(dirt_settings),

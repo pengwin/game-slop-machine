@@ -1,10 +1,10 @@
-use super::{
-    maps::WorkingMaps,
+use super::maps::WorkingMaps;
+use crate::PlasterParams;
+use crate::surface::{
     math::{distance_to_segment, smoothstep, u32_to_f32, wrapped_delta},
     rng::SmallRng,
     tile_noise::fbm_tileable,
 };
-use crate::PlasterParams;
 use num_traits::ToPrimitive;
 
 pub fn build_tileable_tone(

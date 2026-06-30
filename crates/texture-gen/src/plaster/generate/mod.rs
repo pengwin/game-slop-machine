@@ -1,11 +1,8 @@
 mod channels;
 mod layers;
 mod maps;
-mod math;
-mod rng;
 mod stage;
 mod texture_set;
-mod tile_noise;
 
 use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
 

@@ -1,9 +1,15 @@
 //! Pure procedural texture generation.
 
+mod concrete;
 mod mip;
 mod plaster;
+mod surface;
 mod texture;
 
+pub use concrete::{
+    ConcreteGenerationStage, ConcreteParams, ConcreteTextureSet, generate_concrete_set,
+    generate_concrete_set_with_progress, generate_concrete_set_with_progress_and_cancellation,
+};
 pub use mip::{GeneratedMipTexture, MipGenerationKind, generate_mip_chain};
 pub use plaster::{
     PlasterGenerationStage, PlasterParams, PlasterTextureSet, generate_plaster_set,

@@ -1,23 +1,25 @@
 use super::maps::WorkingMaps;
 use crate::surface::math::{normalize3, u32_to_f32, write_rgba};
-use crate::{PlasterParams, RUNTIME_TEXTURE_SIZE};
+use crate::{ConcreteParams, RUNTIME_TEXTURE_SIZE};
 
-pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
+pub fn build_albedo(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
 
     for y in 0..maps.size.height {
         for x in 0..maps.size.width {
             let i = maps.index(x, y);
             let tone = maps.tone[i] * params.tone_variation;
-            let macro_tone = maps.macro_tone[i] * params.tone_variation * 1.35;
+            let lime = maps.lime[i] * params.lime_cloud_strength;
+            let aggregate = maps.aggregate[i];
+            let aggregate_tint = maps.aggregate_tint[i] * params.aggregate_contrast;
             let stain = maps.stain[i] * params.stain_darkening;
-            let crack = maps.crack[i] * 0.21;
-            let crack_lip = maps.crack_lip[i] * 0.045;
-            let pit = maps.pit[i] * 0.08;
-            let shade =
-                (1.0 + tone + macro_tone + crack_lip - stain - crack - pit).clamp(0.42, 1.28);
-            let warm = maps.macro_tone[i].mul_add(0.8, maps.tone[i]).max(0.0) * 0.035;
-            let cool = (-maps.macro_tone[i].mul_add(0.5, maps.tone[i])).max(0.0) * 0.025;
+            let void = maps.void[i] * 0.12;
+            let crack = maps.crack[i] * 0.18;
+            let shade = (lime.mul_add(0.65, 1.0 + tone) - stain - void - crack).clamp(0.42, 1.32);
+            let warm_aggregate = aggregate_tint.max(0.0) * aggregate;
+            let cool_aggregate = (-aggregate_tint).max(0.0) * aggregate;
+            let lime_rub = lime.max(0.0) * 0.055;
+            let pozzolana = (-lime).max(0.0) * 0.045;
 
             write_rgba(
                 &mut data,
@@ -25,9 +27,9 @@ pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
                 x,
                 y,
                 [
-                    params.base_color[0].mul_add(shade, warm),
-                    params.base_color[1].mul_add(shade, warm * 0.55),
-                    params.base_color[2].mul_add(shade, -cool),
+                    params.base_color[0].mul_add(shade, lime_rub + warm_aggregate * 0.22),
+                    params.base_color[1].mul_add(shade, lime_rub * 0.8 + warm_aggregate * 0.11),
+                    params.base_color[2].mul_add(shade, cool_aggregate * 0.14 - pozzolana),
                     1.0,
                 ],
             );
@@ -37,7 +39,7 @@ pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     data
 }
 
-pub fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
+pub fn build_normal(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
     let width_scale = u32_to_f32(maps.size.width) / u32_to_f32(RUNTIME_TEXTURE_SIZE.width);
     let height_scale = u32_to_f32(maps.size.height) / u32_to_f32(RUNTIME_TEXTURE_SIZE.height);
@@ -76,35 +78,24 @@ pub fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     data
 }
 
-pub fn build_orm(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
+pub fn build_orm(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
 
     for y in 0..maps.size.height {
         for x in 0..maps.size.width {
             let i = maps.index(x, y);
-            let crack = maps.crack[i];
-            let crack_lip = maps.crack_lip[i];
-            let pit = maps.pit[i];
-            let stain = maps.stain[i];
-            let macro_dirt = (-maps.macro_tone[i]).max(0.0);
-            let occlusion = pit
+            let occlusion = maps.void[i]
                 .mul_add(
-                    -0.25,
-                    crack.mul_add(
-                        -0.34,
-                        crack_lip.mul_add(-0.04, macro_dirt.mul_add(-0.04, params.ao_base)),
-                    ),
+                    -0.28,
+                    maps.crack[i].mul_add(-0.31, maps.aggregate[i].mul_add(-0.025, params.ao_base)),
                 )
                 .clamp(0.0, 1.0);
-            let roughness = crack
+            let roughness = maps.stain[i]
                 .mul_add(
-                    -0.03,
-                    pit.mul_add(
-                        0.04,
-                        stain.mul_add(0.06, macro_dirt.mul_add(0.03, params.rough_base)),
-                    ),
+                    0.05,
+                    maps.void[i].mul_add(0.04, maps.aggregate[i].mul_add(0.035, params.rough_base)),
                 )
-                .clamp(0.65, 1.0);
+                .clamp(0.62, 1.0);
 
             write_rgba(&mut data, maps.size, x, y, [occlusion, roughness, 0.0, 1.0]);
         }
