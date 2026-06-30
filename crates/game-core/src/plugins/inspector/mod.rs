@@ -4,6 +4,7 @@ pub mod concrete_wall_material_scene;
 pub mod plaster_wall_material_scene;
 pub mod simple_scene;
 mod state;
+pub mod wall_material;
 
 use bevy::prelude::*;
 

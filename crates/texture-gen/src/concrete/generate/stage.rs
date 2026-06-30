@@ -1,3 +1,5 @@
+use crate::material::TextureStage;
+
 /// One discrete stage in the concrete texture pipeline.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum ConcreteGenerationStage {
@@ -64,5 +66,15 @@ impl ConcreteGenerationStage {
             Self::Normal => 11.0 / 12.0,
             Self::Orm => 1.0,
         }
+    }
+}
+
+impl TextureStage for ConcreteGenerationStage {
+    fn label(&self) -> &'static str {
+        Self::label(*self)
+    }
+
+    fn fraction(&self) -> f32 {
+        Self::fraction(*self)
     }
 }

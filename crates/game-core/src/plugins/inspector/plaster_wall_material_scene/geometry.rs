@@ -8,6 +8,7 @@ use super::{
     super::InspectorSceneState, material, root::PlasterWallMaterialSceneRoot,
     scene_sets::PlasterWallMaterialSceneSet,
 };
+use super::super::wall_material::apply_material_settings;
 
 /// Editable vertex-color dirt settings for the plaster wall preview mesh.
 #[derive(Resource, Clone, Debug, PartialEq)]
@@ -125,7 +126,7 @@ fn spawn_plaster_wall_geometry(
         perceptual_roughness: 1.0,
         ..default()
     };
-    material::apply_material_settings(
+    apply_material_settings(
         &mut wall_material,
         &material::PlasterWallMaterialSettings::default(),
     );

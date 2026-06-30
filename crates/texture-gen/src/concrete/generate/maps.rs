@@ -40,12 +40,4 @@ impl WorkingMaps {
     pub const fn index(&self, x: u32, y: u32) -> usize {
         (y * self.size.width + x) as usize
     }
-
-    pub fn sample_height_wrapped(&self, x: i64, y: i64) -> f32 {
-        let width = i64::from(self.size.width);
-        let height = i64::from(self.size.height);
-        let xx = u32::try_from(x.rem_euclid(width)).unwrap_or(0);
-        let yy = u32::try_from(y.rem_euclid(height)).unwrap_or(0);
-        self.height[self.index(xx, yy)]
-    }
 }

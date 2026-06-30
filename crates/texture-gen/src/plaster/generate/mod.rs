@@ -2,9 +2,9 @@ mod channels;
 mod layers;
 mod maps;
 mod stage;
-mod texture_set;
 
 use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
+pub use crate::material::PbrTextureSet as PlasterTextureSet;
 
 use super::params::PlasterParams;
 use channels::{build_albedo, build_normal, build_orm};
@@ -14,7 +14,6 @@ use layers::{
 use maps::WorkingMaps;
 
 pub use stage::PlasterGenerationStage;
-pub use texture_set::PlasterTextureSet;
 
 /// Generates all plaster PBR texture channels.
 #[must_use]

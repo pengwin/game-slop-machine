@@ -1,8 +1,5 @@
 use bevy::{
-    asset::RenderAssetUsages,
-    image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
     prelude::*,
-    render::render_resource::{Extent3d, Face, TextureDataOrder, TextureDimension, TextureFormat},
     tasks::AsyncComputeTaskPool,
 };
 use std::sync::{
@@ -12,11 +9,17 @@ use std::sync::{
 };
 pub use texture_gen::PlasterGenerationStage;
 use texture_gen::{
-    GeneratedMipTexture, MipGenerationKind, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE,
-    TextureColorSpace, generate_mip_chain, generate_plaster_set_with_progress_and_cancellation,
+    MipGenerationKind, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE,
+    generate_mip_chain, generate_plaster_set_with_progress_and_cancellation,
 };
 
 use super::super::InspectorSceneState;
+use super::super::wall_material::{
+    WallMaterialSettings, apply_material_settings, bevy_image,
+};
+
+/// Editable `StandardMaterial` settings for the plaster wall material.
+pub type PlasterWallMaterialSettings = WallMaterialSettings;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<PlasterWallMaterialControls>()
@@ -47,45 +50,6 @@ impl Default for PlasterWallMaterialControls {
     fn default() -> Self {
         Self {
             params: default_plaster_params(),
-        }
-    }
-}
-
-/// Editable `StandardMaterial` settings for the plaster wall material.
-#[derive(Resource, Clone, Debug, PartialEq)]
-pub struct PlasterWallMaterialSettings {
-    /// Red tint multiplier.
-    pub tint_r: f32,
-    /// Green tint multiplier.
-    pub tint_g: f32,
-    /// Blue tint multiplier.
-    pub tint_b: f32,
-    /// Roughness scalar multiplied with the ORM roughness channel.
-    pub perceptual_roughness: f32,
-    /// Metallic scalar multiplied with the ORM metallic channel.
-    pub metallic: f32,
-    /// Specular intensity for the non-metal surface.
-    pub reflectance: f32,
-    /// Enables two-sided lighting in the PBR shader.
-    pub double_sided: bool,
-    /// Disables backface culling when true.
-    pub cull_none: bool,
-    /// Shows base color only, ignoring lighting and maps.
-    pub unlit: bool,
-}
-
-impl Default for PlasterWallMaterialSettings {
-    fn default() -> Self {
-        Self {
-            tint_r: 1.0,
-            tint_g: 1.0,
-            tint_b: 1.0,
-            perceptual_roughness: 1.0,
-            metallic: 1.0,
-            reflectance: 0.5,
-            double_sided: false,
-            cull_none: false,
-            unlit: false,
         }
     }
 }
@@ -333,29 +297,6 @@ fn apply_plaster_wall_material_settings(
     apply_material_settings(&mut material, &settings);
 }
 
-#[allow(clippy::missing_const_for_fn)]
-pub fn apply_material_settings(
-    material: &mut StandardMaterial,
-    settings: &PlasterWallMaterialSettings,
-) {
-    material.base_color = Color::srgba(
-        settings.tint_r.clamp(0.0, 2.0),
-        settings.tint_g.clamp(0.0, 2.0),
-        settings.tint_b.clamp(0.0, 2.0),
-        1.0,
-    );
-    material.perceptual_roughness = settings.perceptual_roughness.clamp(0.0, 1.0);
-    material.metallic = settings.metallic.clamp(0.0, 1.0);
-    material.reflectance = settings.reflectance.clamp(0.0, 1.0);
-    material.double_sided = settings.double_sided;
-    material.cull_mode = if settings.cull_none {
-        None
-    } else {
-        Some(Face::Back)
-    };
-    material.unlit = settings.unlit;
-}
-
 fn request_plaster_generation(
     generation: &mut PlasterWallGeneration,
     progress: &mut PlasterWallGenerationProgress,
@@ -402,39 +343,5 @@ impl PlasterWallGeneration {
 
     fn cancel_active(&self) {
         self.cancellation.store(true, Ordering::Relaxed);
-    }
-}
-
-fn bevy_image(texture: GeneratedMipTexture) -> Image {
-    let format = match texture.color_space {
-        TextureColorSpace::Srgb => TextureFormat::Rgba8UnormSrgb,
-        TextureColorSpace::Linear => TextureFormat::Rgba8Unorm,
-    };
-    let mut image = Image::new_uninit(
-        Extent3d {
-            width: texture.width,
-            height: texture.height,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        format,
-        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
-    );
-    image.data = Some(texture.data);
-    image.data_order = TextureDataOrder::MipMajor;
-    image.texture_descriptor.mip_level_count = texture.mip_level_count;
-    image.sampler = ImageSampler::Descriptor(repeating_linear_sampler());
-    image
-}
-
-fn repeating_linear_sampler() -> ImageSamplerDescriptor {
-    ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        address_mode_w: ImageAddressMode::Repeat,
-        mag_filter: ImageFilterMode::Linear,
-        min_filter: ImageFilterMode::Linear,
-        mipmap_filter: ImageFilterMode::Linear,
-        ..default()
     }
 }

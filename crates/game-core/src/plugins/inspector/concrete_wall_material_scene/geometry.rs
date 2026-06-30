@@ -8,6 +8,7 @@ use super::{
     super::InspectorSceneState, material, root::ConcreteWallMaterialSceneRoot,
     scene_sets::ConcreteWallMaterialSceneSet,
 };
+use super::super::wall_material::apply_material_settings;
 
 /// Editable vertex-color dirt settings for the concrete wall preview mesh.
 #[derive(Resource, Clone, Debug, PartialEq)]
@@ -125,7 +126,7 @@ fn spawn_concrete_wall_geometry(
         perceptual_roughness: 1.0,
         ..default()
     };
-    material::apply_material_settings(
+    apply_material_settings(
         &mut wall_material,
         &material::ConcreteWallMaterialSettings::default(),
     );

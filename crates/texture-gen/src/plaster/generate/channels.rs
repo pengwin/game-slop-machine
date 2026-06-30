@@ -1,6 +1,7 @@
 use super::maps::WorkingMaps;
-use crate::surface::math::{normalize3, u32_to_f32, write_rgba};
-use crate::{PlasterParams, RUNTIME_TEXTURE_SIZE};
+use crate::surface::math::write_rgba;
+use crate::surface::normal::build_normal_from_height;
+use crate::PlasterParams;
 
 pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
@@ -38,42 +39,7 @@ pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
 }
 
 pub fn build_normal(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
-    let mut data = vec![255; maps.size.rgba_len()];
-    let width_scale = u32_to_f32(maps.size.width) / u32_to_f32(RUNTIME_TEXTURE_SIZE.width);
-    let height_scale = u32_to_f32(maps.size.height) / u32_to_f32(RUNTIME_TEXTURE_SIZE.height);
-
-    for y in 0..maps.size.height {
-        for x in 0..maps.size.width {
-            let xi = i64::from(x);
-            let yi = i64::from(y);
-            let left = maps.sample_height_wrapped(xi - 1, yi);
-            let right = maps.sample_height_wrapped(xi + 1, yi);
-            let up = maps.sample_height_wrapped(xi, yi - 1);
-            let down = maps.sample_height_wrapped(xi, yi + 1);
-            let dx = (right - left) * width_scale;
-            let dy = (down - up) * height_scale;
-            let normal = normalize3([
-                -dx * params.normal_strength,
-                -dy * params.normal_strength,
-                1.0,
-            ]);
-
-            write_rgba(
-                &mut data,
-                maps.size,
-                x,
-                y,
-                [
-                    normal[0].mul_add(0.5, 0.5),
-                    normal[1].mul_add(0.5, 0.5),
-                    normal[2].mul_add(0.5, 0.5),
-                    1.0,
-                ],
-            );
-        }
-    }
-
-    data
+    build_normal_from_height(&maps.height, maps.size, params.normal_strength)
 }
 
 pub fn build_orm(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {

@@ -2,9 +2,9 @@ mod channels;
 mod layers;
 mod maps;
 mod stage;
-mod texture_set;
 
 use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
+pub use crate::material::PbrTextureSet as ConcreteTextureSet;
 
 use super::params::ConcreteParams;
 use channels::{build_albedo, build_normal, build_orm};
@@ -15,7 +15,6 @@ use layers::{
 use maps::WorkingMaps;
 
 pub use stage::ConcreteGenerationStage;
-pub use texture_set::ConcreteTextureSet;
 
 /// Generates all concrete PBR texture channels.
 #[must_use]
