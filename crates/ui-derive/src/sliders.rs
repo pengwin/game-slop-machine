@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
-use syn::{DataStruct, Expr, Field, Lit, Type, punctuated::Punctuated, token::Comma};
+use syn::{DataStruct, DeriveInput, Expr, Field, Lit, Type, punctuated::Punctuated, token::Comma};
 
 struct SliderField {
     field_name: Ident,
@@ -13,7 +13,10 @@ struct SliderField {
     is_u32: bool,
 }
 
-pub fn impl_sliders(struct_ident: &Ident, data: &DataStruct) -> TokenStream {
+pub fn impl_sliders(input: &DeriveInput, data: &DataStruct) -> TokenStream {
+    let struct_ident = &input.ident;
+    let post_fn = parse_post_attr(input);
+
     let fields: Vec<SliderField> = data
         .fields
         .iter()
@@ -25,19 +28,20 @@ pub fn impl_sliders(struct_ident: &Ident, data: &DataStruct) -> TokenStream {
     }
 
     let enum_ident = Ident::new(&format!("{struct_ident}Slider"), struct_ident.span());
-
     let variants: Vec<Ident> = fields
         .iter()
         .map(|f| Ident::new(&snake_to_pascal_case(&f.field_name.to_string()), f.field_name.span()))
         .collect();
 
-    let labels: Vec<_> = fields.iter().map(|f| f.label.as_str()).collect();
-    let mins: Vec<_> = fields.iter().map(|f| f.min).collect();
-    let maxs: Vec<_> = fields.iter().map(|f| f.max).collect();
-    let steps: Vec<_> = fields.iter().map(|f| f.step).collect();
-    let precisions: Vec<_> = fields.iter().map(|f| f.precision).collect();
+    let value_arms = build_value_arms(&fields, &variants);
+    let set_arms = build_set_arms(&fields, &variants);
+    let post_call = build_post_call(struct_ident, post_fn);
 
-    let value_arms: Vec<_> = fields
+    generate_enum(struct_ident, &enum_ident, &variants, &fields, &value_arms, &set_arms, post_call.as_ref())
+}
+
+fn build_value_arms(fields: &[SliderField], variants: &[Ident]) -> Vec<proc_macro2::TokenStream> {
+    fields
         .iter()
         .zip(variants.iter())
         .map(|(f, variant)| {
@@ -48,9 +52,11 @@ pub fn impl_sliders(struct_ident: &Ident, data: &DataStruct) -> TokenStream {
                 quote! { Self::#variant => params.#field }
             }
         })
-        .collect();
+        .collect()
+}
 
-    let set_arms: Vec<_> = fields
+fn build_set_arms(fields: &[SliderField], variants: &[Ident]) -> Vec<proc_macro2::TokenStream> {
+    fields
         .iter()
         .zip(variants.iter())
         .map(|(f, variant)| {
@@ -71,7 +77,32 @@ pub fn impl_sliders(struct_ident: &Ident, data: &DataStruct) -> TokenStream {
                 }
             }
         })
-        .collect();
+        .collect()
+}
+
+fn build_post_call(
+    struct_ident: &Ident,
+    post_fn: Option<String>,
+) -> Option<proc_macro2::TokenStream> {
+    let fn_name = post_fn?;
+    let fn_ident = Ident::new(&fn_name, struct_ident.span());
+    Some(quote! { params.#fn_ident(); })
+}
+
+fn generate_enum(
+    struct_ident: &Ident,
+    enum_ident: &Ident,
+    variants: &[Ident],
+    fields: &[SliderField],
+    value_arms: &[proc_macro2::TokenStream],
+    set_arms: &[proc_macro2::TokenStream],
+    post_call: Option<&proc_macro2::TokenStream>,
+) -> TokenStream {
+    let labels: Vec<_> = fields.iter().map(|f| f.label.as_str()).collect();
+    let mins: Vec<_> = fields.iter().map(|f| f.min).collect();
+    let maxs: Vec<_> = fields.iter().map(|f| f.max).collect();
+    let steps: Vec<_> = fields.iter().map(|f| f.step).collect();
+    let precisions: Vec<_> = fields.iter().map(|f| f.precision).collect();
 
     let expanded = quote! {
         #[derive(Clone, Default)]
@@ -123,11 +154,31 @@ pub fn impl_sliders(struct_ident: &Ident, data: &DataStruct) -> TokenStream {
                 match self {
                     #(#set_arms,)*
                 }
+                #post_call
             }
         }
     };
 
     TokenStream::from(expanded)
+}
+
+fn parse_post_attr(input: &DeriveInput) -> Option<String> {
+    for attr in &input.attrs {
+        if !attr.path().is_ident("slider") {
+            continue;
+        }
+
+        let nested: Punctuated<syn::Meta, Comma> = attr.parse_args_with(Punctuated::parse_terminated).ok()?;
+
+        for meta in nested {
+            if let syn::Meta::NameValue(nv) = meta
+                && nv.path.is_ident("post")
+            {
+                return parse_string(&nv.value);
+            }
+        }
+    }
+    None
 }
 
 fn parse_slider_field(field: &Field) -> Option<SliderField> {
@@ -178,13 +229,19 @@ fn parse_slider_field(field: &Field) -> Option<SliderField> {
 }
 
 fn parse_f32(expr: &Expr) -> Option<f32> {
-    if let Expr::Lit(lit) = expr {
-        if let Lit::Float(f) = &lit.lit {
-            return f.base10_parse().ok();
+    match expr {
+        Expr::Lit(lit) => {
+            if let Lit::Float(f) = &lit.lit {
+                return f.base10_parse().ok();
+            }
+            if let Lit::Int(i) = &lit.lit {
+                return i.base10_parse::<f32>().ok();
+            }
         }
-        if let Lit::Int(i) = &lit.lit {
-            return i.base10_parse::<f32>().ok();
+        Expr::Unary(unary) if matches!(unary.op, syn::UnOp::Neg(_)) => {
+            return parse_f32(&unary.expr).map(|v| -v);
         }
+        _ => {}
     }
     None
 }

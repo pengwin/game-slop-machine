@@ -1,33 +1,45 @@
 use bevy::prelude::*;
+use ui_derive::Sliders;
 
 use super::{SceneLightingSettings, SceneShadowCascadeSettings};
 
 /// Runtime controls for tuning the global sun and ambient light.
-#[derive(Resource, Clone, PartialEq)]
+#[derive(Resource, Clone, PartialEq, Sliders)]
+#[slider(post = "normalize_shadow_constraints")]
 pub struct GlobalLightControls {
     /// Ambient light brightness.
+    #[slider(min = 0.0, max = 1000.0, step = 5.0, precision = 1, label = "Ambient")]
     pub ambient_brightness: f32,
     /// Directional sun illuminance.
+    #[slider(min = 0.0, max = 30000.0, step = 250.0, precision = 0, label = "Sun lx")]
     pub sun_illuminance: f32,
     /// Directional sun elevation in degrees.
+    #[slider(min = -180.0, max = 180.0, step = 1.0, precision = 1, label = "Elevation")]
     pub sun_elevation_degrees: f32,
     /// Directional sun azimuth in degrees.
+    #[slider(min = -180.0, max = 180.0, step = 1.0, precision = 1, label = "Azimuth")]
     pub sun_azimuth_degrees: f32,
     /// Whether the sun casts shadow maps.
     pub shadows_enabled: bool,
     /// Directional shadow depth bias.
+    #[slider(min = 0.0, max = 0.2, step = 0.001, precision = 4, label = "Depth bias")]
     pub shadow_depth_bias: f32,
     /// Directional shadow normal bias.
+    #[slider(min = 0.0, max = 2.0, step = 0.01, precision = 3, label = "Normal bias")]
     pub shadow_normal_bias: f32,
     /// Number of directional shadow cascades.
     pub cascade_count: usize,
     /// Minimum distance from the camera receiving shadows.
+    #[slider(min = 0.0, max = 5.0, step = 0.1, precision = 2, label = "Min dist")]
     pub cascade_minimum_distance: f32,
     /// Far bound of the first cascade.
+    #[slider(min = 1.0, max = 150.0, step = 1.0, precision = 1, label = "First far")]
     pub cascade_first_far_bound: f32,
     /// Maximum distance from the camera receiving shadows.
+    #[slider(min = 1.0, max = 200.0, step = 1.0, precision = 1, label = "Max dist")]
     pub cascade_maximum_distance: f32,
     /// Proportion of overlap between shadow cascades.
+    #[slider(min = 0.0, max = 0.95, step = 0.01, precision = 2, label = "Overlap")]
     pub cascade_overlap_proportion: f32,
     /// Directional shadow map size.
     pub shadow_map_size: usize,

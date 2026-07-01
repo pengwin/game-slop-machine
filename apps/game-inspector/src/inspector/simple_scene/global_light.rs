@@ -18,7 +18,10 @@ use bevy::{
         slider_self_update,
     },
 };
-use game_core::plugins::{global_lighting::GlobalLightControls, inspector::InspectorSceneState};
+use game_core::plugins::{
+    global_lighting::{GlobalLightControls, GlobalLightControlsSlider},
+    inspector::InspectorSceneState,
+};
 
 use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
@@ -30,62 +33,11 @@ struct ShadowMapSizeCaption;
 
 #[derive(Component, Clone, Default)]
 struct GlobalLightSlider {
-    setting: GlobalLightSliderSetting,
+    setting: GlobalLightControlsSlider,
 }
 
 #[derive(Component, Clone, Default)]
 struct ShadowsEnabledCheckbox;
-
-#[derive(Clone, Default)]
-enum GlobalLightSliderSetting {
-    #[default]
-    AmbientBrightness,
-    SunIlluminance,
-    SunElevation,
-    SunAzimuth,
-    ShadowDepthBias,
-    ShadowNormalBias,
-    CascadeMinimumDistance,
-    CascadeFirstFarBound,
-    CascadeMaximumDistance,
-    CascadeOverlapProportion,
-}
-
-impl GlobalLightSliderSetting {
-    const fn value(&self, controls: &GlobalLightControls) -> f32 {
-        match self {
-            Self::AmbientBrightness => controls.ambient_brightness,
-            Self::SunIlluminance => controls.sun_illuminance,
-            Self::SunElevation => controls.sun_elevation_degrees,
-            Self::SunAzimuth => controls.sun_azimuth_degrees,
-            Self::ShadowDepthBias => controls.shadow_depth_bias,
-            Self::ShadowNormalBias => controls.shadow_normal_bias,
-            Self::CascadeMinimumDistance => controls.cascade_minimum_distance,
-            Self::CascadeFirstFarBound => controls.cascade_first_far_bound,
-            Self::CascadeMaximumDistance => controls.cascade_maximum_distance,
-            Self::CascadeOverlapProportion => controls.cascade_overlap_proportion,
-        }
-    }
-
-    fn set(&self, controls: &mut GlobalLightControls, value: f32) {
-        match self {
-            Self::AmbientBrightness => controls.ambient_brightness = value,
-            Self::SunIlluminance => controls.sun_illuminance = value,
-            Self::SunElevation => controls.sun_elevation_degrees = value,
-            Self::SunAzimuth => controls.sun_azimuth_degrees = value,
-            Self::ShadowDepthBias => controls.shadow_depth_bias = value,
-            Self::ShadowNormalBias => controls.shadow_normal_bias = value,
-            Self::CascadeMinimumDistance => controls.cascade_minimum_distance = value,
-            Self::CascadeFirstFarBound => controls.cascade_first_far_bound = value,
-            Self::CascadeMaximumDistance => controls.cascade_maximum_distance = value,
-            Self::CascadeOverlapProportion => {
-                controls.cascade_overlap_proportion = value.clamp(0.0, 0.95);
-            }
-        }
-
-        controls.normalize_shadow_constraints();
-    }
-}
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
@@ -136,32 +88,30 @@ fn global_light_panel() -> impl Scene {
             }
             Children [
                 (Text("Global Light") ThemedText),
-                light_slider(GlobalLightSliderSetting::AmbientBrightness, "Ambient", 0.0, 1000.0, 5.0, 1),
-                light_slider(GlobalLightSliderSetting::SunIlluminance, "Sun lx", 0.0, 30000.0, 250.0, 0),
-                light_slider(GlobalLightSliderSetting::SunElevation, "Elevation", -180.0, 180.0, 1.0, 1),
-                light_slider(GlobalLightSliderSetting::SunAzimuth, "Azimuth", -180.0, 180.0, 1.0, 1),
+                light_slider(GlobalLightControlsSlider::AmbientBrightness),
+                light_slider(GlobalLightControlsSlider::SunIlluminance),
+                light_slider(GlobalLightControlsSlider::SunElevationDegrees),
+                light_slider(GlobalLightControlsSlider::SunAzimuthDegrees),
                 shadows_checkbox(),
-                light_slider(GlobalLightSliderSetting::ShadowDepthBias, "Depth bias", 0.0, 0.2, 0.001, 4),
-                light_slider(GlobalLightSliderSetting::ShadowNormalBias, "Normal bias", 0.0, 2.0, 0.01, 3),
-                light_slider(GlobalLightSliderSetting::CascadeMinimumDistance, "Min dist", 0.0, 5.0, 0.1, 2),
-                light_slider(GlobalLightSliderSetting::CascadeFirstFarBound, "First far", 1.0, 150.0, 1.0, 1),
-                light_slider(GlobalLightSliderSetting::CascadeMaximumDistance, "Max dist", 1.0, 200.0, 1.0, 1),
-                light_slider(GlobalLightSliderSetting::CascadeOverlapProportion, "Overlap", 0.0, 0.95, 0.01, 2),
+                light_slider(GlobalLightControlsSlider::ShadowDepthBias),
+                light_slider(GlobalLightControlsSlider::ShadowNormalBias),
+                light_slider(GlobalLightControlsSlider::CascadeMinimumDistance),
+                light_slider(GlobalLightControlsSlider::CascadeFirstFarBound),
+                light_slider(GlobalLightControlsSlider::CascadeMaximumDistance),
+                light_slider(GlobalLightControlsSlider::CascadeOverlapProportion),
                 shadow_map_size_menu(),
             ]
         )
     }
 }
 
-fn light_slider(
-    setting: GlobalLightSliderSetting,
-    label: &'static str,
-    min: f32,
-    max: f32,
-    step: f32,
-    precision: i32,
-) -> impl Scene {
+fn light_slider(setting: GlobalLightControlsSlider) -> impl Scene {
     let handler_setting = setting.clone();
+    let label = setting.label();
+    let min = setting.min();
+    let max = setting.max();
+    let step = setting.step();
+    let precision = setting.precision();
 
     bsn! {
         Node {

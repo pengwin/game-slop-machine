@@ -11,7 +11,8 @@ use syn::{DeriveInput, parse_macro_input};
 ///
 /// ```ignore
 /// #[derive(Sliders)]
-/// pub struct ConcreteParams {
+/// #[slider(post = "normalize")]
+/// pub struct Params {
 ///     #[slider(min = 0.0, max = 9999.0, step = 1.0, precision = 0)]
 ///     pub seed: u32,
 ///
@@ -24,7 +25,7 @@ pub fn derive_sliders(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     if let syn::Data::Struct(ref data) = input.data {
-        sliders::impl_sliders(&input.ident, data)
+        sliders::impl_sliders(&input, data)
     } else {
         TokenStream::from(
             syn::Error::new(input.ident.span(), "Only structs can derive `Sliders`").to_compile_error(),
