@@ -2,42 +2,28 @@
 
 use bevy::{
     feathers::{
-        controls::{
-            FeathersCheckbox, FeathersMenu, FeathersMenuButton, FeathersMenuItem,
-            FeathersMenuPopup, FeathersSlider,
-        },
+        controls::{FeathersMenu, FeathersMenuButton, FeathersMenuItem, FeathersMenuPopup},
         font_styles::InheritableFont,
         theme::{ThemeBackgroundColor, ThemedText},
         tokens,
     },
     input_focus::tab_navigation::TabGroup,
     prelude::*,
-    ui::Checked,
-    ui_widgets::{
-        Activate, SliderPrecision, SliderStep, SliderValue, ValueChange, checkbox_self_update,
-        slider_self_update,
-    },
+    ui_widgets::Activate,
 };
-use game_core::plugins::{
-    global_lighting::{GlobalLightControls, GlobalLightControlsSlider},
-    inspector::InspectorSceneState,
-};
+use game_core::plugins::{global_lighting::GlobalLightControls, inspector::InspectorSceneState};
 
-use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
+use super::super::{
+    consts::PANEL_FONT_SIZE,
+    control_panel::{control_rows, sync_schema_checkboxes, sync_schema_sliders},
+    despawn_ui::despawn_ui,
+};
 
 #[derive(Component, Clone, Default)]
 struct GlobalLightUi;
 
 #[derive(Component, Clone, Default)]
 struct ShadowMapSizeCaption;
-
-#[derive(Component, Clone, Default)]
-struct GlobalLightSlider {
-    setting: GlobalLightControlsSlider,
-}
-
-#[derive(Component, Clone, Default)]
-struct ShadowsEnabledCheckbox;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
@@ -47,8 +33,8 @@ pub fn plugin(app: &mut App) {
     .add_systems(
         Update,
         (
-            sync_global_light_sliders,
-            sync_shadows_enabled_checkbox,
+            sync_schema_sliders::<GlobalLightControls>,
+            sync_schema_checkboxes::<GlobalLightControls>,
             sync_shadow_map_size_caption,
         ),
     )
@@ -88,92 +74,9 @@ fn global_light_panel() -> impl Scene {
             }
             Children [
                 (Text("Global Light") ThemedText),
-                light_slider(GlobalLightControlsSlider::AmbientBrightness),
-                light_slider(GlobalLightControlsSlider::SunIlluminance),
-                light_slider(GlobalLightControlsSlider::SunElevationDegrees),
-                light_slider(GlobalLightControlsSlider::SunAzimuthDegrees),
-                shadows_checkbox(),
-                light_slider(GlobalLightControlsSlider::ShadowDepthBias),
-                light_slider(GlobalLightControlsSlider::ShadowNormalBias),
-                light_slider(GlobalLightControlsSlider::CascadeMinimumDistance),
-                light_slider(GlobalLightControlsSlider::CascadeFirstFarBound),
-                light_slider(GlobalLightControlsSlider::CascadeMaximumDistance),
-                light_slider(GlobalLightControlsSlider::CascadeOverlapProportion),
+                {control_rows::<GlobalLightControls>(80.0)},
                 shadow_map_size_menu(),
             ]
-        )
-    }
-}
-
-fn light_slider(setting: GlobalLightControlsSlider) -> impl Scene {
-    let handler_setting = setting.clone();
-    let label = setting.label();
-    let min = setting.min();
-    let max = setting.max();
-    let step = setting.step();
-    let precision = setting.precision();
-
-    bsn! {
-        Node {
-            display: Display::Flex,
-            flex_direction: FlexDirection::Row,
-            align_items: AlignItems::Center,
-            column_gap: px(4),
-        }
-        InheritableFont {
-            font_size: PANEL_FONT_SIZE,
-        }
-        Children [
-            (
-                Text(label)
-                ThemedText
-                Node {
-                    width: px(80),
-                }
-            ),
-            (
-                @FeathersSlider {
-                    @min: min,
-                    @max: max,
-                    @value: min,
-                }
-                template_value(GlobalLightSlider { setting })
-                SliderStep(step)
-                SliderPrecision(precision)
-                on(slider_self_update)
-                on(
-                    move |
-                        change: On<'_, '_, ValueChange<f32>>,
-                        mut controls: ResMut<'_, GlobalLightControls>,
-                    | {
-                        handler_setting.set(&mut controls, change.value);
-                    }
-                )
-            )
-        ]
-    }
-}
-
-fn shadows_checkbox() -> impl Scene {
-    bsn! {
-        (
-            @FeathersCheckbox {
-                @caption: bsn! { Text("Shadows") ThemedText }
-            }
-            InheritableFont {
-                font_size: PANEL_FONT_SIZE,
-            }
-            ShadowsEnabledCheckbox
-            Checked
-            on(checkbox_self_update)
-            on(
-                |
-                    change: On<'_, '_, ValueChange<bool>>,
-                    mut controls: ResMut<'_, GlobalLightControls>,
-                | {
-                    controls.shadows_enabled = change.value;
-                }
-            )
         )
     }
 }
@@ -231,35 +134,6 @@ fn shadow_map_size_item(size: usize) -> impl Scene {
                 controls.shadow_map_size = size;
             })
         )
-    }
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn sync_global_light_sliders(
-    mut commands: Commands<'_, '_>,
-    controls: Res<'_, GlobalLightControls>,
-    sliders: Query<'_, '_, (Entity, &GlobalLightSlider, &SliderValue)>,
-) {
-    for (entity, slider, value) in &sliders {
-        let expected = slider.setting.value(&controls);
-        if (value.0 - expected).abs() > 0.001 {
-            commands.entity(entity).insert(SliderValue(expected));
-        }
-    }
-}
-
-#[allow(clippy::needless_pass_by_value)]
-fn sync_shadows_enabled_checkbox(
-    mut commands: Commands<'_, '_>,
-    controls: Res<'_, GlobalLightControls>,
-    checkboxes: Query<'_, '_, (Entity, Has<Checked>), With<ShadowsEnabledCheckbox>>,
-) {
-    for (entity, checked) in &checkboxes {
-        if controls.shadows_enabled && !checked {
-            commands.entity(entity).insert(Checked);
-        } else if !controls.shadows_enabled && checked {
-            commands.entity(entity).remove::<Checked>();
-        }
     }
 }
 

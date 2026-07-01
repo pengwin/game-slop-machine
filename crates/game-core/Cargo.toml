@@ -16,6 +16,7 @@ bevy.workspace = true
 material-preview-geometry = { path = "../material-preview-geometry" }
 texture-gen = { path = "../texture-gen" }
 ui-derive = { path = "../ui-derive" }
+ui-schema = { path = "../ui-schema" }
 
 [lints]
 workspace = true

@@ -1,7 +1,7 @@
 use super::maps::WorkingMaps;
+use crate::ConcreteParams;
 use crate::surface::math::write_rgba;
 use crate::surface::normal::build_normal_from_height;
-use crate::ConcreteParams;
 
 pub fn build_albedo(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];
@@ -20,8 +20,8 @@ pub fn build_albedo(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
             let crack = maps.crack[i] * 0.18;
             let formwork = maps.formwork[i] * params.formwork_strength * 0.15;
             let efflo = maps.efflorescence[i] * params.efflorescence_strength;
-            let shade =
-                (lime.mul_add(0.65, 1.0 + tone) - stain - void - crack - formwork).clamp(0.42, 1.32);
+            let shade = (lime.mul_add(0.65, 1.0 + tone) - stain - void - crack - formwork)
+                .clamp(0.42, 1.32);
             let warm_aggregate = aggregate_tint.max(0.0) * aggregate;
             let cool_aggregate = (-aggregate_tint).max(0.0) * aggregate;
             let warm_exposed = exposed_tint.max(0.0) * exposed;
@@ -77,10 +77,8 @@ pub fn build_orm(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
                         -0.31,
                         maps.exposed_aggregate[i].mul_add(
                             -0.04,
-                            maps.formwork[i].mul_add(
-                                -0.06,
-                                maps.aggregate[i].mul_add(-0.025, params.ao_base),
-                            ),
+                            maps.formwork[i]
+                                .mul_add(-0.06, maps.aggregate[i].mul_add(-0.025, params.ao_base)),
                         ),
                     ),
                 )
@@ -92,10 +90,8 @@ pub fn build_orm(params: &ConcreteParams, maps: &WorkingMaps) -> Vec<u8> {
                         0.05,
                         maps.void[i].mul_add(
                             0.04,
-                            maps.exposed_aggregate[i].mul_add(
-                                0.05,
-                                maps.aggregate[i].mul_add(0.035, params.rough_base),
-                            ),
+                            maps.exposed_aggregate[i]
+                                .mul_add(0.05, maps.aggregate[i].mul_add(0.035, params.rough_base)),
                         ),
                     ),
                 )

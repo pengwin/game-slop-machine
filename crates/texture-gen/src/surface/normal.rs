@@ -1,5 +1,5 @@
 use super::math::{normalize3, u32_to_f32, write_rgba};
-use crate::{TextureSize, RUNTIME_TEXTURE_SIZE};
+use crate::{RUNTIME_TEXTURE_SIZE, TextureSize};
 
 /// Builds a tangent-space normal map from a height buffer using central differences.
 pub fn build_normal_from_height(
@@ -31,11 +31,7 @@ pub fn build_normal_from_height(
             let down = sample_wrapped(xi, yi + 1);
             let dx = (right - left) * width_scale;
             let dy = (down - up) * height_scale;
-            let normal = normalize3([
-                -dx * normal_strength,
-                -dy * normal_strength,
-                1.0,
-            ]);
+            let normal = normalize3([-dx * normal_strength, -dy * normal_strength, 1.0]);
 
             write_rgba(
                 &mut data,

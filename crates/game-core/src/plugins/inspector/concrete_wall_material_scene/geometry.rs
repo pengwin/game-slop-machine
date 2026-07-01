@@ -3,25 +3,37 @@ use material_preview_geometry::{
     WallPreviewDirtSettings, WallPreviewMeshSettings, WallPreviewUvSettings,
     build_wall_preview_mesh,
 };
+use ui_derive::Controls;
 
+use super::super::wall_material::apply_material_settings;
 use super::{
     super::InspectorSceneState, material, root::ConcreteWallMaterialSceneRoot,
     scene_sets::ConcreteWallMaterialSceneSet,
 };
-use super::super::wall_material::apply_material_settings;
 
 /// Editable vertex-color dirt settings for the concrete wall preview mesh.
-#[derive(Resource, Clone, Debug, PartialEq)]
+#[derive(Resource, Clone, Debug, PartialEq, Controls)]
 pub struct ConcreteWallDirtSettings {
     /// Dirt amount that accumulates upward from the floor.
+    #[slider(min = 0.0, max = 1.5, step = 0.01, precision = 2, label = "Floor dirt")]
     pub floor_strength: f32,
     /// Dirt amount that accumulates in wall corner triangles.
+    #[slider(
+        min = 0.0,
+        max = 1.5,
+        step = 0.01,
+        precision = 2,
+        label = "Corner dirt"
+    )]
     pub corner_strength: f32,
     /// Red multiplier for maximum dirt.
+    #[slider(min = 0.0, max = 1.0, step = 0.01, precision = 2, label = "Dirt R")]
     pub color_r: f32,
     /// Green multiplier for maximum dirt.
+    #[slider(min = 0.0, max = 1.0, step = 0.01, precision = 2, label = "Dirt G")]
     pub color_g: f32,
     /// Blue multiplier for maximum dirt.
+    #[slider(min = 0.0, max = 1.0, step = 0.01, precision = 2, label = "Dirt B")]
     pub color_b: f32,
 }
 
@@ -51,15 +63,19 @@ impl From<&ConcreteWallDirtSettings> for WallPreviewDirtSettings {
 }
 
 /// Editable UV projection settings for the concrete wall preview mesh.
-#[derive(Resource, Clone, Debug, PartialEq)]
+#[derive(Resource, Clone, Debug, PartialEq, Controls)]
 pub struct ConcreteWallUvSettings {
     /// Uses old per-face local UVs with deterministic offsets instead of world-space projection.
+    #[checkbox(label = "Per-face UV")]
     pub per_face_offset: bool,
     /// Texture tiles per meter on the preview wall mesh.
+    #[slider(min = 0.05, max = 1.5, step = 0.01, precision = 2, label = "UV scale")]
     pub tiles_per_meter: f32,
     /// Horizontal subdivisions for each vertical wall face.
+    #[slider(min = 1.0, max = 48.0, step = 1.0, precision = 0, label = "Columns")]
     pub face_columns: u32,
     /// Vertical subdivisions for each vertical wall face.
+    #[slider(min = 1.0, max = 32.0, step = 1.0, precision = 0, label = "Rows")]
     pub face_rows: u32,
 }
 

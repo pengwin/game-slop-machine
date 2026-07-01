@@ -3,14 +3,14 @@ mod layers;
 mod maps;
 mod stage;
 
-use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
 pub use crate::material::PbrTextureSet as ConcreteTextureSet;
+use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
 
 use super::params::ConcreteParams;
 use channels::{build_albedo, build_normal, build_orm};
 use layers::{
-    build_tileable_tone, build_formwork_marks, build_efflorescence, compose_height,
-    draw_aggregate, draw_exposed_aggregate, draw_hairline_cracks, draw_stains, draw_voids,
+    build_efflorescence, build_formwork_marks, build_tileable_tone, compose_height, draw_aggregate,
+    draw_exposed_aggregate, draw_hairline_cracks, draw_stains, draw_voids,
 };
 use maps::WorkingMaps;
 

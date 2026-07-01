@@ -10,6 +10,7 @@ use bevy::{
     prelude::*,
     render::camera::TemporalJitter,
 };
+use ui_derive::Controls;
 
 use super::{CameraPreset, SceneCameraProjection, SceneCameraSettings};
 
@@ -30,27 +31,37 @@ pub struct GlobalCamera3d;
     clippy::struct_excessive_bools,
     reason = "debug UI mirrors camera effect toggles"
 )]
-#[derive(Resource, Clone, Eq, PartialEq)]
+#[derive(Resource, Clone, Eq, PartialEq, Controls)]
 pub struct CameraEffects {
     /// Disables multisample anti-aliasing for camera effects that require it.
+    #[checkbox(label = "Msaa::Off")]
     pub msaa_off: bool,
     /// Enables HDR rendering on the camera.
+    #[checkbox(label = "Hdr")]
     pub hdr: bool,
     /// Applies the ACES fitted tonemapper.
+    #[checkbox(label = "Tonemapping::AcesFitted")]
     pub tonemapping_aces_fitted: bool,
     /// Enables the depth prepass.
+    #[checkbox(label = "DepthPrepass")]
     pub depth_prepass: bool,
     /// Enables the normal prepass.
+    #[checkbox(label = "NormalPrepass")]
     pub normal_prepass: bool,
     /// Enables the motion vector prepass.
+    #[checkbox(label = "MotionVectorPrepass")]
     pub motion_vector_prepass: bool,
     /// Enables screen space ambient occlusion.
+    #[checkbox(label = "ScreenSpaceAmbientOcclusion")]
     pub screen_space_ambient_occlusion: bool,
     /// Enables temporal jitter.
+    #[checkbox(label = "TemporalJitter")]
     pub temporal_jitter: bool,
     /// Enables temporal anti-aliasing.
+    #[checkbox(label = "TemporalAntiAliasing")]
     pub temporal_anti_aliasing: bool,
     /// Enables temporal shadow filtering (recommended with TAA).
+    #[checkbox(label = "ShadowFilter::Temporal")]
     pub shadow_filter_temporal: bool,
 }
 

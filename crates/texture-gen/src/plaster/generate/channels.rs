@@ -1,7 +1,7 @@
 use super::maps::WorkingMaps;
+use crate::PlasterParams;
 use crate::surface::math::write_rgba;
 use crate::surface::normal::build_normal_from_height;
-use crate::PlasterParams;
 
 pub fn build_albedo(params: &PlasterParams, maps: &WorkingMaps) -> Vec<u8> {
     let mut data = vec![255; maps.size.rgba_len()];

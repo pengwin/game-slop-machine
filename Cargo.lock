@@ -2616,6 +2616,7 @@ dependencies = [
  "material-preview-geometry",
  "texture-gen",
  "ui-derive",
+ "ui-schema",
 ]
 
 [[package]]
@@ -2626,6 +2627,7 @@ dependencies = [
  "game-core",
  "num-traits",
  "texture-gen",
+ "ui-schema",
 ]
 
 [[package]]
@@ -4774,6 +4776,7 @@ version = "0.0.1"
 dependencies = [
  "num-traits",
  "ui-derive",
+ "ui-schema",
 ]
 
 [[package]]
@@ -5022,6 +5025,10 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "ui-schema"
+version = "0.0.1"
 
 [[package]]
 name = "unicode-ident"

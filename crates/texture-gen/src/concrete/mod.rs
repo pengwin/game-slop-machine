@@ -8,10 +8,10 @@ pub use generate::{
     ConcreteGenerationStage, ConcreteTextureSet, generate_concrete_set,
     generate_concrete_set_with_progress, generate_concrete_set_with_progress_and_cancellation,
 };
-pub use params::{ConcreteParams, ConcreteParamsSlider};
+pub use params::ConcreteParams;
 
-use crate::material::{PbrTextureSet, TextureMaterial};
 use crate::TextureSize;
+use crate::material::{PbrTextureSet, TextureMaterial};
 
 /// Concrete wall material implementation of `TextureMaterial`.
 pub struct ConcreteMaterial;
@@ -26,12 +26,7 @@ impl TextureMaterial for ConcreteMaterial {
         on_stage: impl FnMut(Self::Stage),
         cancel: impl Fn() -> bool,
     ) -> Option<PbrTextureSet> {
-        generate_concrete_set_with_progress_and_cancellation(
-            params,
-            size,
-            on_stage,
-            cancel,
-        )
+        generate_concrete_set_with_progress_and_cancellation(params, size, on_stage, cancel)
     }
 
     fn default_scene_params() -> Self::Params {

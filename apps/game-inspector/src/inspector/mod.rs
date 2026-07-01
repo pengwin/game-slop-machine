@@ -2,6 +2,7 @@
 
 mod concrete_wall_material_scene;
 mod consts;
+mod control_panel;
 mod despawn_ui;
 mod plaster_wall_material_scene;
 mod scene_selector;

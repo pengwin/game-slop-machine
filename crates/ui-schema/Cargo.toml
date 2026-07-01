@@ -1,5 +1,5 @@
 [package]
-name = "texture-gen"
+name = "ui-schema"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,13 +8,10 @@ license.workspace = true
 keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
-description = "Pure procedural texture generation for Game Slop Machine."
+description = "UI-agnostic control schemas for Game Slop Machine."
 readme = "../../README.md"
 
 [dependencies]
-num-traits = "0.2.19"
-ui-derive = { path = "../ui-derive" }
-ui-schema = { path = "../ui-schema" }
 
 [lints]
 workspace = true

@@ -8,7 +8,7 @@ mod sun;
 
 use bevy::prelude::*;
 
-pub use light_controls::{GlobalLightControls, GlobalLightControlsSlider};
+pub use light_controls::GlobalLightControls;
 pub use preset::LightingPreset;
 pub use scene_lighting_settings::{SceneLightingSettings, SceneShadowCascadeSettings};
 

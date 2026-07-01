@@ -3,8 +3,8 @@ mod layers;
 mod maps;
 mod stage;
 
-use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
 pub use crate::material::PbrTextureSet as PlasterTextureSet;
+use crate::{GeneratedTexture, TextureColorSpace, TextureSize};
 
 use super::params::PlasterParams;
 use channels::{build_albedo, build_normal, build_orm};

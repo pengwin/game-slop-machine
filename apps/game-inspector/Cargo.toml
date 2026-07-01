@@ -16,6 +16,7 @@ bevy.workspace = true
 game-core = { path = "../../crates/game-core" }
 num-traits = "0.2.19"
 texture-gen = { path = "../../crates/texture-gen" }
+ui-schema = { path = "../../crates/ui-schema" }
 
 [lints]
 workspace = true

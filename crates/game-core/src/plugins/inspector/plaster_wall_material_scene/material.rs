@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    tasks::AsyncComputeTaskPool,
-};
+use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
@@ -9,14 +6,13 @@ use std::sync::{
 };
 pub use texture_gen::PlasterGenerationStage;
 use texture_gen::{
-    MipGenerationKind, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE,
-    generate_mip_chain, generate_plaster_set_with_progress_and_cancellation,
+    MipGenerationKind, PlasterParams, PlasterTextureSet, RUNTIME_TEXTURE_SIZE, generate_mip_chain,
+    generate_plaster_set_with_progress_and_cancellation,
 };
+use ui_schema::{CheckboxControl, Control, ControlsSchema, NoControl, SliderControl};
 
 use super::super::InspectorSceneState;
-use super::super::wall_material::{
-    WallMaterialSettings, apply_material_settings, bevy_image,
-};
+use super::super::wall_material::{WallMaterialSettings, apply_material_settings, bevy_image};
 
 /// Editable `StandardMaterial` settings for the plaster wall material.
 pub type PlasterWallMaterialSettings = WallMaterialSettings;
@@ -51,6 +47,31 @@ impl Default for PlasterWallMaterialControls {
         Self {
             params: default_plaster_params(),
         }
+    }
+}
+
+impl ControlsSchema for PlasterWallMaterialControls {
+    type Slider = <PlasterParams as ControlsSchema>::Slider;
+    type Checkbox = NoControl;
+
+    const SLIDERS: &'static [SliderControl<Self::Slider>] = PlasterParams::SLIDERS;
+    const CHECKBOXES: &'static [CheckboxControl<Self::Checkbox>] = &[];
+    const CONTROLS: &'static [Control<Self::Slider, Self::Checkbox>] = PlasterParams::CONTROLS;
+
+    fn slider_value(control: Self::Slider, data: &Self) -> f32 {
+        PlasterParams::slider_value(control, &data.params)
+    }
+
+    fn set_slider(control: Self::Slider, data: &mut Self, value: f32) {
+        PlasterParams::set_slider(control, &mut data.params, value);
+    }
+
+    fn checkbox_value(_control: Self::Checkbox, _data: &Self) -> bool {
+        unreachable!("plaster material controls do not define checkbox controls")
+    }
+
+    fn set_checkbox(_control: Self::Checkbox, _data: &mut Self, _value: bool) {
+        unreachable!("plaster material controls do not define checkbox controls")
     }
 }
 

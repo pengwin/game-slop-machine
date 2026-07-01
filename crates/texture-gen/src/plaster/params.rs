@@ -1,8 +1,8 @@
 use std::hash::{Hash, Hasher};
-use crate::Sliders;
+use ui_derive::Controls;
 
 /// Complete plaster generation parameters.
-#[derive(Clone, Debug, Sliders)]
+#[derive(Clone, Debug, Controls)]
 pub struct PlasterParams {
     /// Deterministic texture seed.
     #[slider(min = 0.0, max = 9999.0, step = 1.0, precision = 0)]

@@ -159,9 +159,8 @@ pub fn build_formwork_marks(
         for x in 0..maps.size.width {
             let u = u32_to_f32(x) / u32_to_f32(maps.size.width);
             let board_index = (v / board_spacing).floor();
-            let board_seed = params.seed ^ 0xB0A7_u32.wrapping_add(
-                board_index.to_u32().unwrap_or(0),
-            );
+            let board_seed =
+                params.seed ^ 0xB0A7_u32.wrapping_add(board_index.to_u32().unwrap_or(0));
             let wave = fbm_tileable(board_seed, 3, 2, u, 0.0);
             let edge = v % board_spacing;
             let edge_dist = edge.min(board_spacing - edge);
@@ -281,11 +280,10 @@ pub fn compose_height(
             return false;
         }
 
-        maps.height[i] =
-            (maps.lime[i] * params.lime_cloud_strength).mul_add(0.018, maps.height[i]);
+        maps.height[i] = (maps.lime[i] * params.lime_cloud_strength).mul_add(0.018, maps.height[i]);
         maps.height[i] = maps.aggregate[i].mul_add(params.aggregate_height, maps.height[i]);
-        maps.height[i] = maps.exposed_aggregate[i]
-            .mul_add(params.exposed_aggregate_height, maps.height[i]);
+        maps.height[i] =
+            maps.exposed_aggregate[i].mul_add(params.exposed_aggregate_height, maps.height[i]);
         maps.height[i] = maps.void[i].mul_add(-params.void_depth, maps.height[i]);
         maps.height[i] = maps.formwork[i].mul_add(-params.formwork_strength * 0.03, maps.height[i]);
         maps.height[i] = (maps.crack_lip[i] * params.crack_depth).mul_add(0.42, maps.height[i]);

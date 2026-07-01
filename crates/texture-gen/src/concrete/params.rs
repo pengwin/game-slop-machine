@@ -1,8 +1,8 @@
 use std::hash::{Hash, Hasher};
-use crate::Sliders;
+use ui_derive::Controls;
 
 /// Complete ancient concrete generation parameters.
-#[derive(Clone, Debug, Sliders)]
+#[derive(Clone, Debug, Controls)]
 pub struct ConcreteParams {
     /// Deterministic texture seed.
     #[slider(min = 0.0, max = 9999.0, step = 1.0, precision = 0)]
@@ -51,10 +51,22 @@ pub struct ConcreteParams {
     #[slider(min = 0.0, max = 0.5)]
     pub formwork_strength: f32,
     /// Number of large exposed aggregate stones.
-    #[slider(min = 0.0, max = 40.0, step = 1.0, precision = 0, label = "Exposed agg")]
+    #[slider(
+        min = 0.0,
+        max = 40.0,
+        step = 1.0,
+        precision = 0,
+        label = "Exposed agg"
+    )]
     pub exposed_aggregate_count: u32,
     /// Height of exposed aggregate stones in the height field.
-    #[slider(min = 0.0, max = 0.06, step = 0.001, precision = 3, label = "Exp height")]
+    #[slider(
+        min = 0.0,
+        max = 0.06,
+        step = 0.001,
+        precision = 3,
+        label = "Exp height"
+    )]
     pub exposed_aggregate_height: f32,
     /// Strength of white efflorescence mineral deposits.
     #[slider(min = 0.0, max = 0.4)]

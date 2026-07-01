@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    tasks::AsyncComputeTaskPool,
-};
+use bevy::{prelude::*, tasks::AsyncComputeTaskPool};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
@@ -9,15 +6,13 @@ use std::sync::{
 };
 pub use texture_gen::ConcreteGenerationStage;
 use texture_gen::{
-    ConcreteParams, ConcreteTextureSet, MipGenerationKind,
-    RUNTIME_TEXTURE_SIZE, generate_concrete_set_with_progress_and_cancellation,
-    generate_mip_chain,
+    ConcreteParams, ConcreteTextureSet, MipGenerationKind, RUNTIME_TEXTURE_SIZE,
+    generate_concrete_set_with_progress_and_cancellation, generate_mip_chain,
 };
+use ui_schema::{CheckboxControl, Control, ControlsSchema, NoControl, SliderControl};
 
 use super::super::InspectorSceneState;
-use super::super::wall_material::{
-    WallMaterialSettings, apply_material_settings, bevy_image,
-};
+use super::super::wall_material::{WallMaterialSettings, apply_material_settings, bevy_image};
 
 /// Editable `StandardMaterial` settings for the concrete wall material.
 pub type ConcreteWallMaterialSettings = WallMaterialSettings;
@@ -52,6 +47,31 @@ impl Default for ConcreteWallMaterialControls {
         Self {
             params: default_concrete_params(),
         }
+    }
+}
+
+impl ControlsSchema for ConcreteWallMaterialControls {
+    type Slider = <ConcreteParams as ControlsSchema>::Slider;
+    type Checkbox = NoControl;
+
+    const SLIDERS: &'static [SliderControl<Self::Slider>] = ConcreteParams::SLIDERS;
+    const CHECKBOXES: &'static [CheckboxControl<Self::Checkbox>] = &[];
+    const CONTROLS: &'static [Control<Self::Slider, Self::Checkbox>] = ConcreteParams::CONTROLS;
+
+    fn slider_value(control: Self::Slider, data: &Self) -> f32 {
+        ConcreteParams::slider_value(control, &data.params)
+    }
+
+    fn set_slider(control: Self::Slider, data: &mut Self, value: f32) {
+        ConcreteParams::set_slider(control, &mut data.params, value);
+    }
+
+    fn checkbox_value(_control: Self::Checkbox, _data: &Self) -> bool {
+        unreachable!("concrete material controls do not define checkbox controls")
+    }
+
+    fn set_checkbox(_control: Self::Checkbox, _data: &mut Self, _value: bool) {
+        unreachable!("concrete material controls do not define checkbox controls")
     }
 }
 

@@ -1,17 +1,23 @@
 use bevy::prelude::*;
-use ui_derive::Sliders;
+use ui_derive::Controls;
 
 use super::{SceneLightingSettings, SceneShadowCascadeSettings};
 
 /// Runtime controls for tuning the global sun and ambient light.
-#[derive(Resource, Clone, PartialEq, Sliders)]
-#[slider(post = "normalize_shadow_constraints")]
+#[derive(Resource, Clone, PartialEq, Controls)]
+#[controls(post = "normalize_shadow_constraints")]
 pub struct GlobalLightControls {
     /// Ambient light brightness.
     #[slider(min = 0.0, max = 1000.0, step = 5.0, precision = 1, label = "Ambient")]
     pub ambient_brightness: f32,
     /// Directional sun illuminance.
-    #[slider(min = 0.0, max = 30000.0, step = 250.0, precision = 0, label = "Sun lx")]
+    #[slider(
+        min = 0.0,
+        max = 30000.0,
+        step = 250.0,
+        precision = 0,
+        label = "Sun lx"
+    )]
     pub sun_illuminance: f32,
     /// Directional sun elevation in degrees.
     #[slider(min = -180.0, max = 180.0, step = 1.0, precision = 1, label = "Elevation")]
@@ -20,12 +26,25 @@ pub struct GlobalLightControls {
     #[slider(min = -180.0, max = 180.0, step = 1.0, precision = 1, label = "Azimuth")]
     pub sun_azimuth_degrees: f32,
     /// Whether the sun casts shadow maps.
+    #[checkbox(label = "Shadows")]
     pub shadows_enabled: bool,
     /// Directional shadow depth bias.
-    #[slider(min = 0.0, max = 0.2, step = 0.001, precision = 4, label = "Depth bias")]
+    #[slider(
+        min = 0.0,
+        max = 0.2,
+        step = 0.001,
+        precision = 4,
+        label = "Depth bias"
+    )]
     pub shadow_depth_bias: f32,
     /// Directional shadow normal bias.
-    #[slider(min = 0.0, max = 2.0, step = 0.01, precision = 3, label = "Normal bias")]
+    #[slider(
+        min = 0.0,
+        max = 2.0,
+        step = 0.01,
+        precision = 3,
+        label = "Normal bias"
+    )]
     pub shadow_normal_bias: f32,
     /// Number of directional shadow cascades.
     pub cascade_count: usize,
