@@ -69,10 +69,7 @@ impl SliderField {
     }
 }
 
-pub fn build_slider_enum(
-    struct_ident: &Ident,
-    fields: &[SliderField],
-) -> proc_macro2::TokenStream {
+pub fn build_slider_enum(struct_ident: &Ident, fields: &[SliderField]) -> proc_macro2::TokenStream {
     if fields.is_empty() {
         return quote! {};
     }

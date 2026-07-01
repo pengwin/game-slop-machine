@@ -9,16 +9,18 @@ use texture_gen::{
     ConcreteParams, ConcreteTextureSet, MipGenerationKind, RUNTIME_TEXTURE_SIZE,
     generate_concrete_set_with_progress_and_cancellation, generate_mip_chain,
 };
-use ui_schema::{CheckboxControl, Control, ControlsSchema, NoControl, SliderControl};
 
-use super::super::InspectorSceneState;
 use super::super::wall_material::{WallMaterialSettings, apply_material_settings, bevy_image};
+use super::super::{EditableParams, InspectorSceneState};
 
 /// Editable `StandardMaterial` settings for the concrete wall material.
 pub type ConcreteWallMaterialSettings = WallMaterialSettings;
 
+/// Editable concrete generator parameters for the inspector scene.
+pub type ConcreteWallEditableParams = EditableParams<ConcreteParams>;
+
 pub fn plugin(app: &mut App) {
-    app.init_resource::<ConcreteWallMaterialControls>()
+    app.init_resource::<ConcreteWallEditableParams>()
         .init_resource::<ConcreteWallMaterialSettings>()
         .add_systems(
             OnEnter(InspectorSceneState::ConcreteWallMaterial),
@@ -33,46 +35,6 @@ pub fn plugin(app: &mut App) {
             )
                 .run_if(in_state(InspectorSceneState::ConcreteWallMaterial)),
         );
-}
-
-/// Editable controls for the concrete wall material generator.
-#[derive(Resource, Clone, Debug)]
-pub struct ConcreteWallMaterialControls {
-    /// Current concrete generation parameters.
-    pub params: ConcreteParams,
-}
-
-impl Default for ConcreteWallMaterialControls {
-    fn default() -> Self {
-        Self {
-            params: default_concrete_params(),
-        }
-    }
-}
-
-impl ControlsSchema for ConcreteWallMaterialControls {
-    type Slider = <ConcreteParams as ControlsSchema>::Slider;
-    type Checkbox = NoControl;
-
-    const SLIDERS: &'static [SliderControl<Self::Slider>] = ConcreteParams::SLIDERS;
-    const CHECKBOXES: &'static [CheckboxControl<Self::Checkbox>] = &[];
-    const CONTROLS: &'static [Control<Self::Slider, Self::Checkbox>] = ConcreteParams::CONTROLS;
-
-    fn slider_value(control: Self::Slider, data: &Self) -> f32 {
-        ConcreteParams::slider_value(control, &data.params)
-    }
-
-    fn set_slider(control: Self::Slider, data: &mut Self, value: f32) {
-        ConcreteParams::set_slider(control, &mut data.params, value);
-    }
-
-    fn checkbox_value(_control: Self::Checkbox, _data: &Self) -> bool {
-        unreachable!("concrete material controls do not define checkbox controls")
-    }
-
-    fn set_checkbox(_control: Self::Checkbox, _data: &mut Self, _value: bool) {
-        unreachable!("concrete material controls do not define checkbox controls")
-    }
 }
 
 /// Request to regenerate the concrete wall material from a parameter snapshot.
@@ -92,10 +54,10 @@ pub fn default_concrete_params() -> ConcreteParams {
 }
 
 fn reset_concrete_material_resources(
-    mut controls: ResMut<'_, ConcreteWallMaterialControls>,
+    mut params: ResMut<'_, ConcreteWallEditableParams>,
     mut settings: ResMut<'_, ConcreteWallMaterialSettings>,
 ) {
-    *controls = ConcreteWallMaterialControls::default();
+    *params = ConcreteWallEditableParams::new(default_concrete_params());
     *settings = ConcreteWallMaterialSettings::default();
 }
 

@@ -10,8 +10,9 @@ mod scene_sets;
 
 pub use geometry::{ConcreteWallDirtSettings, ConcreteWallUvSettings};
 pub use material::{
-    ConcreteGenerationStage, ConcreteWallGenerationProgress, ConcreteWallGenerationRequest,
-    ConcreteWallGenerationStatus, ConcreteWallMaterialControls, ConcreteWallMaterialSettings,
+    ConcreteGenerationStage, ConcreteWallEditableParams, ConcreteWallGenerationProgress,
+    ConcreteWallGenerationRequest, ConcreteWallGenerationStatus, ConcreteWallMaterialSettings,
+    default_concrete_params,
 };
 pub use plugin::ConcreteWallMaterialScenePlugin;
 pub use root::ConcreteWallMaterialSceneRoot;

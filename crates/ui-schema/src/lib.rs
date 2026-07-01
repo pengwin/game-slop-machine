@@ -6,4 +6,4 @@ mod schema;
 
 pub use control::{CheckboxControl, Control, SliderControl};
 pub use id::{ControlId, NoControl};
-pub use schema::ControlsSchema;
+pub use schema::{ControlsSchema, DelegatedControlsSchema};

@@ -12,7 +12,7 @@ use bevy::{
     ui_widgets::Activate,
 };
 use game_core::plugins::inspector::{
-    ConcreteWallDirtSettings, ConcreteWallGenerationRequest, ConcreteWallMaterialControls,
+    ConcreteWallDirtSettings, ConcreteWallEditableParams, ConcreteWallGenerationRequest,
     ConcreteWallUvSettings, InspectorSceneState,
 };
 
@@ -33,7 +33,7 @@ pub fn plugin(app: &mut App) {
     .add_systems(
         Update,
         (
-            sync_schema_sliders::<ConcreteWallMaterialControls>,
+            sync_schema_sliders::<ConcreteWallEditableParams>,
             sync_schema_sliders::<ConcreteWallDirtSettings>,
             sync_schema_sliders::<ConcreteWallUvSettings>,
             sync_schema_checkboxes::<ConcreteWallUvSettings>,
@@ -76,7 +76,7 @@ fn controls_panel() -> impl Scene {
             }
             Children [
                 (Text("Concrete Params") ThemedText),
-                {control_rows::<ConcreteWallMaterialControls>(88.0)},
+                {control_rows::<ConcreteWallEditableParams>(88.0)},
                 {control_rows::<ConcreteWallDirtSettings>(88.0)},
                 {control_rows::<ConcreteWallUvSettings>(88.0)},
                 command_buttons(),
@@ -120,10 +120,10 @@ fn command_buttons() -> impl Scene {
 fn handle_apply(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
-    controls: Res<'_, ConcreteWallMaterialControls>,
+    params: Res<'_, ConcreteWallEditableParams>,
 ) {
     commands.insert_resource(ConcreteWallGenerationRequest {
-        params: controls.params.clone(),
+        params: params.value.clone(),
     });
 }
 
@@ -131,14 +131,16 @@ fn handle_apply(
 fn handle_reset(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
-    mut controls: ResMut<'_, ConcreteWallMaterialControls>,
+    mut params: ResMut<'_, ConcreteWallEditableParams>,
     mut dirt_settings: ResMut<'_, ConcreteWallDirtSettings>,
     mut uv_settings: ResMut<'_, ConcreteWallUvSettings>,
 ) {
-    *controls = ConcreteWallMaterialControls::default();
+    *params = ConcreteWallEditableParams::new(
+        game_core::plugins::inspector::concrete_wall_material_scene::default_concrete_params(),
+    );
     *dirt_settings = ConcreteWallDirtSettings::default();
     *uv_settings = ConcreteWallUvSettings::default();
     commands.insert_resource(ConcreteWallGenerationRequest {
-        params: controls.params.clone(),
+        params: params.value.clone(),
     });
 }

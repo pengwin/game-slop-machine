@@ -10,8 +10,9 @@ mod scene_sets;
 
 pub use geometry::{PlasterWallDirtSettings, PlasterWallUvSettings};
 pub use material::{
-    PlasterGenerationStage, PlasterWallGenerationProgress, PlasterWallGenerationRequest,
-    PlasterWallGenerationStatus, PlasterWallMaterialControls, PlasterWallMaterialSettings,
+    PlasterGenerationStage, PlasterWallEditableParams, PlasterWallGenerationProgress,
+    PlasterWallGenerationRequest, PlasterWallGenerationStatus, PlasterWallMaterialSettings,
+    default_plaster_params,
 };
 pub use plugin::PlasterWallMaterialScenePlugin;
 pub use root::PlasterWallMaterialSceneRoot;

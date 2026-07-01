@@ -12,8 +12,8 @@ use bevy::{
     ui_widgets::Activate,
 };
 use game_core::plugins::inspector::{
-    InspectorSceneState, PlasterWallDirtSettings, PlasterWallGenerationRequest,
-    PlasterWallMaterialControls, PlasterWallUvSettings,
+    InspectorSceneState, PlasterWallDirtSettings, PlasterWallEditableParams,
+    PlasterWallGenerationRequest, PlasterWallUvSettings,
 };
 
 use super::super::{
@@ -33,7 +33,7 @@ pub fn plugin(app: &mut App) {
     .add_systems(
         Update,
         (
-            sync_schema_sliders::<PlasterWallMaterialControls>,
+            sync_schema_sliders::<PlasterWallEditableParams>,
             sync_schema_sliders::<PlasterWallDirtSettings>,
             sync_schema_sliders::<PlasterWallUvSettings>,
             sync_schema_checkboxes::<PlasterWallUvSettings>,
@@ -76,7 +76,7 @@ fn controls_panel() -> impl Scene {
             }
             Children [
                 (Text("Plaster Params") ThemedText),
-                {control_rows::<PlasterWallMaterialControls>(88.0)},
+                {control_rows::<PlasterWallEditableParams>(88.0)},
                 {control_rows::<PlasterWallDirtSettings>(88.0)},
                 {control_rows::<PlasterWallUvSettings>(88.0)},
                 command_buttons(),
@@ -120,10 +120,10 @@ fn command_buttons() -> impl Scene {
 fn handle_apply(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
-    controls: Res<'_, PlasterWallMaterialControls>,
+    params: Res<'_, PlasterWallEditableParams>,
 ) {
     commands.insert_resource(PlasterWallGenerationRequest {
-        params: controls.params.clone(),
+        params: params.value.clone(),
     });
 }
 
@@ -131,14 +131,16 @@ fn handle_apply(
 fn handle_reset(
     _: On<'_, '_, Activate>,
     mut commands: Commands<'_, '_>,
-    mut controls: ResMut<'_, PlasterWallMaterialControls>,
+    mut params: ResMut<'_, PlasterWallEditableParams>,
     mut dirt_settings: ResMut<'_, PlasterWallDirtSettings>,
     mut uv_settings: ResMut<'_, PlasterWallUvSettings>,
 ) {
-    *controls = PlasterWallMaterialControls::default();
+    *params = PlasterWallEditableParams::new(
+        game_core::plugins::inspector::plaster_wall_material_scene::default_plaster_params(),
+    );
     *dirt_settings = PlasterWallDirtSettings::default();
     *uv_settings = PlasterWallUvSettings::default();
     commands.insert_resource(PlasterWallGenerationRequest {
-        params: controls.params.clone(),
+        params: params.value.clone(),
     });
 }
