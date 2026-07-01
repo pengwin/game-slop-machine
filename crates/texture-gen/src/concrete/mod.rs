@@ -8,7 +8,7 @@ pub use generate::{
     ConcreteGenerationStage, ConcreteTextureSet, generate_concrete_set,
     generate_concrete_set_with_progress, generate_concrete_set_with_progress_and_cancellation,
 };
-pub use params::ConcreteParams;
+pub use params::{ConcreteParams, ConcreteParamsSlider};
 
 use crate::material::{PbrTextureSet, TextureMaterial};
 use crate::TextureSize;

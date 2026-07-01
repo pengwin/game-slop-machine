@@ -9,7 +9,7 @@ pub use generate::{
     PlasterGenerationStage, PlasterTextureSet, generate_plaster_set,
     generate_plaster_set_with_progress, generate_plaster_set_with_progress_and_cancellation,
 };
-pub use params::PlasterParams;
+pub use params::{PlasterParams, PlasterParamsSlider};
 
 use crate::material::{PbrTextureSet, TextureMaterial};
 use crate::TextureSize;

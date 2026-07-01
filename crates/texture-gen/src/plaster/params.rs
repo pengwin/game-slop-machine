@@ -1,35 +1,48 @@
 use std::hash::{Hash, Hasher};
+use crate::Sliders;
 
 /// Complete plaster generation parameters.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Sliders)]
 pub struct PlasterParams {
     /// Deterministic texture seed.
+    #[slider(min = 0.0, max = 9999.0, step = 1.0, precision = 0)]
     pub seed: u32,
     /// Version included in cache/hash keys by callers.
     pub version: u32,
     /// Main plaster color, linear-ish RGB.
     pub base_color: [f32; 3],
     /// How strong broad color variation is.
+    #[slider(min = 0.0, max = 0.3)]
     pub tone_variation: f32,
     /// Fine sandy grain strength in height.
+    #[slider(min = 0.0, max = 0.08, step = 0.001, precision = 3)]
     pub grain_height: f32,
     /// Pit depth in the height field.
+    #[slider(min = 0.0, max = 0.12, step = 0.001, precision = 3)]
     pub pit_depth: f32,
     /// Number of tiny pits.
+    #[slider(min = 0.0, max = 400.0, step = 1.0, precision = 0, label = "Pores")]
     pub pit_count: u32,
     /// Crack depth in the height field.
+    #[slider(min = 0.0, max = 0.14, step = 0.001, precision = 3)]
     pub crack_depth: f32,
     /// Number of generated hairline cracks.
+    #[slider(min = 0.0, max = 40.0, step = 1.0, precision = 0)]
     pub crack_count: u32,
     /// How much stains darken albedo.
+    #[slider(min = 0.0, max = 0.4)]
     pub stain_darkening: f32,
     /// Number of soft dirt/stain blobs.
+    #[slider(min = 0.0, max = 80.0, step = 1.0, precision = 0)]
     pub stain_count: u32,
     /// Normal strength multiplier.
+    #[slider(min = 0.0, max = 12.0, step = 0.1, precision = 1)]
     pub normal_strength: f32,
     /// Base ambient occlusion.
+    #[slider(min = 0.0, max = 1.0)]
     pub ao_base: f32,
     /// Base roughness.
+    #[slider(min = 0.0, max = 1.0)]
     pub rough_base: f32,
 }
 

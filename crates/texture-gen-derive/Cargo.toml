@@ -1,5 +1,5 @@
 [package]
-name = "texture-gen"
+name = "texture-gen-derive"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,12 +8,16 @@ license.workspace = true
 keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
-description = "Pure procedural texture generation for Game Slop Machine."
+description = "Derive macros for texture-gen."
 readme = "../../README.md"
 
+[lib]
+proc-macro = true
+
 [dependencies]
-num-traits = "0.2.19"
-texture-gen-derive = { path = "../texture-gen-derive" }
+syn = { version = "2.0", features = ["full", "parsing"] }
+quote = "1.0"
+proc-macro2 = "1.0"
 
 [lints]
 workspace = true

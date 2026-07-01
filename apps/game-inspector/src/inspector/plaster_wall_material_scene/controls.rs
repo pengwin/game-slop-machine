@@ -20,6 +20,7 @@ use game_core::plugins::inspector::{
     PlasterWallMaterialControls, PlasterWallUvSettings,
 };
 use num_traits::ToPrimitive;
+use texture_gen::PlasterParamsSlider;
 
 use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
@@ -28,7 +29,7 @@ struct PlasterWallControlsUi;
 
 #[derive(Component, Clone, Default)]
 struct PlasterWallSlider {
-    setting: PlasterWallSliderSetting,
+    setting: PlasterParamsSlider,
 }
 
 #[derive(Component, Clone, Default)]
@@ -43,23 +44,6 @@ struct UvSlider {
 
 #[derive(Component, Clone, Default)]
 struct PerFaceUvCheckbox;
-
-#[derive(Clone, Default)]
-enum PlasterWallSliderSetting {
-    #[default]
-    Seed,
-    Tone,
-    Grain,
-    Stains,
-    StainDarkening,
-    Pores,
-    PoreDepth,
-    Cracks,
-    CrackDepth,
-    Normal,
-    RoughBase,
-    AoBase,
-}
 
 #[derive(Clone, Default)]
 enum DirtSliderSetting {
@@ -77,52 +61,6 @@ enum UvSliderSetting {
     TilesPerMeter,
     FaceColumns,
     FaceRows,
-}
-
-#[allow(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    reason = "seed is edited through a float slider and clamped to a small integer range"
-)]
-impl PlasterWallSliderSetting {
-    const fn value(&self, controls: &PlasterWallMaterialControls) -> f32 {
-        match self {
-            Self::Seed => controls.params.seed as f32,
-            Self::Tone => controls.params.tone_variation,
-            Self::Grain => controls.params.grain_height,
-            Self::Stains => controls.params.stain_count as f32,
-            Self::StainDarkening => controls.params.stain_darkening,
-            Self::Pores => controls.params.pit_count as f32,
-            Self::PoreDepth => controls.params.pit_depth,
-            Self::Cracks => controls.params.crack_count as f32,
-            Self::CrackDepth => controls.params.crack_depth,
-            Self::Normal => controls.params.normal_strength,
-            Self::RoughBase => controls.params.rough_base,
-            Self::AoBase => controls.params.ao_base,
-        }
-    }
-
-    #[allow(
-        clippy::missing_const_for_fn,
-        reason = "kept non-const to match other UI setting mutators"
-    )]
-    fn set(&self, controls: &mut PlasterWallMaterialControls, value: f32) {
-        match self {
-            Self::Seed => controls.params.seed = value.round().clamp(0.0, 9999.0) as u32,
-            Self::Tone => controls.params.tone_variation = value.clamp(0.0, 0.3),
-            Self::Grain => controls.params.grain_height = value.clamp(0.0, 0.08),
-            Self::Stains => controls.params.stain_count = value.round().clamp(0.0, 80.0) as u32,
-            Self::StainDarkening => controls.params.stain_darkening = value.clamp(0.0, 0.4),
-            Self::Pores => controls.params.pit_count = value.round().clamp(0.0, 400.0) as u32,
-            Self::PoreDepth => controls.params.pit_depth = value.clamp(0.0, 0.12),
-            Self::Cracks => controls.params.crack_count = value.round().clamp(0.0, 40.0) as u32,
-            Self::CrackDepth => controls.params.crack_depth = value.clamp(0.0, 0.14),
-            Self::Normal => controls.params.normal_strength = value.clamp(0.0, 12.0),
-            Self::RoughBase => controls.params.rough_base = value.clamp(0.0, 1.0),
-            Self::AoBase => controls.params.ao_base = value.clamp(0.0, 1.0),
-        }
-    }
 }
 
 impl DirtSliderSetting {
@@ -220,18 +158,18 @@ fn controls_panel() -> impl Scene {
             }
             Children [
                 (Text("Plaster Params") ThemedText),
-                plaster_slider(PlasterWallSliderSetting::Seed, "Seed", 0.0, 9999.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::Tone, "Tone", 0.0, 0.3, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::Grain, "Grain", 0.0, 0.08, 0.001, 3),
-                plaster_slider(PlasterWallSliderSetting::Stains, "Stains", 0.0, 80.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::StainDarkening, "Stain dark", 0.0, 0.4, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::Pores, "Pores", 0.0, 400.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::PoreDepth, "Pore depth", 0.0, 0.12, 0.001, 3),
-                plaster_slider(PlasterWallSliderSetting::Cracks, "Cracks", 0.0, 40.0, 1.0, 0),
-                plaster_slider(PlasterWallSliderSetting::CrackDepth, "Crack depth", 0.0, 0.14, 0.001, 3),
-                plaster_slider(PlasterWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),
-                plaster_slider(PlasterWallSliderSetting::RoughBase, "Rough base", 0.0, 1.0, 0.01, 2),
-                plaster_slider(PlasterWallSliderSetting::AoBase, "AO base", 0.0, 1.0, 0.01, 2),
+                plaster_slider(PlasterParamsSlider::Seed, "Seed"),
+                plaster_slider(PlasterParamsSlider::ToneVariation, "Tone variation"),
+                plaster_slider(PlasterParamsSlider::GrainHeight, "Grain height"),
+                plaster_slider(PlasterParamsSlider::StainCount, "Stain count"),
+                plaster_slider(PlasterParamsSlider::StainDarkening, "Stain dark"),
+                plaster_slider(PlasterParamsSlider::PitCount, "Pores"),
+                plaster_slider(PlasterParamsSlider::PitDepth, "Pore depth"),
+                plaster_slider(PlasterParamsSlider::CrackCount, "Crack count"),
+                plaster_slider(PlasterParamsSlider::CrackDepth, "Crack depth"),
+                plaster_slider(PlasterParamsSlider::NormalStrength, "Normal"),
+                plaster_slider(PlasterParamsSlider::RoughBase, "Rough base"),
+                plaster_slider(PlasterParamsSlider::AoBase, "AO base"),
                 (Text("Dirt") ThemedText),
                 dirt_slider(DirtSliderSetting::FloorDirt, "Floor dirt", 0.0, 1.5, 0.01, 2),
                 dirt_slider(DirtSliderSetting::CornerDirt, "Corner dirt", 0.0, 1.5, 0.01, 2),
@@ -249,15 +187,12 @@ fn controls_panel() -> impl Scene {
     }
 }
 
-fn plaster_slider(
-    setting: PlasterWallSliderSetting,
-    label: &'static str,
-    min: f32,
-    max: f32,
-    step: f32,
-    precision: i32,
-) -> impl Scene {
+fn plaster_slider(setting: PlasterParamsSlider, label: &'static str) -> impl Scene {
     let handler_setting = setting.clone();
+    let min = setting.min();
+    let max = setting.max();
+    let step = setting.step();
+    let precision = setting.precision();
 
     bsn! {
         Node {
@@ -292,7 +227,7 @@ fn plaster_slider(
                         change: On<'_, '_, ValueChange<f32>>,
                         mut controls: ResMut<'_, PlasterWallMaterialControls>,
                     | {
-                        handler_setting.set(&mut controls, change.value);
+                        handler_setting.set(&mut controls.params, change.value);
                     }
                 )
             )
@@ -490,7 +425,7 @@ fn sync_plaster_wall_sliders(
     sliders: Query<'_, '_, (Entity, &PlasterWallSlider, &SliderValue)>,
 ) {
     for (entity, slider, value) in &sliders {
-        let expected = slider.setting.value(&controls);
+        let expected = slider.setting.value(&controls.params);
         if (value.0 - expected).abs() > 0.001 {
             commands.entity(entity).insert(SliderValue(expected));
         }

@@ -20,6 +20,7 @@ use game_core::plugins::inspector::{
     ConcreteWallUvSettings, InspectorSceneState,
 };
 use num_traits::ToPrimitive;
+use texture_gen::ConcreteParamsSlider;
 
 use super::super::{consts::PANEL_FONT_SIZE, despawn_ui::despawn_ui};
 
@@ -28,7 +29,7 @@ struct ConcreteWallControlsUi;
 
 #[derive(Component, Clone, Default)]
 struct ConcreteWallSlider {
-    setting: ConcreteWallSliderSetting,
+    setting: ConcreteParamsSlider,
 }
 
 #[derive(Component, Clone, Default)]
@@ -43,31 +44,6 @@ struct UvSlider {
 
 #[derive(Component, Clone, Default)]
 struct PerFaceUvCheckbox;
-
-#[derive(Clone, Default)]
-enum ConcreteWallSliderSetting {
-    #[default]
-    Seed,
-    Tone,
-    LimeClouds,
-    Grain,
-    Aggregates,
-    AggregateContrast,
-    AggregateHeight,
-    ExposedAggregate,
-    ExposedAggregateHeight,
-    Voids,
-    VoidDepth,
-    Stains,
-    StainDarkening,
-    Formwork,
-    Efflorescence,
-    Cracks,
-    CrackDepth,
-    Normal,
-    RoughBase,
-    AoBase,
-}
 
 #[derive(Clone, Default)]
 enum DirtSliderSetting {
@@ -85,74 +61,6 @@ enum UvSliderSetting {
     TilesPerMeter,
     FaceColumns,
     FaceRows,
-}
-
-impl ConcreteWallSliderSetting {
-    fn value(&self, controls: &ConcreteWallMaterialControls) -> f32 {
-        match self {
-            Self::Seed => controls.params.seed.to_f32().unwrap_or(0.0),
-            Self::Tone => controls.params.tone_variation,
-            Self::LimeClouds => controls.params.lime_cloud_strength,
-            Self::Grain => controls.params.grain_height,
-            Self::Aggregates => controls.params.aggregate_count.to_f32().unwrap_or(0.0),
-            Self::AggregateContrast => controls.params.aggregate_contrast,
-            Self::AggregateHeight => controls.params.aggregate_height,
-            Self::ExposedAggregate => controls.params.exposed_aggregate_count.to_f32().unwrap_or(0.0),
-            Self::ExposedAggregateHeight => controls.params.exposed_aggregate_height,
-            Self::Voids => controls.params.void_count.to_f32().unwrap_or(0.0),
-            Self::VoidDepth => controls.params.void_depth,
-            Self::Stains => controls.params.stain_count.to_f32().unwrap_or(0.0),
-            Self::StainDarkening => controls.params.stain_darkening,
-            Self::Formwork => controls.params.formwork_strength,
-            Self::Efflorescence => controls.params.efflorescence_strength,
-            Self::Cracks => controls.params.crack_count.to_f32().unwrap_or(0.0),
-            Self::CrackDepth => controls.params.crack_depth,
-            Self::Normal => controls.params.normal_strength,
-            Self::RoughBase => controls.params.rough_base,
-            Self::AoBase => controls.params.ao_base,
-        }
-    }
-
-    fn set(&self, controls: &mut ConcreteWallMaterialControls, value: f32) {
-        match self {
-            Self::Seed => {
-                controls.params.seed = value.round().clamp(0.0, 9999.0).to_u32().unwrap_or(0);
-            }
-            Self::Tone => controls.params.tone_variation = value.clamp(0.0, 0.3),
-            Self::LimeClouds => controls.params.lime_cloud_strength = value.clamp(0.0, 0.3),
-            Self::Grain => controls.params.grain_height = value.clamp(0.0, 0.08),
-            Self::Aggregates => {
-                controls.params.aggregate_count =
-                    value.round().clamp(0.0, 800.0).to_u32().unwrap_or(0);
-            }
-            Self::AggregateContrast => controls.params.aggregate_contrast = value.clamp(0.0, 0.5),
-            Self::AggregateHeight => controls.params.aggregate_height = value.clamp(0.0, 0.08),
-            Self::ExposedAggregate => {
-                controls.params.exposed_aggregate_count =
-                    value.round().clamp(0.0, 40.0).to_u32().unwrap_or(0);
-            }
-            Self::ExposedAggregateHeight => {
-                controls.params.exposed_aggregate_height = value.clamp(0.0, 0.06);
-            }
-            Self::Voids => {
-                controls.params.void_count = value.round().clamp(0.0, 260.0).to_u32().unwrap_or(0);
-            }
-            Self::VoidDepth => controls.params.void_depth = value.clamp(0.0, 0.14),
-            Self::Stains => {
-                controls.params.stain_count = value.round().clamp(0.0, 80.0).to_u32().unwrap_or(0);
-            }
-            Self::StainDarkening => controls.params.stain_darkening = value.clamp(0.0, 0.4),
-            Self::Formwork => controls.params.formwork_strength = value.clamp(0.0, 0.5),
-            Self::Efflorescence => controls.params.efflorescence_strength = value.clamp(0.0, 0.4),
-            Self::Cracks => {
-                controls.params.crack_count = value.round().clamp(0.0, 30.0).to_u32().unwrap_or(0);
-            }
-            Self::CrackDepth => controls.params.crack_depth = value.clamp(0.0, 0.14),
-            Self::Normal => controls.params.normal_strength = value.clamp(0.0, 12.0),
-            Self::RoughBase => controls.params.rough_base = value.clamp(0.0, 1.0),
-            Self::AoBase => controls.params.ao_base = value.clamp(0.0, 1.0),
-        }
-    }
 }
 
 impl DirtSliderSetting {
@@ -250,26 +158,26 @@ fn controls_panel() -> impl Scene {
             }
             Children [
                 (Text("Concrete Params") ThemedText),
-                concrete_slider(ConcreteWallSliderSetting::Seed, "Seed", 0.0, 9999.0, 1.0, 0),
-                concrete_slider(ConcreteWallSliderSetting::Tone, "Tone", 0.0, 0.3, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::LimeClouds, "Lime", 0.0, 0.3, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::Grain, "Grain", 0.0, 0.08, 0.001, 3),
-                concrete_slider(ConcreteWallSliderSetting::Aggregates, "Aggregate", 0.0, 800.0, 1.0, 0),
-                concrete_slider(ConcreteWallSliderSetting::AggregateContrast, "Agg contrast", 0.0, 0.5, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::AggregateHeight, "Agg height", 0.0, 0.08, 0.001, 3),
-                concrete_slider(ConcreteWallSliderSetting::ExposedAggregate, "Exposed agg", 0.0, 40.0, 1.0, 0),
-                concrete_slider(ConcreteWallSliderSetting::ExposedAggregateHeight, "Exp height", 0.0, 0.06, 0.001, 3),
-                concrete_slider(ConcreteWallSliderSetting::Voids, "Voids", 0.0, 260.0, 1.0, 0),
-                concrete_slider(ConcreteWallSliderSetting::VoidDepth, "Void depth", 0.0, 0.14, 0.001, 3),
-                concrete_slider(ConcreteWallSliderSetting::Stains, "Stains", 0.0, 80.0, 1.0, 0),
-                concrete_slider(ConcreteWallSliderSetting::StainDarkening, "Stain dark", 0.0, 0.4, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::Formwork, "Formwork", 0.0, 0.5, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::Efflorescence, "Efflorescence", 0.0, 0.4, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::Cracks, "Cracks", 0.0, 30.0, 1.0, 0),
-                concrete_slider(ConcreteWallSliderSetting::CrackDepth, "Crack depth", 0.0, 0.14, 0.001, 3),
-                concrete_slider(ConcreteWallSliderSetting::Normal, "Normal", 0.0, 12.0, 0.1, 1),
-                concrete_slider(ConcreteWallSliderSetting::RoughBase, "Rough base", 0.0, 1.0, 0.01, 2),
-                concrete_slider(ConcreteWallSliderSetting::AoBase, "AO base", 0.0, 1.0, 0.01, 2),
+                concrete_slider(ConcreteParamsSlider::Seed, "Seed"),
+                concrete_slider(ConcreteParamsSlider::ToneVariation, "Tone variation"),
+                concrete_slider(ConcreteParamsSlider::LimeCloudStrength, "Lime clouds"),
+                concrete_slider(ConcreteParamsSlider::GrainHeight, "Grain height"),
+                concrete_slider(ConcreteParamsSlider::AggregateCount, "Aggregate count"),
+                concrete_slider(ConcreteParamsSlider::AggregateContrast, "Aggregate contrast"),
+                concrete_slider(ConcreteParamsSlider::AggregateHeight, "Aggregate height"),
+                concrete_slider(ConcreteParamsSlider::ExposedAggregateCount, "Exposed agg"),
+                concrete_slider(ConcreteParamsSlider::ExposedAggregateHeight, "Exp height"),
+                concrete_slider(ConcreteParamsSlider::VoidCount, "Void count"),
+                concrete_slider(ConcreteParamsSlider::VoidDepth, "Void depth"),
+                concrete_slider(ConcreteParamsSlider::StainCount, "Stain count"),
+                concrete_slider(ConcreteParamsSlider::StainDarkening, "Stain dark"),
+                concrete_slider(ConcreteParamsSlider::FormworkStrength, "Formwork"),
+                concrete_slider(ConcreteParamsSlider::EfflorescenceStrength, "Efflorescence"),
+                concrete_slider(ConcreteParamsSlider::CrackCount, "Crack count"),
+                concrete_slider(ConcreteParamsSlider::CrackDepth, "Crack depth"),
+                concrete_slider(ConcreteParamsSlider::NormalStrength, "Normal"),
+                concrete_slider(ConcreteParamsSlider::RoughBase, "Rough base"),
+                concrete_slider(ConcreteParamsSlider::AoBase, "AO base"),
                 (Text("Dirt") ThemedText),
                 dirt_slider(DirtSliderSetting::FloorDirt, "Floor dirt", 0.0, 1.5, 0.01, 2),
                 dirt_slider(DirtSliderSetting::CornerDirt, "Corner dirt", 0.0, 1.5, 0.01, 2),
@@ -287,15 +195,12 @@ fn controls_panel() -> impl Scene {
     }
 }
 
-fn concrete_slider(
-    setting: ConcreteWallSliderSetting,
-    label: &'static str,
-    min: f32,
-    max: f32,
-    step: f32,
-    precision: i32,
-) -> impl Scene {
+fn concrete_slider(setting: ConcreteParamsSlider, label: &'static str) -> impl Scene {
     let handler_setting = setting.clone();
+    let min = setting.min();
+    let max = setting.max();
+    let step = setting.step();
+    let precision = setting.precision();
 
     bsn! {
         Node {
@@ -330,7 +235,7 @@ fn concrete_slider(
                         change: On<'_, '_, ValueChange<f32>>,
                         mut controls: ResMut<'_, ConcreteWallMaterialControls>,
                     | {
-                        handler_setting.set(&mut controls, change.value);
+                        handler_setting.set(&mut controls.params, change.value);
                     }
                 )
             )
@@ -528,7 +433,7 @@ fn sync_concrete_wall_sliders(
     sliders: Query<'_, '_, (Entity, &ConcreteWallSlider, &SliderValue)>,
 ) {
     for (entity, slider, value) in &sliders {
-        let expected = slider.setting.value(&controls);
+        let expected = slider.setting.value(&controls.params);
         if (value.0 - expected).abs() > 0.001 {
             commands.entity(entity).insert(SliderValue(expected));
         }

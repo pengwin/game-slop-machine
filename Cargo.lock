@@ -2624,6 +2624,7 @@ dependencies = [
  "bevy",
  "game-core",
  "num-traits",
+ "texture-gen",
 ]
 
 [[package]]
@@ -4771,6 +4772,16 @@ name = "texture-gen"
 version = "0.0.1"
 dependencies = [
  "num-traits",
+ "texture-gen-derive",
+]
+
+[[package]]
+name = "texture-gen-derive"
+version = "0.0.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
