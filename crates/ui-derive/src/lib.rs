@@ -1,4 +1,4 @@
-//! Derive macros for texture-gen.
+//! Derive macros for UI components.
 
 mod sliders;
 

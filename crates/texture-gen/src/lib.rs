@@ -7,7 +7,7 @@ mod plaster;
 mod surface;
 mod texture;
 
-pub use texture_gen_derive::Sliders;
+pub use ui_derive::Sliders;
 
 pub use material::{PbrTextureSet, TextureMaterial, TextureStage};
 pub use concrete::{
