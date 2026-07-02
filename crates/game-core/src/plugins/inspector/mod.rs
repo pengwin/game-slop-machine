@@ -2,6 +2,7 @@
 
 pub mod concrete_wall_material_scene;
 mod editable_params;
+pub mod material_scene;
 pub mod plaster_wall_material_scene;
 pub mod simple_scene;
 mod state;

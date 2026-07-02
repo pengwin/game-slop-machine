@@ -122,9 +122,7 @@ fn handle_apply(
     mut commands: Commands<'_, '_>,
     params: Res<'_, PlasterWallEditableParams>,
 ) {
-    commands.insert_resource(PlasterWallGenerationRequest {
-        params: params.value.clone(),
-    });
+    commands.insert_resource(PlasterWallGenerationRequest::new(params.value.clone()));
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -140,7 +138,5 @@ fn handle_reset(
     );
     *dirt_settings = PlasterWallDirtSettings::default();
     *uv_settings = PlasterWallUvSettings::default();
-    commands.insert_resource(PlasterWallGenerationRequest {
-        params: params.value.clone(),
-    });
+    commands.insert_resource(PlasterWallGenerationRequest::new(params.value.clone()));
 }

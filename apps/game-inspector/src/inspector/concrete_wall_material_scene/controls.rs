@@ -122,9 +122,7 @@ fn handle_apply(
     mut commands: Commands<'_, '_>,
     params: Res<'_, ConcreteWallEditableParams>,
 ) {
-    commands.insert_resource(ConcreteWallGenerationRequest {
-        params: params.value.clone(),
-    });
+    commands.insert_resource(ConcreteWallGenerationRequest::new(params.value.clone()));
 }
 
 #[allow(clippy::needless_pass_by_value)]
@@ -140,7 +138,5 @@ fn handle_reset(
     );
     *dirt_settings = ConcreteWallDirtSettings::default();
     *uv_settings = ConcreteWallUvSettings::default();
-    commands.insert_resource(ConcreteWallGenerationRequest {
-        params: params.value.clone(),
-    });
+    commands.insert_resource(ConcreteWallGenerationRequest::new(params.value.clone()));
 }
